@@ -6,14 +6,29 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>Chess Server</h1>
+    <p>Server is running</p>
+    <p>WebSocket endpoint: ws://${req.headers.host}</p>
+    <p>API Documentation:</p>
+    <ul>
+      <li>POST /api/move - Submit a chess move</li>
+      <li>GET /api/game-by-code/:code - Get game status</li>
+    </ul>
+  `);
+});
 
 // Configuration (replace these values with your own)
 const config = {
   supabaseUrl: 'https://evberyanshxxalxtwnnc.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw',
-  port: 3000,
-  corsOrigin: 'http://localhost:1384'
+   port: process.env.PORT || 3000, // Modified for Railway compatibility
+  corsOrigin: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',') 
+    : 'http://localhost:1384'
 };
+
 
 // Middleware
 app.use(cors({
@@ -27,10 +42,11 @@ app.use(bodyParser.json());
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
 // Create HTTP server
-const server = app.listen(config.port, () => {
-  console.log(`Server running on port ${config.port}`);
+// Replace your current server.listen with:
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
@@ -1078,6 +1094,9 @@ app.post('/api/start-timer', async (req, res) => {
     console.error('Timer start error:', error);
     res.status(400).json({ error: error.message });
   }
+});
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
 });
 // Add this to your server initialization
 const abandonedGameChecker = setInterval(async () => {
