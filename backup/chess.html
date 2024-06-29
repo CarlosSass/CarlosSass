@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habesha Chess</title>
+    <link rel="stylesheet" href="chess.css">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="telegram-app">
+        <!-- Main Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Habesha Chess</h1>
+                <div class="player-info">
+                    <div class="user-details">
+                        <span id="username">Loading...</span>
+                        <span id="balance"></span>
+                    </div>
+                    <div class="opponent-info">
+                        <span id="opponent-username">Waiting...</span>
+                    </div>
+                </div>
+                <div class="time-info">
+                    <div class="player-time">
+                        <span>Your Time:</span>
+                        <span id="user-time">0:00</span>
+                    </div>
+                    <div class="player-time">
+                        <span>Opponent:</span>
+                        <span id="opponent-time">0:00</span>
+                    </div>
+                </div>
+                <div class="game-code">
+                    Game Code: <span id="game-code">XXXXXX</span>
+                </div>
+            </div>
+        </header>
+        <div id="waiting-overlay">
+            <p>Waiting for opponent...</p>
+          </div>
+        <!-- Main Game Area -->
+        <main class="game-area">
+            <!-- Chess Board with Notation -->
+            <div id="turn-indicator" class="turn-display">
+                <span>Turn:</span>
+                <span id="turn-color">White</span>
+            </div>
+            <div class="chessboard-container">
+                <div class="board-with-notation">
+                    <div class="rank-notation">
+                        <span>8</span><span>7</span><span>6</span><span>5</span>
+                        <span>4</span><span>3</span><span>2</span><span>1</span>
+                    </div>
+                    <div id="chessboard"></div>
+                </div>
+                <div class="file-notation">
+                    <span>a</span><span>b</span><span>c</span><span>d</span>
+                    <span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+            </div>
+
+            <!-- Game Controls -->
+            <div class="game-controls">
+                
+                <div class="action-buttons">
+                    <button id="resign-button" class="tg-button danger">Resign</button>
+                    <button id="offer-draw-button" class="tg-button primary">Offer Draw</button>
+                </div>
+                <div class="move-history">
+                    <h3>Move History</h3>
+                    <div class="move-list-container">
+                        <ul id="move-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Status Indicator -->
+        <div id="status" class="status-message">Game loading...</div>
+
+        <!-- Modals -->
+        <div id="game-over-modal" class="tg-modal">
+            <div class="modal-content">
+                <h3>Game Over</h3>
+                <p id="game-over-message"></p>
+                <button id="close-modal" class="tg-button primary">Close</button>
+            </div>
+        </div>
+
+        <div id="draw-offer-modal" class="tg-modal">
+            <div class="modal-content">
+                <h3>Draw Offer</h3>
+                <p id="draw-offer-message">Your opponent offers a draw</p>
+                <div class="modal-buttons">
+                    <button id="accept-draw-button" class="tg-button success">Accept</button>
+                    <button id="reject-draw-button" class="tg-button danger">Reject</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Promotion Modal (Dynamically inserted) -->
+    </div>
+
+    <script type="module" src="chess.js"></script>
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Expand the web app to full size
+        tg.enableClosingConfirmation(); // Prevent accidental closing
+        
+        // Set theme colors based on Telegram
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#707579');
+        document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#3390ec');
+        document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#3390ec');
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+    </script>
+</body>
+</html>

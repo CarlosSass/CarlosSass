@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Guessing Game</title>
+    <link rel="stylesheet" href="game.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <button id="back-btn" class="icon-btn" title="Go back">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" fill="currentColor"/>
+                </svg>
+            </button>
+
+            <div class="game-code">
+                <span>Game Code:</span>
+                <strong id="game-code-display">XXXXXX</strong>
+                <button id="copy-code-btn" class="icon-btn" title="Copy code">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="game-bet">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
+                </svg>
+                <span id="game-bet-amount">0 ETB</span>
+            </div>
+
+            
+        </header>
+
+        <div class="players-section">
+            <div class="player-card creator">
+                <div class="player-avatar" id="creator-avatar">C</div>
+                <div class="player-info">
+                    <h3 id="creator-username">Creator</h3>
+                    <div class="player-status" id="creator-status">Waiting...</div>
+                </div>
+            </div>
+
+            <div class="vs-circle">VS</div>
+
+            <div class="player-card opponent">
+                <div class="player-avatar" id="opponent-avatar">O</div>
+                <div class="player-info">
+                    <h3 id="opponent-username">Opponent</h3>
+                    <div class="player-status" id="opponent-status">Waiting...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-status" id="game-status-message">
+            Game is starting...
+        </div>
+
+        <div class="game-board">
+            <div class="guess-input-container">
+                <input type="text" id="guess-input" placeholder="Enter 4-digit number" maxlength="4" inputmode="numeric" pattern="\d*">
+                <button id="submit-guess-btn">Submit Guess</button>
+            </div>
+
+            <div class="guess-history">
+                <table id="guess-history-table">
+                    <thead>
+                        <tr>
+                            <th>Guess</th>
+                            <th>Number</th>
+                            <th>Order</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+                <div class="empty-state" id="history-empty-state">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+                    </svg>
+                    <p>Your guesses will appear here</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-actions">
+            <button id="leave-game-btn" class="danger-btn">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" fill="currentColor"/>
+                </svg>
+                Leave Game
+            </button>
+        </div>
+    </div>
+
+    <div class="modal" id="game-result-modal">
+        <div class="modal-content">
+            <h2 id="result-title">Game Over</h2>
+            <p id="result-message">You won the game!</p>
+            <div class="result-details">
+                <div class="result-amount">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
+                    </svg>
+                    <span id="result-amount">+250 ETB</span>
+                </div>
+            </div>
+            <button id="result-close-btn" class="primary-btn">Continue</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="game.js" type="module"></script>
+</body>
+</html>

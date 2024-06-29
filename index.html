@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Habesha Games - Register</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #ecf0f1;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    form {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .error {
+      color: red;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Register for Habesha Games</h1>
+
+  <form id="registerForm">
+    <input type="text" id="username" placeholder="Enter your name" required />
+    <input type="tel" id="phone" placeholder="Enter your phone number" required />
+    <button type="submit">Register / Login</button>
+    <div class="error" id="errorMsg"></div>
+  </form>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // If already logged in, redirect to home
+    if (localStorage.getItem("phone")) {
+      window.location.href = "home.html";
+    }
+
+    const form = document.getElementById("registerForm");
+    const errorMsg = document.getElementById("errorMsg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorMsg.textContent = "";
+
+      const username = document.getElementById("username").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+
+      if (!username || !phone) {
+        errorMsg.textContent = "Please enter both name and phone.";
+        return;
+      }
+
+      try {
+        let { data: existingUser, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("phone", phone)
+          .single();
+
+        if (error && error.code !== "PGRST116") {
+          throw error;
+        }
+
+        if (!existingUser) {
+          const { data: newUser, error: insertError } = await supabase
+            .from("users")
+            .insert([{ username, phone, balance: 0 }])
+            .select()
+            .single();
+
+          if (insertError) {
+            throw insertError;
+          }
+
+          localStorage.setItem("phone", newUser.phone);
+          localStorage.setItem("user", JSON.stringify(newUser));
+        } else {
+          localStorage.setItem("phone", existingUser.phone);
+          localStorage.setItem("user", JSON.stringify(existingUser));
+        }
+
+        window.location.href = "home.html";
+      } catch (err) {
+        console.error(err);
+        errorMsg.textContent = "Something went wrong. Please try again.";
+      }
+    });
+  </script>
+</body>
+</html>

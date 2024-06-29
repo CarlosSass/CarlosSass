@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <link rel="stylesheet" href="chess.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        #back-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        #back-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        #back-btn:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Back button with absolute positioning -->
+    <button id="back-btn" title="Go back">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" fill="currentColor"/>
+        </svg>
+    </button>
+    <div id="notifications-container"></div>
+    <div class="chess-container">
+        <div class="game-info">
+            <div id="animation-container"></div>
+            <div>Current Bet: $<span id="current-bet">0</span></div>
+            <div id="game-code-display">
+                <span>Game Code: </span>
+                <strong id="game-code-text">Loading...</strong>
+                <button id="copy-code">📋</button>
+            </div>
+            <div id="waiting-overlay">
+                <p>Waiting for opponent...</p>
+            </div>
+            <div id="promotion-dialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
+                <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3>Promote your pawn to:</h3>
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                        <button class="promotion-option" data-piece="q" style="font-size: 2em; cursor: pointer;">♕</button>
+                        <button class="promotion-option" data-piece="r" style="font-size: 2em; cursor: pointer;">♖</button>
+                        <button class="promotion-option" data-piece="b" style="font-size: 2em; cursor: pointer;">♗</button>
+                        <button class="promotion-option" data-piece="n" style="font-size: 2em; cursor: pointer;">♘</button>
+                    </div>
+                </div>
+            </div>
+            <div class="player white-player">
+                <span id="white-username">White</span>
+                <span id="white-time">10:00</span>
+            </div>
+            <div class="chess-board" id="board"></div>
+            <div class="player black-player">
+                <span id="black-username">Black</span>
+                <span id="black-time">10:00</span>
+            </div>
+        </div>
+        
+        <div class="game-controls">
+            <div class="game-status" id="game-status">Loading game...</div>
+            <div class="move-history" id="move-history"></div>
+            <div class="actions">
+                <button id="offer-draw">Offer Draw</button>
+                <button id="resign">Resign</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>     <script type="module" src="chess.js"></script>
+</body>
+</html>

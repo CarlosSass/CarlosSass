@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Habesha Games - Home</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+    }
+    header {
+      background: #222;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex;
+      flex-direction: column;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .material-icons {
+      cursor: pointer;
+    }
+    main {
+      padding: 1rem;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .game-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .game {
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .game:hover {
+      background: #e3f2fd;
+    }
+    .game .material-icons {
+      color: #3498db;
+    }
+
+    @media (max-width: 600px) {
+      .game {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <strong id="user-name">Welcome, ...</strong>
+      <small id="user-balance">Balance: ...</small>
+    </div>
+    <div class="header-right">
+      <span class="material-icons" onclick="location.href='profile.html'">account_circle</span>
+      <span class="material-icons" onclick="logout()">logout</span>
+    </div>
+  </header>
+
+  <main>
+    <h2>Available Games</h2>
+    <div class="game-list">
+      <div class="game" onclick="location.href='guessnumberorderloby.html'">
+        <span>Guess Number Order</span>
+        <span class="material-icons">psychology</span>
+      </div>
+      <div class="game" onclick="location.href='loby.html'">
+        <span>Chess</span>
+        <span class="material-icons">sports_esports</span>
+      </div>
+      <div class="game" onclick="location.href='ludo.html'">
+        <span>Ludo</span>
+        <span class="material-icons">casino</span>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      window.location.href = 'index.html';
+    } else {
+      document.getElementById('user-name').textContent = `Welcome, ${user.username}`;
+      fetchBalance(user.phone);
+      
+      // Store user phone in localStorage for profile page
+      localStorage.setItem('playerPhone', user.phone);
+    }
+
+    async function fetchBalance(phone) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('phone', phone)
+        .single();
+
+      if (!error && data) {
+        document.getElementById('user-balance').textContent = `Balance: ${data.balance} ETB`;
+      } else {
+        document.getElementById('user-balance').textContent = `Balance: Error`;
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('playerPhone');
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

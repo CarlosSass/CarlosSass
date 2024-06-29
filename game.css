@@ -1,0 +1,558 @@
+:root {
+    --primary-color: #6366f1;
+    --primary-dark: #4f46e5;
+    --danger-color: #ef4444;
+    --danger-dark: #dc2626;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --text-color: #1f2937;
+    --text-light: #6b7280;
+    --bg-color: #f9fafb;
+    --card-bg: #ffffff;
+    --border-color: #e5e7eb;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    line-height: 1.5;
+    padding: 1rem;
+}
+
+.game-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: var(--card-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--primary-color);
+    color: white;
+    position: relative; /* Added for positioning the back button if needed */
+}
+
+/* Style for the Back Button */
+#back-btn {
+    /* Inherits icon-btn styles */
+    position: absolute; /* Position it within the header */
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.5rem; /* Increased padding slightly */
+}
+
+.game-header svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    /* margin-right: 0.5rem; Removed default margin-right */
+    margin: 0; /* Ensure no default margin for header icons */
+}
+
+.game-code, .game-bet, .game-attempts {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    /* Added margin-left to push content away from the back button */
+    margin-left: 3rem; /* Adjust based on back button size and padding */
+}
+
+.game-code strong {
+    margin: 0 0.5rem;
+    font-size: 1rem;
+}
+
+.game-code .icon-btn {
+    margin-left: 0.5rem; /* Add margin back for copy button */
+}
+
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s;
+}
+
+.icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.icon-btn svg {
+    width: 1rem;
+    height: 1rem;
+    margin: 0; /* Ensure no default margin */
+}
+
+.players-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 1rem;
+    position: relative;
+}
+
+.player-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+    max-width: 200px;
+}
+
+.player-card.creator {
+    margin-right: auto;
+}
+
+.player-card.opponent {
+    margin-left: auto;
+}
+
+.player-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.25rem;
+    color: white;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.player-info {
+    overflow: hidden;
+}
+
+.player-info h3 {
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-status {
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.vs-circle {
+    position: absolute;
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+}
+
+.game-status {
+    text-align: center;
+    padding: 0.5rem 1rem;
+    background-color: #f3f4f6;
+    margin: 0 1.5rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+}
+
+.game-board {
+    padding: 1.5rem;
+}
+
+.guess-input-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.guess-input-container input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.guess-input-container input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.guess-input-container button {
+    padding: 0 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.guess-input-container button:hover {
+    background-color: var(--primary-dark);
+}
+
+.guess-input-container button:disabled {
+    background-color: #d1d5db;
+    cursor: not-allowed;
+}
+
+.guess-history {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative; /* Needed for absolute positioning of empty state */
+    min-height: 100px; /* Give it some minimum height */
+}
+
+/* Style for the Guess History Table */
+#guess-history-table {
+    width: 100%;
+    border-collapse: collapse; /* Remove space between borders */
+    table-layout: fixed; /* Optional: makes column widths more predictable */
+}
+
+#guess-history-table th,
+#guess-history-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    word-break: break-word; /* Prevent long words from overflowing */
+}
+
+#guess-history-table th {
+    background-color: #f3f4f6; /* Light background for headers */
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Optional: Zebra striping for rows */
+#guess-history-table tbody tr:nth-child(even) {
+    background-color: #f9fafb; /* Slightly different background for even rows */
+}
+
+#guess-history-table tbody tr:last-child td {
+    border-bottom: none; /* Remove bottom border for the last row */
+}
+
+/* Hide the empty state when the table body is not empty */
+#history-empty-state {
+    display: flex; /* Keep it flex for centering */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-light);
+    text-align: center;
+    /* Position above the table, initially displayed */
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--card-bg); /* Match container background */
+    z-index: 1; /* Ensure it's above the potentially empty table */
+}
+
+/* You will need JavaScript to toggle the display of #history-empty-state
+   and #guess-history-table based on whether the table body is empty.
+   When history is present: #history-empty-state { display: none; }
+   When history is empty: #guess-history-table { display: none; }
+*/
+
+
+.empty-state svg {
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+}
+
+/* Removed old .guess-item styles as they are replaced by table structure */
+/*
+.guess-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.guess-item:last-child {
+    border-bottom: none;
+}
+
+.guess-number {
+    font-weight: 500;
+}
+
+.guess-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.guess-feedback.correct {
+    color: var(--success-color);
+}
+
+.guess-feedback.partial {
+    color: var(--warning-color);
+}
+
+.guess-feedback.incorrect {
+    color: var(--danger-color);
+}
+*/
+
+
+.game-actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.danger-btn {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    color: var(--danger-color);
+    border: 1px solid var(--danger-color);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.danger-btn:hover {
+    background-color: #fee2e2;
+}
+
+.danger-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.modal.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-20px);
+    transition: transform 0.3s;
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-content h2 {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.modal-content p {
+    margin-bottom: 1.5rem;
+    color: var(--text-light);
+}
+
+.result-details {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f3f4f6;
+    border-radius: var(--radius-md);
+}
+
+.result-amount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    gap: 0.5rem;
+}
+
+.result-amount.win {
+    color: var(--success-color);
+}
+
+.result-amount.lose {
+    color: var(--danger-color);
+}
+
+.result-amount svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.primary-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+.primary-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .game-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    /* Adjustments for back button in mobile view */
+    #back-btn {
+        position: relative; /* Change positioning */
+        top: auto;
+        left: auto;
+        transform: none;
+        margin-bottom: 0.5rem; /* Add some space below */
+        padding: 0.25rem; /* Revert padding */
+    }
+
+    .game-code, .game-bet, .game-attempts {
+        margin-left: 0; /* Remove margin-left in mobile view */
+        width: 100%; /* Make them take full width */
+        justify-content: space-between; /* Distribute items */
+    }
+
+    .players-section {
+        flex-direction: column;
+        gap: 2rem;
+        padding: 1.5rem 1rem;
+    }
+
+    .player-card {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .player-card.creator, .player-card.opponent {
+        margin: 0;
+    }
+
+    .vs-circle {
+        position: relative;
+        margin: 1rem 0;
+    }
+
+    .guess-input-container {
+        flex-direction: column;
+    }
+
+    #guess-history-table th,
+    #guess-history-table td {
+        padding: 0.5rem 0.75rem; /* Reduced padding for smaller screens */
+        font-size: 0.875rem; /* Slightly smaller font */
+    }
+}
+/* Game notifications */
+.game-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 5px;
+    z-index: 1001;
+    animation: slideIn 0.5s forwards;
+  }
+  .game-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    z-index: 1000;
+    animation: slide-in 0.3s ease-out;
+  }
+  

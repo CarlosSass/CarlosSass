@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Online Chess Game</title>
+    <link rel="stylesheet" href="chess.css">
+</head>
+<body>
+    <h1>Online Chess Game</h1>
+
+    <div id="user-info">
+        <p>Username: <span id="username"></span></p>
+        <p id="balance"></p>
+    </div>
+
+    <div id="game-setup">
+        <input type="text" id="game-code" placeholder="Enter Game Code">
+        <input type="number" id="bet-amount" placeholder="Bet Amount">
+        <button id="create-game">Create Game</button>
+        <button id="join-game">Join Game</button>
+    </div>
+
+    <div class="chessboard-container">
+        <div class="board-with-notation">
+            <div class="rank-notation">
+                <span>8</span>
+                <span>7</span>
+                <span>6</span>
+                <span>5</span>
+                <span>4</span>
+                <span>3</span>
+                <span>2</span>
+                <span>1</span>
+            </div>
+            <div id="chessboard">
+                </div>
+        </div>
+        <div class="file-notation">
+            <span>a</span>
+            <span>b</span>
+            <span>c</span>
+            <span>d</span>
+            <span>e</span>
+            <span>f</span>
+            <span>g</span>
+            <span>h</span>
+        </div>
+    </div>
+
+    <p id="status">Loading...</p>
+
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-modal" class="close-button">&times;</span>
+            <p id="game-over-message"></p>
+        </div>
+    </div>
+
+    <script type="module" src="chess.js"></script>
+</body>
+</html>

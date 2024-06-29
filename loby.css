@@ -1,0 +1,623 @@
+:root {
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
+    --tg-theme-hint-color: #707579;
+    --tg-theme-link-color: #3390ec;
+    --tg-theme-button-color: #3390ec;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f4f4f5;
+    --tg-theme-accent-color: #3390ec;
+    --tg-theme-section-header-color: #f4f4f5;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    background-color: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    min-height: 100vh;
+    padding-bottom: 24px;
+}
+
+.container {
+    max-width: 100%;
+    padding: 0 16px;
+}
+
+header {
+    padding: 16px 0;
+    margin-bottom: 16px;
+    position: sticky;
+    top: 0;
+    background-color: var(--tg-theme-bg-color);
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--tg-theme-text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--tg-theme-button-color);
+}
+
+.user-chip {
+    background-color: var(--tg-theme-secondary-bg-color);
+    border-radius: 16px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.user-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--tg-theme-button-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.balance {
+    font-size: 13px;
+    color: var(--tg-theme-link-color);
+    font-weight: 500;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.coin-icon {
+    width: 14px;
+    height: 14px;
+}
+
+section {
+    margin-bottom: 20px;
+    background-color: var(--tg-theme-secondary-bg-color);
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+    background-color: var(--tg-theme-section-header-color);
+    padding: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+h2 {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--tg-theme-text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--tg-theme-button-color);
+}
+
+.section-content {
+    padding: 16px;
+}
+
+.bet-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.bet-button {
+    background-color: var(--tg-theme-bg-color);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bet-button:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.bet-button.active {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border-color: var(--tg-theme-button-color);
+}
+
+.bet-amount {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.bet-label {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.create-game-btn {
+    width: 100%;
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.create-game-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.create-game-btn:active {
+    transform: translateY(0);
+}
+
+.btn-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.status-message {
+    font-size: 14px;
+    color: var(--tg-theme-hint-color);
+    margin-top: 12px;
+    text-align: center;
+    padding: 0 8px;
+}
+
+.games-list {
+    list-style: none;
+}
+
+.game-item {
+    background-color: var(--tg-theme-bg-color);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.game-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.game-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-creator {
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.creator-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--tg-theme-button-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.creator-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-details {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--tg-theme-hint-color);
+}
+
+.game-detail {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.detail-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+}
+
+.join-btn {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.join-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.join-btn:active {
+    transform: translateY(0);
+}
+
+.no-games {
+    text-align: center;
+    color: var(--tg-theme-hint-color);
+    padding: 24px 16px;
+    font-size: 14px;
+    background-color: var(--tg-theme-bg-color);
+    border-radius: 10px;
+    margin-top: 8px;
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: var(--tg-theme-link-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.refresh-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s;
+}
+
+.refresh-btn:hover .refresh-icon {
+    transform: rotate(180deg);
+}
+
+.tabs {
+    display: flex;
+    background-color: var(--tg-theme-secondary-bg-color);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+}
+
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.tab.active {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.badge {
+    background-color: var(--tg-theme-button-color);
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+}
+/* Toggle switch styles */
+.private-toggle {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin-right: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+/* Add these styles to your existing loby.css */
+
+/* Join Private Game Section Styles */
+#join-private-section {
+    margin-bottom: 20px;
+}
+
+.join-private-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.private-game-input {
+    flex: 1;
+    padding: 14px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 15px;
+    background-color: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    transition: all 0.2s;
+}
+
+.private-game-input:focus {
+    outline: none;
+    border-color: var(--tg-theme-button-color);
+    box-shadow: 0 0 0 2px rgba(51, 144, 236, 0.2);
+}
+
+.join-private-btn {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.join-private-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.join-private-btn:active {
+    transform: translateY(0);
+}
+/* Replace your existing toggle styles with this */
+/* Replace your existing toggle styles with this */
+/* Replace your existing toggle styles with this */
+.private-toggle-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 16px 0;
+    padding: 12px 16px;
+    background-color: var(--tg-theme-bg-color);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.private-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+}
+
+.private-toggle-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--tg-theme-button-color);
+}
+
+.private-toggle {
+    position: relative;
+    display: inline-block;
+}
+
+.private-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-text {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--tg-theme-hint-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggle-text::after {
+    content: "OFF";
+    margin-left: 6px;
+    color: #f44336;
+}
+
+input:checked ~ .toggle-text {
+    background-color: rgba(51, 144, 236, 0.1);
+    color: var(--tg-theme-button-color);
+}
+
+input:checked ~ .toggle-text::after {
+    content: "ON";
+    color: #4CAF50;
+}
+/* Black back button styles */
+#back-btn {
+
+    left: 20px;
+    top: 20px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #000; /* Black color */
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+#back-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+#back-btn svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}

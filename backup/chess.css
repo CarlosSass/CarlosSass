@@ -1,0 +1,652 @@
+/* Telegram Mini App Chess - Complete CSS */
+:root {
+    /* Telegram theme variables */
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
+    --tg-theme-hint-color: #707579;
+    --tg-theme-link-color: #3390ec;
+    --tg-theme-button-color: #3390ec;
+    --tg-theme-button-text-color: #ffffff;
+    
+    /* Chess colors */
+    --light-square: #f0d9b5;
+    --dark-square: #b58863;
+    --highlight: rgba(52, 152, 219, 0.4);
+    --capture-highlight: rgba(231, 76, 60, 0.4);
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    
+    /* Sizing */
+    --square-size: min(11.5vw, 50px);
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+  
+  body {
+    background-color: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    line-height: 1.5;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+  
+  .telegram-app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Header Styles */
+  .app-header {
+    background-color: var(--tg-theme-bg-color);
+    padding: 12px 15px 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .app-header h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--tg-theme-text-color);
+    margin-bottom: 4px;
+  }
+  
+  .player-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+  
+  .user-details, .opponent-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  #username, #opponent-username {
+    font-weight: 500;
+  }
+  
+  #balance {
+    font-weight: bold;
+    color: var(--success-color);
+    font-size: 0.85rem;
+  }
+  
+  .time-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-top: 4px;
+  }
+  
+  .player-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .player-time span:last-child {
+    font-weight: 500;
+  }
+  
+  .game-code {
+    font-size: 0.75rem;
+    color: var(--tg-theme-hint-color);
+    text-align: center;
+    margin-top: 4px;
+  }
+  
+  /* Chessboard Styles */
+  .chessboard-container {
+    margin: 0 auto;
+    position: relative;
+  }
+  
+  .board-with-notation {
+    display: flex;
+    margin-bottom: 2px;
+  }
+  
+  .rank-notation {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+    height: calc(8 * var(--square-size));
+    margin-right: 4px;
+    font-size: calc(var(--square-size) * 0.18);
+    color: var(--tg-theme-hint-color);
+  }
+  
+  .rank-notation span {
+    height: var(--square-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .file-notation {
+    display: flex;
+    justify-content: space-between;
+    width: calc(8 * var(--square-size));
+    font-size: calc(var(--square-size) * 0.18);
+    color: var(--tg-theme-hint-color);
+    padding: 0 2px;
+  }
+  
+  .file-notation span {
+    width: var(--square-size);
+    text-align: center;
+  }
+  
+  #chessboard {
+    display: grid;
+    grid-template-columns: repeat(8, var(--square-size));
+    grid-template-rows: repeat(8, var(--square-size));
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    touch-action: none;
+  }
+  
+  .square {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--square-size) * 0.65);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .square.light {
+    background-color: var(--light-square);
+  }
+  
+  .square.dark {
+    background-color: var(--dark-square);
+  }
+  
+  .square.selected {
+    box-shadow: inset 0 0 0 3px var(--tg-theme-link-color);
+    z-index: 2;
+  }
+  
+  .square.possible-move::after {
+    content: '';
+    position: absolute;
+    width: calc(var(--square-size) * 0.3);
+    height: calc(var(--square-size) * 0.3);
+    background-color: var(--highlight);
+    border-radius: 50%;
+  }
+  
+  .square.capture-move::after {
+    content: '';
+    position: absolute;
+    width: calc(var(--square-size) - 6px);
+    height: calc(var(--square-size) - 6px);
+    border: 3px dashed var(--capture-highlight);
+    border-radius: 50%;
+  }
+  
+  /* Fixed Piece Colors */
+  .piece {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    cursor: pointer;
+  }
+  
+  /* White pieces (uppercase) */
+  .piece[data-piece="K"],
+  .piece[data-piece="Q"],
+  .piece[data-piece="R"],
+  .piece[data-piece="B"],
+  .piece[data-piece="N"],
+  .piece[data-piece="P"] {
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Black pieces (lowercase) */
+  .piece[data-piece="k"],
+  .piece[data-piece="q"],
+  .piece[data-piece="r"],
+  .piece[data-piece="b"],
+  .piece[data-piece="n"],
+  .piece[data-piece="p"] {
+    color: black !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Game Controls */
+  .game-controls {
+    width: 100%;
+    max-width: calc(8 * var(--square-size));
+    margin-top: 12px;
+    padding: 0 5px;
+  }
+  
+  .turn-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  
+  .turn-display.white-turn {
+    background-color: rgba(240, 217, 181, 0.3);
+  }
+  
+  .turn-display.black-turn {
+    background-color: rgba(181, 136, 99, 0.3);
+    color: white;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .tg-button {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.1s;
+    white-space: nowrap;
+  }
+  
+  .tg-button:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+  
+  .tg-button.primary {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+  }
+  
+  .tg-button.success {
+    background-color: var(--success-color);
+    color: white;
+  }
+  
+  .tg-button.danger {
+    background-color: var(--danger-color);
+    color: white;
+  }
+  
+  .tg-button.warning {
+    background-color: var(--warning-color);
+    color: white;
+  }
+  
+  .move-history {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  
+  .move-history h3 {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    text-align: center;
+    color: var(--tg-theme-hint-color);
+  }
+  
+  .move-list-container {
+    max-height: 120px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  #move-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    font-size: 0.8rem;
+  }
+  
+  #move-list li {
+    padding: 4px 6px;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    text-align: center;
+  }
+  
+  /* Status Message */
+  .status-message {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--tg-theme-hint-color);
+    padding: 8px;
+    margin-top: auto;
+  }
+  
+  /* Modal Styles */
+  .tg-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .modal-content {
+    background-color: var(--tg-theme-bg-color);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 300px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.25s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  .modal-content h3 {
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+  
+  .modal-content p {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  
+  /* Promotion Modal */
+  .promotion-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--tg-theme-bg-color);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 101;
+    animation: slideUp 0.2s ease-out;
+  }
+  
+  .promo-option {
+    width: 45px;
+    height: 45px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  
+  .promo-option:active {
+    transform: scale(0.95);
+  }
+  
+  /* Alerts */
+  .alert {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 99;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    animation: alertIn 0.2s ease-out, alertOut 0.2s ease-out 2.6s forwards;
+    max-width: 90%;
+    text-align: center;
+  }
+  
+  @keyframes alertIn {
+    from { opacity: 0; transform: translate(-50%, -20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  
+  @keyframes alertOut {
+    from { opacity: 1; transform: translate(-50%, 0); }
+    to { opacity: 0; transform: translate(-50%, -20px); }
+  }
+  
+  .alert.info {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+  }
+  
+  .alert.success {
+    background-color: var(--success-color);
+    color: white;
+  }
+  
+.alert.error {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.alert.warning {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+/* Responsive Adjustments */
+@media (min-width: 500px) {
+    :root {
+        --square-size: 50px;
+    }
+    
+    .game-area {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 15px;
+    }
+    
+    .chessboard-container {
+        margin-right: 20px;
+    }
+    
+    .game-controls {
+        width: 180px;
+        margin-top: 0;
+    }
+    
+    .move-list-container {
+        max-height: 300px;
+    }
+}
+
+@media (min-width: 768px) {
+    :root {
+        --square-size: 55px;
+    }
+    
+    .game-controls {
+        width: 200px;
+    }
+}
+/* Chess Piece Colors - Unchanged from original */
+.piece {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    cursor: pointer;
+}
+
+/* White pieces (uppercase) */
+.piece[data-piece="K"],
+.piece[data-piece="Q"],
+.piece[data-piece="R"],
+.piece[data-piece="B"],
+.piece[data-piece="N"],
+.piece[data-piece="P"] {
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Black pieces (lowercase) */
+.piece[data-piece="k"],
+.piece[data-piece="q"],
+.piece[data-piece="r"],
+.piece[data-piece="b"],
+.piece[data-piece="n"],
+.piece[data-piece="p"] {
+    color: black !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+/* Override any square-based color inheritance */
+.square.light .piece,
+.square.dark .piece,
+.square.selected .piece,
+.square.possible-move .piece,
+.square.capture-move .piece {
+    color: inherit !important;
+}
+/* In chess.css */
+
+/* Style for the initial waiting state */
+.game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1; /* Take up remaining vertical space */
+    padding: 20px;
+    text-align: center;
+}
+
+.status-message {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--tg-theme-text-color);
+    margin-bottom: 15px;
+}
+
+.opponent-info {
+    font-size: 1rem;
+    color: var(--tg-theme-hint-color);
+}
+
+/* Optional: Add a simple loading indicator */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.opponent-info #opponent-username {
+    display: inline-block;
+    animation: pulse 1.5s infinite alternate;
+}
+
+/* Ensure the chessboard and controls are hidden initially (redundant if inline style is used, but good for clarity) */
+.chessboard-container {
+  /*  display: none;
+*/}
+
+.game-controls {
+    display: none;
+}
+.promotion-dialog {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.promotion-title {
+  text-align: center;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.promotion-options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.promotion-option {
+  font-size: 24px;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  text-align: center;
+}
+
+.promotion-option:hover {
+  background-color: #f0f0f0;
+}
+
+.time-low {
+  color: red;
+  font-weight: bold;
+}
+
+.time-low {
+  color: red;
+  font-weight: bold;
+}

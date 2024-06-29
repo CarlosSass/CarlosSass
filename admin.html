@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Deposit Approval</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    h2 { color: #333; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: #333;
+      color: white;
+    }
+
+    tr.pending {
+      background-color: #fff3cd;
+    }
+
+    tr.approved {
+      background-color: #d4edda;
+    }
+
+    tr.rejected {
+      background-color: #f8d7da;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 2px;
+    }
+
+    .btn-approve {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .btn-approve:hover {
+      background-color: #218838;
+    }
+
+    .btn-reject {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .btn-reject:hover {
+      background-color: #c82333;
+    }
+
+    .tab {
+      overflow: hidden;
+      border: 1px solid #ccc;
+      background-color: #f1f1f1;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .tab button {
+      background-color: inherit;
+      float: left;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      transition: 0.3s;
+    }
+
+    .tab button:hover {
+      background-color: #ddd;
+    }
+
+    .tab button.active {
+      background-color: #333;
+      color: white;
+    }
+
+    .tabcontent {
+      display: none;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+      background: white;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 5px;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: black;
+    }
+
+    #rejectReason {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .reason-text {
+      font-style: italic;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Admin Panel – Deposit Management</h2>
+  
+  <div class="tab">
+    <button class="tablinks active" data-tab="pending">Pending</button>
+    <button class="tablinks" data-tab="approved">Approved</button>
+    <button class="tablinks" data-tab="rejected">Rejected</button>
+  </div>
+
+  <div id="pending" class="tabcontent" style="display: block;">
+    <table>
+      <thead>
+        <tr>
+          <th>Phone</th>
+          <th>Amount (ETB)</th>
+          <th>Description</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pending-body">
+        <!-- Dynamic content -->
+      </tbody>
+    </table>
+  </div>
+
+  <div id="approved" class="tabcontent">
+    <table>
+      <thead>
+        <tr>
+          <th>Phone</th>
+          <th>Amount (ETB)</th>
+          <th>Description</th>
+          <th>Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="approved-body">
+        <!-- Dynamic content -->
+      </tbody>
+    </table>
+  </div>
+
+  <div id="rejected" class="tabcontent">
+    <table>
+      <thead>
+        <tr>
+          <th>Phone</th>
+          <th>Amount (ETB)</th>
+          <th>Description</th>
+          <th>Reason</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="rejected-body">
+        <!-- Dynamic content -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Reject Modal -->
+  <div id="rejectModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3>Reject Deposit</h3>
+      <p>Please provide a reason for rejecting this deposit:</p>
+      <textarea id="rejectReason" rows="4" required></textarea>
+      <div style="text-align: right; margin-top: 15px;">
+        <button class="btn btn-reject" id="confirmRejectBtn">Confirm Reject</button>
+        <button class="btn" id="cancelRejectBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let currentTransactionId = null;
+    let currentTransactionPhone = null;
+    let currentTransactionAmount = null;
+
+    // Set up realtime subscription
+    function setupRealtime() {
+      const channel = supabase
+        .channel('transactions_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'player_transactions'
+          },
+          payload => {
+            console.log('Change received!', payload);
+            loadTransactions();
+          }
+        )
+        .subscribe();
+
+      return channel;
+    }
+
+    // Initialize realtime updates
+    const channel = setupRealtime();
+
+    function openTab(evt, tabName) {
+      const tabcontent = document.getElementsByClassName("tabcontent");
+      for (let i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+      }
+
+      const tablinks = document.getElementsByClassName("tablinks");
+      for (let i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+      }
+
+      document.getElementById(tabName).style.display = "block";
+      evt.currentTarget.classList.add("active");
+      
+      // Load data for the selected tab if needed
+      if (tabName === 'approved') {
+        loadApprovedTransactions();
+      } else if (tabName === 'rejected') {
+        loadRejectedTransactions();
+      }
+    }
+
+    async function loadTransactions() {
+      await loadPendingTransactions();
+      await loadApprovedTransactions();
+      await loadRejectedTransactions();
+    }
+
+    async function loadPendingTransactions() {
+      const { data: transactions, error } = await supabase
+        .from('player_transactions')
+        .select('*')
+        .eq('status', 'pending')
+        .eq('transaction_type', 'deposit')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        alert('Error loading pending transactions');
+        console.error(error);
+        return;
+      }
+
+      const tbody = document.getElementById('pending-body');
+      tbody.innerHTML = '';
+
+      transactions.forEach(tx => {
+        const row = document.createElement('tr');
+        row.className = tx.status;
+
+        const approveBtn = document.createElement('button');
+        approveBtn.className = 'btn btn-approve';
+        approveBtn.textContent = 'Approve';
+        approveBtn.addEventListener('click', () => approveDeposit(tx.id, tx.player_phone, tx.amount));
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.className = 'btn btn-reject';
+        rejectBtn.textContent = 'Reject';
+        rejectBtn.addEventListener('click', () => openRejectModal(tx.id, tx.player_phone, tx.amount));
+
+        const actionsCell = document.createElement('td');
+        actionsCell.append(approveBtn, rejectBtn);
+
+        row.innerHTML = `
+          <td>${tx.player_phone}</td>
+          <td>${tx.amount.toFixed(2)}</td>
+          <td>${tx.description || 'N/A'}</td>
+          <td>${new Date(tx.created_at).toLocaleString()}</td>
+        `;
+
+        row.appendChild(actionsCell);
+        tbody.appendChild(row);
+      });
+    }
+
+    async function loadApprovedTransactions() {
+      const { data: transactions, error } = await supabase
+        .from('player_transactions')
+        .select('*')
+        .eq('status', 'approved')
+        .eq('transaction_type', 'deposit')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        alert('Error loading approved transactions');
+        console.error(error);
+        return;
+      }
+
+      const tbody = document.getElementById('approved-body');
+      tbody.innerHTML = '';
+
+      transactions.forEach(tx => {
+        const row = document.createElement('tr');
+        row.className = tx.status;
+
+        row.innerHTML = `
+          <td>${tx.player_phone}</td>
+          <td>${tx.amount.toFixed(2)}</td>
+          <td>${tx.description || 'N/A'}</td>
+          <td>${new Date(tx.created_at).toLocaleString()}</td>
+          <td>${tx.status}</td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+
+    async function loadRejectedTransactions() {
+      const { data: transactions, error } = await supabase
+        .from('player_transactions')
+        .select('*')
+        .eq('status', 'rejected')
+        .eq('transaction_type', 'deposit')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        alert('Error loading rejected transactions');
+        console.error(error);
+        return;
+      }
+
+      const tbody = document.getElementById('rejected-body');
+      tbody.innerHTML = '';
+
+      transactions.forEach(tx => {
+        const row = document.createElement('tr');
+        row.className = tx.status;
+
+        row.innerHTML = `
+          <td>${tx.player_phone}</td>
+          <td>${tx.amount.toFixed(2)}</td>
+          <td>${tx.description || 'N/A'}</td>
+          <td>${tx.reject_reason || 'No reason provided'}</td>
+          <td>${new Date(tx.created_at).toLocaleString()}</td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+
+    async function approveDeposit(id, phone, amount) {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('phone', phone)
+        .single();
+
+      if (userError) {
+        alert('User not found!');
+        console.error(userError);
+        return;
+      }
+
+      const balanceBefore = user.balance || 0;
+      const balanceAfter = balanceBefore + amount;
+
+      // 1. Update user balance
+      const { error: balanceError } = await supabase
+        .from('users')
+        .update({ balance: balanceAfter })
+        .eq('phone', phone);
+
+      if (balanceError) {
+        alert('Failed to update user balance!');
+        console.error(balanceError);
+        return;
+      }
+
+      // 2. Update original transaction to "approved"
+      const { error: txUpdateError } = await supabase
+        .from('player_transactions')
+        .update({ status: 'approved' })
+        .eq('id', id);
+
+      if (txUpdateError) {
+        alert('Failed to update transaction status!');
+        console.error(txUpdateError);
+        return;
+      }
+
+      // 3. Insert a new transaction record for the actual deposit
+      
+     
+
+      alert('Deposit approved and recorded!');
+      loadTransactions();
+    }
+
+    function openRejectModal(id, phone, amount) {
+      currentTransactionId = id;
+      currentTransactionPhone = phone;
+      currentTransactionAmount = amount;
+      document.getElementById('rejectModal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('rejectModal').style.display = 'none';
+      document.getElementById('rejectReason').value = '';
+    }
+
+    async function confirmReject() {
+      const reason = document.getElementById('rejectReason').value;
+      if (!reason) {
+        alert('Please provide a rejection reason');
+        return;
+      }
+
+      // Update transaction status to rejected and add reason
+      const { error: txUpdateError } = await supabase
+        .from('player_transactions')
+        .update({ 
+          status: 'rejected',
+          description: reason
+        })
+        .eq('id', currentTransactionId);
+
+      if (txUpdateError) {
+        alert('Failed to reject transaction!');
+        console.error(txUpdateError);
+        return;
+      }
+
+      alert('Deposit rejected!');
+      closeModal();
+      loadTransactions();
+    }
+
+    // Initialize event listeners when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // Tab switching
+      document.querySelectorAll('.tablinks').forEach(button => {
+        button.addEventListener('click', (e) => {
+          openTab(e, e.target.dataset.tab);
+        });
+      });
+
+      // Modal close button
+      document.querySelector('.close').addEventListener('click', closeModal);
+
+      // Modal cancel button
+      document.getElementById('cancelRejectBtn').addEventListener('click', closeModal);
+
+      // Confirm reject button
+      document.getElementById('confirmRejectBtn').addEventListener('click', confirmReject);
+
+      // Load initial data
+      loadTransactions();
+    });
+  </script>
+</body>
+</html>
