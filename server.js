@@ -1,63 +1,65 @@
+require('dotenv').config(); // Load environment variables first
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { Server } = require('socket.io');
 const { Chess } = require('chess.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const helmet = require('helmet');
 
 const app = express();
-app.get("/", (req, res) => {
-  res.send(`
-    <h1>Chess Server</h1>
-    <p>Server is running</p>
-    <p>WebSocket endpoint: ws://${req.headers.host}</p>
-    <p>API Documentation:</p>
-    <ul>
-      <li>POST /api/move - Submit a chess move</li>
-      <li>GET /api/game-by-code/:code - Get game status</li>
-    </ul>
-  `);
-});
 
-// Configuration (replace these values with your own)
+// Railway-optimized configuration
 const config = {
-  supabaseUrl: 'https://evberyanshxxalxtwnnc.supabase.co',
-  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw',
-   port: process.env.PORT || 3000, // Modified for Railway compatibility
-  corsOrigin: process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',') 
-    : 'http://localhost:1384'
+  supabaseUrl: process.env.SUPABASE_URL || 'https://evberyanshxxalxtwnnc.supabase.co',
+  supabaseKey: process.env.SUPABASE_KEY || 'your-supabase-key',
+  port: process.env.PORT || 3000,
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:1384',
+  nodeEnv: process.env.NODE_ENV || 'development'
 };
 
-
-// Middleware
+// Enhanced middleware for Railway
+app.use(helmet()); // Security headers
 app.use(cors({
   origin: config.corsOrigin,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Initialize Supabase
-const supabase = createClient(config.supabaseUrl, config.supabaseKey);
-
-// Create HTTP server
-// Replace your current server.listen with:
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Initialize Supabase with Railway best practices
+const supabase = createClient(config.supabaseUrl, config.supabaseKey, {
+  auth: {
+    persistSession: false // Recommended for server-side usage
+  }
 });
-// Initialize Socket.IO
+
+// Railway-optimized HTTP server
+const server = app.listen(config.port, '0.0.0.0', () => {
+  console.log(`Server running in ${config.nodeEnv} mode on port ${config.port}`);
+  console.log(`CORS configured for: ${config.corsOrigin}`);
+});
+
+// Enhanced Socket.IO for Railway
 const io = new Server(server, {
   cors: {
     origin: config.corsOrigin,
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true
   },
   connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: true
-  }
+  },
+  transports: ['websocket', 'polling'], // Railway WebSocket optimization
+  pingInterval: 25000, // Better for Railway's load balancing
+  pingTimeout: 20000,
+  serveClient: false // Don't serve Socket.IO client files
 });
+
+// [Rest of your existing code continues here...]
 
 // Game state management
 const gameTimers = {};
@@ -1095,9 +1097,6 @@ app.post('/api/start-timer', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-app.get("/health", (req, res) => {
-  res.status(200).send("OK");
-});
 // Add this to your server initialization
 const abandonedGameChecker = setInterval(async () => {
   try {
@@ -1334,5 +1333,3 @@ app.post('/api/accept-draw', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-// Export for Vercel serverless functions
-module.exports = app;
