@@ -12,14 +12,25 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 
 // Test route - REQUIRED for Railway
-app.get('/', (req, res) => {
-  res.json({ 
-    status: 'Server is working! ✅',
-    message: 'Socket.IO is running at /socket.io/',
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
 
+// Add a test page to debug Socket.IO
+app.get('/test', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <script>
+      const socket = io();
+      socket.on('connect', () => {
+        document.body.innerHTML += '<p>Connected! Socket ID: ' + socket.id + '</p>';
+      });
+      socket.on('welcome', (data) => {
+        document.body.innerHTML += '<p>Server says: ' + JSON.stringify(data) + '</p>';
+      });
+    </script>
+    <h1>Socket.IO Test</h1>
+    <p>Check console (F12) for connection logs</p>
+  `);
+});
 // Start server
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
