@@ -42,7 +42,9 @@ const io = new Server(server, {
     skipMiddlewares: true
   }
 });
-
+app.get("/", (req, res) => {
+  res.send("Chess server is running 🚀");
+});
 // Game state management
 const gameTimers = {};
 const activeGames = new Map();
