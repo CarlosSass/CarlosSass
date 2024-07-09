@@ -35,7 +35,7 @@ const gameState = {
   currentGame: null,
   playerColor: 'white',
   gameCode: '',
-  apiBaseUrl: 'http://localhost:3000',
+  apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
   isConnected: false
   
 };
