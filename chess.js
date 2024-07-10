@@ -12,33 +12,37 @@ const blackUsername = document.getElementById('black-username');
 const moveHistory = document.getElementById('move-history');
 const errorDisplay = document.getElementById('error-message');
 
-// Initialize Supabase (for authentication and persistence)
+// Initialize Supabase (same as before)
 const supabase = createClient(
     'https://evberyanshxxalxtwnnc.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw'
-  );
+);
 
-// Initialize Socket.IO
-const socket = io('http://localhost:3000', {
+// Initialize Socket.IO - UPDATED FOR RAILWAY
+const socket = io('https://chess-game-production-9494.up.railway.app', {
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
-  timeout: 20000
+  timeout: 20000,
+  transports: ['websocket'], // Force WebSocket protocol
+  secure: true,
+  withCredentials: true
 });
 
-// Game State
+// Game State - UPDATED API URL
 const gameState = {
-  playerColor: 'white', // This will be set from URL params
-  boardFlipped: false ,// Add this new property
+  playerColor: 'white',
+  boardFlipped: false,
   chess: new Chess(),
   selectedSquare: null,
   currentGame: null,
-  playerColor: 'white',
   gameCode: '',
-  apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
+  apiBaseUrl: 'https://chess-game-production-9494.up.railway.app', // Updated
   isConnected: false
-  
 };
+
+// ... [rest of your existing code remains exactly the same] ...
+
 
 // Piece Symbols
 const PIECE_SYMBOLS = {
