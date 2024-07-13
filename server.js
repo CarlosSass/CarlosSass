@@ -13,14 +13,37 @@ const config = {
   supabaseKey: process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw',
   
   port: process.env.PORT || 3000,
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:1384'
+  corsOrigin: process.env.CORS_ORIGIN || 'https://chessgame-git-main-kb-solutions-projects.vercel.app/'
 };
 // Middleware
+// Update your CORS configuration
+const allowedOrigins = [
+  'http://localhost:1384', // Local development
+  'https://chessgame-git-main-kb-solutions-projects.vercel.app', // Your Vercel frontend
+  'https://chess-game-production-9494.up.railway.app' // Your backend
+];
+
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
+// Special handling for Socket.IO CORS
+io.engine.on("headers", (headers) => {
+  headers["Access-Control-Allow-Origin"] = allowedOrigins.join(", ");
+  headers["Access-Control-Allow-Credentials"] = "true";
+});
 app.use(bodyParser.json());
 
 // Initialize Supabase
