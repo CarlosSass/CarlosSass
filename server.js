@@ -7,28 +7,28 @@ const bodyParser = require('body-parser');
 
 const app = express();
 
-// Configuration (replace these values with your own)
+// Configuration
 const config = {
   supabaseUrl: process.env.SUPABASE_URL || 'https://evberyanshxxalxtwnnc.supabase.co',
   supabaseKey: process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw',
-  
   port: process.env.PORT || 3000,
-  corsOrigin: process.env.CORS_ORIGIN || 'https://chessgame-git-main-kb-solutions-projects.vercel.app/'
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:1384'
 };
-// Middleware
-// Update your CORS configuration
+
+// Enhanced CORS configuration
 const allowedOrigins = [
-  'http://localhost:1384', // Local development
-  'https://chessgame-git-main-kb-solutions-projects.vercel.app', // Your Vercel frontend
-  'https://chess-game-production-9494.up.railway.app' // Your backend
+  config.corsOrigin,
+  'https://chessgame-git-main-kb-solutions-projects.vercel.app',
+  'https://chess-game-production-9494.up.railway.app'
 ];
 
+// Middleware
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.includes(origin) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -39,11 +39,36 @@ app.use(cors({
   credentials: true
 }));
 
-// Special handling for Socket.IO CORS
+app.use(bodyParser.json());
+
+// Initialize Supabase
+const supabase = createClient(config.supabaseUrl, config.supabaseKey);
+
+// Create HTTP server
+const server = app.listen(config.port, () => {
+  console.log(`Server running on port ${config.port}`);
+});
+
+// Initialize Socket.IO with enhanced CORS
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true
+  }
+});
+
+// Add CORS headers for Socket.IO
 io.engine.on("headers", (headers) => {
   headers["Access-Control-Allow-Origin"] = allowedOrigins.join(", ");
   headers["Access-Control-Allow-Credentials"] = "true";
 });
+
+// ... [rest of your existing server code remains the same] ...
 app.use(bodyParser.json());
 
 // Initialize Supabase
