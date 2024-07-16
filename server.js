@@ -5,6 +5,15 @@ const { Chess } = require('chess.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
+// Error handling
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});
+
 const app = express();
 
 // Configuration
@@ -28,7 +37,7 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -41,12 +50,34 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
+// Health check endpoints
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+app.get('/ready', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('chess_games')
+      .select('*')
+      .limit(1);
+    
+    if (error) throw error;
+    res.status(200).json({ database: 'connected' });
+  } catch (err) {
+    res.status(500).json({ database: 'disconnected' });
+  }
+});
+
 // Initialize Supabase
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
-// Create HTTP server
-const server = app.listen(config.port, () => {
+// Create HTTP server with error handling
+const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
 });
 
 // Initialize Socket.IO with enhanced CORS
@@ -68,40 +99,19 @@ io.engine.on("headers", (headers) => {
   headers["Access-Control-Allow-Credentials"] = "true";
 });
 
-// ... [rest of your existing server code remains the same] ...
-app.use(bodyParser.json());
-
-// Initialize Supabase
-const supabase = createClient(config.supabaseUrl, config.supabaseKey);
-
-// Create HTTP server
-const server = app.listen(config.port, () => {
-  console.log(`Server running on port ${config.port}`);
-});
-
-// Initialize Socket.IO
-const io = new Server(server, {
-  cors: {
-    origin: config.corsOrigin,
-    methods: ["GET", "POST"]
-  },
-  connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
-    skipMiddlewares: true
-  }
-});
+// Root endpoint
 app.get("/", (req, res) => {
   res.send("Chess server is running 🚀");
 });
+
 // Game state management
 const gameTimers = {};
 const activeGames = new Map();
-const gameRooms = new Map(); // Tracks players in each room: { gameCode: { white: socketId, black: socketId } }
+const gameRooms = new Map();
 
 // Socket.IO Connection Handling
 io.on('connection', (socket) => {
   console.log(`New connection: ${socket.id}`);
-
   // Handle joining a game room
    socket.on('joinGame', async (gameCode) => {
     try {
