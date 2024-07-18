@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/game", "destination": "/game.html" },
+    { "source": "/profile", "destination": "/profile.html" },
+    { "source": "/loby", "destination": "/loby.html" },
+    { "source": "/home", "destination": "/home.html" },
+    { "source": "/guessnumberorderloby", "destination": "/guessnumberorderloby.html" },
+    { "source": "/chess", "destination": "/chess.html" }
+  ]
+}
