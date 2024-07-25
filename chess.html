@@ -4,11 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chess Game</title>
-    <link rel="stylesheet" href="chess.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
     <style>
+        :root {
+            --tg-theme-bg-color: #ffffff;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #707579;
+            --tg-theme-link-color: #3390ec;
+            --tg-theme-button-color: #3390ec;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #f4f4f5;
+        }
+        
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            min-height: 100vh;
+            overflow-x: hidden;
         }
         
         #back-btn {
@@ -19,7 +35,7 @@
             border: none;
             cursor: pointer;
             padding: 8px;
-            color: black;
+            color: var(--tg-theme-text-color);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -35,6 +51,7 @@
             opacity: 0.8;
         }
     </style>
+    <link rel="stylesheet" href="chess.css">
 </head>
 <body>
     <!-- Back button with absolute positioning -->
@@ -57,7 +74,7 @@
                 <p>Waiting for opponent...</p>
             </div>
             <div id="promotion-dialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
-                <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                <div style="background: var(--tg-theme-bg-color); padding: 20px; border-radius: 10px; text-align: center;">
                     <h3>Promote your pawn to:</h3>
                     <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
                         <button class="promotion-option" data-piece="q" style="font-size: 2em; cursor: pointer;">♕</button>
@@ -82,12 +99,14 @@
             <div class="game-status" id="game-status">Loading game...</div>
             <div class="move-history" id="move-history"></div>
             <div class="actions">
-                <button id="offer-draw">Offer Draw</button>
-                <button id="resign">Resign</button>
+                <button id="offer-draw" class="tg-button">Offer Draw</button>
+                <button id="resign" class="tg-button">Resign</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>     <script type="module" src="chess.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script type="module" src="chess.js"></script>
 </body>
 </html>
