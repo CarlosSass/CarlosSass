@@ -1,37 +1,41 @@
+/* Telegram Mini App Optimized Chess CSS */
 body {
-  font-family: 'Arial', sans-serif;
-  background-color: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
   margin: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 0;
   min-height: 100vh;
 }
 
 .chess-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 800px;
+  gap: 16px;
+  max-width: 100%;
   width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .game-info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
 }
 
 .player {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 400px;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-weight: bold;
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  background-color: var(--tg-theme-secondary-bg-color);
 }
 
 .white-player {
@@ -46,68 +50,182 @@ body {
 
 .chess-board {
   display: grid;
-  grid-template-columns: repeat(8, 50px);
-  grid-template-rows: repeat(8, 50px);
+  grid-template-columns: repeat(8, min(12vw, 50px));
+  grid-template-rows: repeat(8, min(12vw, 50px));
   border: 2px solid #333;
+  width: min(96vw, 400px);
+  height: min(96vw, 400px);
+  margin: 0 auto;
 }
 
 .square {
-  width: 50px;
-  height: 50px;
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
 }
 
+/* All your existing square highlight styles remain the same */
 .square.highlight {
-  /* For normal moves */
   background-color: rgba(0, 255, 0, 0.3);
   box-shadow: inset 0 0 10px rgba(0, 200, 0, 0.5);
 }
 
 .square.highlight.capture {
-  /* For capture moves */
   background-color: rgba(255, 50, 50, 0.3);
   box-shadow: inset 0 0 10px rgba(200, 0, 0, 0.5);
   border: 2px dashed red;
 }
 
 .square.highlight.en-passant {
-  /* Special style for en passant */
   background-color: rgba(255, 165, 0, 0.3);
   box-shadow: inset 0 0 10px rgba(255, 140, 0, 0.5);
 }
 
 .square.highlight.promotion {
-  /* Promotion squares */
-  background-color: rgba(147, 112, 219, 0.3); /* Purple */
+  background-color: rgba(147, 112, 219, 0.3);
   box-shadow: inset 0 0 15px rgba(147, 112, 219, 0.7);
 }
 
 .game-controls {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 5px;
+  background-color: var(--tg-theme-secondary-bg-color);
+  padding: 16px;
+  border-radius: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .game-status {
-  font-size: 1.2em;
-  font-weight: bold;
-  margin-bottom: 15px;
+  font-size: 1.1em;
+  font-weight: 500;
+  margin-bottom: 12px;
   text-align: center;
 }
 
 .move-history {
-  height: 200px;
+  height: 120px;
   overflow-y: auto;
-  border: 1px solid #ddd;
+  border: 1px solid var(--tg-theme-hint-color);
   padding: 10px;
-  margin-bottom: 15px;
-  background-color: #f9f9f9;
+  margin-bottom: 12px;
+  background-color: var(--tg-theme-bg-color);
+  border-radius: 8px;
+  font-size: 0.9em;
 }
 
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.tg-button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95em;
+  flex: 1;
+  background-color: var(--tg-theme-button-color);
+  color: var(--tg-theme-button-text-color);
+}
+
+#offer-draw {
+  background-color: var(--tg-theme-button-color);
+}
+
+#resign {
+  background-color: #dc3545;
+  color: white;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* All your existing piece styles remain the same */
+.piece {
+  font-size: min(8vw, 40px);
+  line-height: min(12vw, 50px);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 10;
+  transition: transform 0.1s;
+}
+
+/* All your existing animations remain the same */
+@keyframes pop {
+  0% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* All your existing notification styles remain the same */
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 1000;
+}
+
+/* All your other existing styles remain exactly the same */
+/* ... [rest of your original CSS remains unchanged] ... */
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  .player {
+    padding: 8px 12px;
+    font-size: 0.9em;
+  }
+  
+  .game-status {
+    font-size: 1em;
+  }
+  
+  .tg-button {
+    padding: 8px 12px;
+    font-size: 0.85em;
+  }
+  
+  .move-history {
+    height: 100px;
+    font-size: 0.8em;
+  }
+}
+
+/* Telegram theme-aware elements */
+.theme-aware {
+  background-color: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+/* Scrollbar styling for Telegram */
+.move-history::-webkit-scrollbar {
+  width: 6px;
+}
+
+.move-history::-webkit-scrollbar-track {
+  background: var(--tg-theme-secondary-bg-color);
+}
+
+.move-history::-webkit-scrollbar-thumb {
+  background: var(--tg-theme-hint-color);
+  border-radius: 3px;
+}
+
+/* Keep all your other existing CSS rules exactly as they were */
 .actions {
   display: flex;
   gap: 10px;
