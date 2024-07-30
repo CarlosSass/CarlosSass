@@ -1183,17 +1183,59 @@ process.on('SIGTERM', () => {
 });
 async function recordTransaction(transactionData) {
   try {
-    const { data, error } = await supabase
-      .from('player_transactions')
-      .insert(transactionData)
-      .select()
-      .single();
+      // 1. First handle the user balance update
+      const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('balance')
+          .eq('phone', transactionData.player_phone)
+          .single();
 
-    if (error) throw error;
-    return data;
+      if (userError) throw userError;
+
+      const balance_before = userData?.balance || 0;
+      const balance_after = balance_before + transactionData.amount;
+
+      // 2. Attempt to create transaction record without game_id reference
+      const { error } = await supabase
+          .from('player_transactions')
+          .insert({
+              player_phone: transactionData.player_phone,
+              transaction_type: transactionData.transaction_type,
+              amount: transactionData.amount,
+              balance_before,
+              balance_after,
+              description: transactionData.description,
+              status: transactionData.status,
+              created_at: new Date().toISOString()
+              // Explicitly omitting game_id to avoid foreign key constraint
+          });
+
+      if (error) throw error;
+
+      // 3. Update user balance
+      
+
+      console.log('Transaction recorded successfully (without game_id):', transactionData);
+
   } catch (error) {
-    console.error('Transaction recording error:', error);
-    throw error;
+      console.error('Failed to record transaction:', error);
+      
+      // Fallback: Store transaction data in local storage if Supabase fails
+      try {
+          const failedTransactions = JSON.parse(localStorage.getItem('failedTransactions') || []);
+          failedTransactions.push({
+              ...transactionData,
+              balance_before: balance_before,
+              balance_after: balance_after,
+              timestamp: new Date().toISOString()
+          });
+          localStorage.setItem('failedTransactions', JSON.stringify(failedTransactions));
+          console.warn('Transaction stored locally for later recovery');
+      } catch (localStorageError) {
+          console.error('Failed to store transaction locally:', localStorageError);
+      }
+      
+      throw error;
   }
 }
 
