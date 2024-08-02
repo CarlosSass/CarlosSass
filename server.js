@@ -672,7 +672,7 @@ function startGameTimer(gameCode, initialTime = 600) {
     whiteTime: initialTime,
     blackTime: initialTime,
     lastUpdate: Date.now(),
-    currentTurn: 'white',
+    currentTurn: 'black',
     interval: setInterval(async () => {
       try {
         const now = Date.now();
