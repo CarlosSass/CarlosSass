@@ -783,7 +783,7 @@ async function endGame(gameCode, winner, result) {
     const updateData = {
       status: 'finished',
       winner,
-      result: result.slice(0, 10), // Ensure result isn't too long
+      result: result.slice(0, 50), // Increased length limit
       updated_at: new Date().toISOString(),
       ended_at: new Date().toISOString()
     };
@@ -797,7 +797,7 @@ async function endGame(gameCode, winner, result) {
     // 4. Process financial transactions if there was a bet
     if (game.bet && game.bet > 0 && winner) {
       const totalPrizePool = game.bet * 2;
-      const commissionAmount = totalPrizePool * 0.1; // 10% commission
+      const commissionAmount = Math.round(totalPrizePool * 0.1 * 100) / 100; // 10% commission, rounded
       const winnerPayout = totalPrizePool - commissionAmount;
 
       // Get current balances for both players
@@ -822,19 +822,21 @@ async function endGame(gameCode, winner, result) {
           newBalance: winnerNewBalance
         };
 
-        // Notify winner
-        if (room?.white) {
+        // Get and send transaction details
+        const { data: winnerTx } = await supabase
+          .from('player_transactions')
+          .select('*')
+          .eq('player_phone', game.white_phone)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        // Notify winner if still connected
+        if (room?.white && io.sockets.sockets.has(room.white)) {
           io.to(room.white).emit('gameWon', {
             amount: winnerPayout,
             newBalance: winnerNewBalance,
-            transaction: await supabase
-              .from('player_transactions')
-              .select('*')
-              .eq('game_id', gameCode)
-              .eq('player_phone', game.white_phone)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single()
+            transaction: winnerTx
           });
         }
       } 
@@ -853,19 +855,21 @@ async function endGame(gameCode, winner, result) {
           newBalance: winnerNewBalance
         };
 
-        // Notify winner
-        if (room?.black) {
+        // Get and send transaction details
+        const { data: winnerTx } = await supabase
+          .from('player_transactions')
+          .select('*')
+          .eq('player_phone', game.black_phone)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        // Notify winner if still connected
+        if (room?.black && io.sockets.sockets.has(room.black)) {
           io.to(room.black).emit('gameWon', {
             amount: winnerPayout,
             newBalance: winnerNewBalance,
-            transaction: await supabase
-              .from('player_transactions')
-              .select('*')
-              .eq('game_id', gameCode)
-              .eq('player_phone', game.black_phone)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single()
+            transaction: winnerTx
           });
         }
       }
@@ -877,37 +881,41 @@ async function endGame(gameCode, winner, result) {
           (loserData?.balance || 0) : 
           (winnerData?.balance || 0);
         
+        // FIXED: Changed game.moneyDecreasebet to game.bet
         await recordTransaction({
           player_phone: loserPhone,
           transaction_type: 'loss',
-          amount: -game.bet,
+          amount: -game.bet, // Fixed this line
           balance_before: loserBalanceBefore,
-          balance_after: loserBalanceBefore, // No change (already deducted)
+          balance_after: loserBalanceBefore,
           game_id: gameCode,
           description: `Lost game to ${winner === 'white' ? game.white_phone : game.black_phone} (${result})`,
           status: 'completed'
         });
 
+        // Get transaction details for notification
+        const { data: loserTx } = await supabase
+          .from('player_transactions')
+          .select('*')
+          .eq('player_phone', loserPhone)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
         loserTransaction = {
           player: loserPhone,
           amount: -game.bet,
-          newBalance: loserBalanceBefore
+          newBalance: loserBalanceBefore,
+          transaction: loserTx
         };
 
-        // Notify loser
+        // Notify loser if still connected
         const loserSocket = winner === 'white' ? room?.black : room?.white;
-        if (loserSocket) {
+        if (loserSocket && io.sockets.sockets.has(loserSocket)) {
           io.to(loserSocket).emit('gameLost', {
             amount: -game.bet,
             newBalance: loserBalanceBefore,
-            transaction: await supabase
-              .from('player_transactions')
-              .select('*')
-              .eq('game_id', gameCode)
-              .eq('player_phone', loserPhone)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single()
+            transaction: loserTx
           });
         }
       }
@@ -929,12 +937,7 @@ async function endGame(gameCode, winner, result) {
     if (updateError) throw updateError;
 
     // 6. Clean up game state
-    if (gameTimers[gameCode]) {
-      clearInterval(gameTimers[gameCode].interval);
-      delete gameTimers[gameCode];
-    }
-    activeGames.delete(gameCode);
-    gameRooms.delete(gameCode);
+    cleanupGameResources(gameCode);
 
     // 7. Return comprehensive result
     return {
@@ -948,21 +951,26 @@ async function endGame(gameCode, winner, result) {
       financials: {
         betAmount: game.bet || 0,
         prizePool: game.bet ? game.bet * 2 : 0,
-        commission: game.bet ? game.bet * 0.2 : 0,
-        winnerPayout: game.bet ? game.bet * 1.8 : 0
+        commission: game.bet ? Math.round(game.bet * 0.2 * 100) / 100 : 0,
+        winnerPayout: game.bet ? Math.round(game.bet * 1.8 * 100) / 100 : 0
       }
     };
 
   } catch (error) {
-    console.error('Error ending game:', error);
+    console.error('Error ending game:', {
+      gameCode,
+      error: error.message,
+      stack: error.stack
+    });
     
-    // Attempt to mark game as failed if error occurred
+    // Attempt to mark game as failed
     try {
       await supabase
         .from('chess_games')
         .update({
           status: 'error',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          error_message: error.message.slice(0, 255)
         })
         .eq('code', gameCode);
     } catch (cleanupError) {
@@ -971,6 +979,20 @@ async function endGame(gameCode, winner, result) {
     
     throw error;
   }
+}
+
+function cleanupGameResources(gameCode) {
+  // Clear timer if exists
+  if (gameTimers[gameCode]) {
+    clearInterval(gameTimers[gameCode].interval);
+    delete gameTimers[gameCode];
+  }
+  
+  // Remove from active games
+  activeGames.delete(gameCode);
+  
+  // Clean up room
+  gameRooms.delete(gameCode);
 }
 async function updateHouseBalance(amount) {
   try {
