@@ -1,8 +1,9 @@
 /* Telegram Mini App Optimized Chess CSS */
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--tg-theme-bg-color);
-  color: var(--tg-theme-text-color);
+   background-color: #f5f5f5;
+ color: #000;
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -669,8 +670,8 @@ button:hover {
 
 .primary-btn {
   padding: 0.75rem 1.5rem;
-  background-color: var(--primary-color);
-  color: white;
+  background-color:#6366f1;
+  color: rgb(255, 255, 255);
   border: none;
   border-radius: var(--radius-md);
   font-weight: 500;
@@ -681,4 +682,104 @@ button:hover {
 
 .primary-btn:hover {
   background-color: var(--primary-dark);
+}
+
+
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.modal.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-20px);
+  transition: transform 0.3s;
+}
+
+.modal.active .modal-content {
+  transform: translateY(0);
+}
+
+.modal-content h2 {
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.modal-content p {
+  margin-bottom: 1.5rem;
+  color: var(--text-light);
+}
+
+.result-details {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: #f3f4f6;
+  border-radius: var(--radius-md);
+}
+
+.result-amount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  gap: 0.5rem;
+}
+
+.result-amount.win {
+  color: var(--success-color);
+}
+
+.result-amount.lose {
+  color: var(--danger-color);
+}
+
+.result-amount svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.danger-btn {
+  padding: 0.5rem 1rem;
+  background-color: white;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.danger-btn:hover {
+  background-color: #fee2e2;
+}
+
+.danger-btn svg {
+  width: 1rem;
+  height: 1rem;
 }
