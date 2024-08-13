@@ -2,8 +2,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-   background-color: #f5f5f5;
- color: #000;
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -40,20 +40,20 @@ body {
 }
 
 .white-player {
-  background-color: #f0d9b5;
-  color: #000;
+  background-color: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
 }
 
 .black-player {
-  background-color: #b58863;
-  color: #fff;
+  background-color: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
 }
 
 .chess-board {
   display: grid;
   grid-template-columns: repeat(8, min(12vw, 50px));
   grid-template-rows: repeat(8, min(12vw, 50px));
-  border: 2px solid #333;
+  border: 2px solid var(--tg-theme-hint-color);
   width: min(96vw, 400px);
   height: min(96vw, 400px);
   margin: 0 auto;
@@ -68,7 +68,14 @@ body {
   position: relative;
 }
 
-/* All your existing square highlight styles remain the same */
+.square.light {
+  background-color: var(--tg-theme-secondary-bg-color);
+}
+
+.square.dark {
+  background-color: var(--tg-theme-hint-color);
+}
+
 .square.highlight {
   background-color: rgba(0, 255, 0, 0.3);
   box-shadow: inset 0 0 10px rgba(0, 200, 0, 0.5);
@@ -90,6 +97,14 @@ body {
   box-shadow: inset 0 0 15px rgba(147, 112, 219, 0.7);
 }
 
+.square.last-move-from {
+  background-color: rgba(247, 247, 105, 0.7) !important;
+}
+
+.square.last-move-to {
+  background-color: rgba(247, 247, 105, 0.7) !important;
+}
+
 .game-controls {
   background-color: var(--tg-theme-secondary-bg-color);
   padding: 16px;
@@ -104,6 +119,7 @@ body {
   font-weight: 500;
   margin-bottom: 12px;
   text-align: center;
+  color: var(--tg-theme-text-color);
 }
 
 .move-history {
@@ -115,6 +131,7 @@ body {
   background-color: var(--tg-theme-bg-color);
   border-radius: 8px;
   font-size: 0.9em;
+  color: var(--tg-theme-text-color);
 }
 
 .actions {
@@ -135,6 +152,10 @@ body {
   color: var(--tg-theme-button-text-color);
 }
 
+.tg-button.danger {
+  background-color: #dc3545;
+}
+
 #offer-draw {
   background-color: var(--tg-theme-button-color);
 }
@@ -148,7 +169,6 @@ button:hover {
   opacity: 0.9;
 }
 
-/* All your existing piece styles remain the same */
 .piece {
   font-size: min(8vw, 40px);
   line-height: min(12vw, 50px);
@@ -162,128 +182,16 @@ button:hover {
   transition: transform 0.1s;
 }
 
-/* All your existing animations remain the same */
-@keyframes pop {
-  0% { transform: scale(1.3); }
-  100% { transform: scale(1); }
-}
-
-/* All your existing notification styles remain the same */
-.notification {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  z-index: 1000;
-}
-
-/* All your other existing styles remain exactly the same */
-/* ... [rest of your original CSS remains unchanged] ... */
-
-/* Responsive adjustments */
-@media (max-width: 400px) {
-  .player {
-    padding: 8px 12px;
-    font-size: 0.9em;
-  }
-  
-  .game-status {
-    font-size: 1em;
-  }
-  
-  .tg-button {
-    padding: 8px 12px;
-    font-size: 0.85em;
-  }
-  
-  .move-history {
-    height: 100px;
-    font-size: 0.8em;
-  }
-}
-
-/* Telegram theme-aware elements */
-.theme-aware {
-  background-color: var(--tg-theme-secondary-bg-color);
-  color: var(--tg-theme-text-color);
-}
-
-/* Scrollbar styling for Telegram */
-.move-history::-webkit-scrollbar {
-  width: 6px;
-}
-
-.move-history::-webkit-scrollbar-track {
-  background: var(--tg-theme-secondary-bg-color);
-}
-
-.move-history::-webkit-scrollbar-thumb {
-  background: var(--tg-theme-hint-color);
-  border-radius: 3px;
-}
-
-/* Keep all your other existing CSS rules exactly as they were */
-.actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-
-button {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-#offer-draw {
-  background-color: #ffc107;
-}
-
-#resign {
-  background-color: #dc3545;
-  color: white;
-}
-
-button:hover {
-  opacity: 0.8;
-}
-
-/* Generic piece styling */
-.piece {
-  font-size: 40px;
-  line-height: 50px;
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  z-index: 10;
-  transition: transform 0.1s;
-}
-
-/* Hover effect */
-.piece:hover {
-  transform: scale(1.1);
-}
-
-/* White pieces: Light color with dark outline */
 .piece[data-piece^="w"] {
-  color: #ffffff; /* Pure white */
+  color: #ffffff;
   text-shadow: 0 0 3px #000000, 1px 1px 2px rgba(0,0,0,0.6);
 }
 
-/* Black pieces: Dark color with white outline */
 .piece[data-piece^="b"] {
-  color: #000000; /* Pure black */
+  color: #000000;
   text-shadow: 0 0 2px #ffffff, 1px 1px 2px rgba(255,255,255,0.6);
 }
+
 .piece.moved {
   animation: pop 0.3s ease-out;
 }
@@ -292,45 +200,17 @@ button:hover {
   0% { transform: scale(1.3); }
   100% { transform: scale(1); }
 }
+
 .notification {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  display: none;
-  z-index: 100;
-}
-
-.player-status {
-  padding: 5px 10px;
-  border-radius: 3px;
-  margin: 5px 0;
-}
-
-.player-status.connected {
-  background: #4CAF50;
-  color: white;
-}
-
-.player-status.waiting {
-  background: #FFC107;
-  color: black;
-}
-#game-notifications {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  display: none;
-  z-index: 100;
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 1000;
 }
 
 .player-status {
@@ -361,92 +241,29 @@ button:hover {
 @keyframes blink-animation {
   to { visibility: hidden; }
 }
-/* Add to your stylesheet */
-.notification {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.notification.show {
-  opacity: 1;
-}
 
 .game-active {
   border: 2px solid #4CAF50;
 }
 
-/* Disabled controls */
-.game-control:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .game-notification {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 4px;
-  z-index: 1000;
-  animation: slide-in 0.3s ease-out;
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+  padding: 15px 25px;
+  border-radius: 5px;
+  z-index: 1001;
+  animation: slideIn 0.5s forwards;
 }
 
-.fade-out {
-  opacity: 0;
-  transition: opacity 0.5s;
-}
-
-@keyframes slide-in {
+@keyframes slideIn {
   from { top: -50px; opacity: 0; }
   to { top: 20px; opacity: 1; }
 }
-.promotion-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
-  z-index: 1000;
-  text-align: center;
-}
 
-.promotion-title {
-  font-weight: bold;
-  margin-bottom: 15px;
-  font-size: 18px;
-}
-
-.promotion-options button {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  font-size: 16px;
-  cursor: pointer;
-  background: #f0f0f0;
-  border: none;
-  border-radius: 4px;
-}
-
-.promotion-options button:hover {
-  background: #e0e0e0;
-}
-/* Animation container */
 #animation-container {
   position: fixed;
   top: 0;
@@ -457,22 +274,19 @@ button:hover {
   z-index: 1000;
 }
 
-/* Coin animations */
-.coin-increase {
+.coin-increase, .coin-decrease {
   position: absolute;
   width: 20px;
   height: 20px;
   background-color: gold;
   border-radius: 50%;
+}
+
+.coin-increase {
   animation: flyIn 2s forwards;
 }
 
 .coin-decrease {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background-color: gold;
-  border-radius: 50%;
   animation: flyOut 2s forwards;
 }
 
@@ -486,7 +300,6 @@ button:hover {
   100% { transform: translate(calc(var(--tx) - 50vw), calc(var(--ty) - 50vh)); opacity: 0; }
 }
 
-/* Balance update effect */
 .balance-update {
   animation: pulse 1s;
 }
@@ -497,24 +310,6 @@ button:hover {
   100% { transform: scale(1); }
 }
 
-/* Game notifications */
-.game-notification {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 15px 25px;
-  border-radius: 5px;
-  z-index: 1001;
-  animation: slideIn 0.5s forwards;
-}
-
-@keyframes slideIn {
-  from { top: -50px; opacity: 0; }
-  to { top: 20px; opacity: 1; }
-}
 .celebration {
   position: relative;
   overflow: hidden;
@@ -536,12 +331,13 @@ button:hover {
   0% { transform: scale(0); opacity: 1; }
   100% { transform: scale(1); opacity: 0; }
 }
+
 .bet-display {
   position: fixed;
   top: 20px;
   left: 20px;
-  background: rgba(0,0,0,0.7);
-  color: white;
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
   padding: 10px;
   border-radius: 5px;
   z-index: 1000;
@@ -563,13 +359,15 @@ button:hover {
 .bet-update {
   animation: pulse-gold 0.5s;
 }
+
 #game-code-display {
   padding: 10px;
-  background: #f0f0f0;
+  background: var(--tg-theme-secondary-bg-color);
   border-radius: 5px;
   text-align: center;
   margin-bottom: 10px;
   font-size: 1.2em;
+  color: var(--tg-theme-text-color);
 }
 
 #copy-code {
@@ -578,18 +376,18 @@ button:hover {
   cursor: pointer;
   font-size: 1em;
   margin-left: 5px;
+  color: var(--tg-theme-button-color);
 }
-/* Add to CSS */
+
 .active-player {
   font-weight: bold;
-  color: #4CAF50; /* Green color */
-  /* Optional: Add subtle background for better visibility */
+  color: var(--tg-theme-button-color);
   background-color: rgba(76, 175, 80, 0.1);
   padding: 2px 5px;
   border-radius: 3px;
-  transition: all 0.3s ease; /* Smooth transition */
+  transition: all 0.3s ease;
 }
-/* Add to your animations */
+
 @keyframes capture-pulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.2); }
@@ -602,7 +400,6 @@ button:hover {
   z-index: 20;
 }
 
-/* For the disappearing effect */
 @keyframes fade-out {
   to { opacity: 0; transform: scale(0.8); }
 }
@@ -610,70 +407,49 @@ button:hover {
 .captured-piece.fade-out {
   animation: fade-out 0.3s forwards;
 }
-.square.light {
-  background-color: #f0d9b5;
-}
 
-.square.dark {
-  background-color: #b58863;
-}
-/* Add this to your existing CSS */
 #waiting-overlay {
-  position: absolute; /* Position it relative to the board container */
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black background */
+  background-color: rgba(0, 0, 0, 0.7);
   color: white;
-  display: flex; /* Center the text */
+  display: flex;
   justify-content: center;
   align-items: center;
   font-size: 1.5em;
-  z-index: 10; /* Make sure it's above the board */
-  pointer-events: none; /* Allow clicks to pass through when hidden */
-  transition: opacity 0.5s ease; /* Smooth transition */
-  opacity: 1; /* Start visible */
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  opacity: 1;
 }
 
 #waiting-overlay.hidden {
   opacity: 0;
-  pointer-events: none; /* Ensure no interaction when hidden */
+  pointer-events: none;
 }
 
-/* You might need to adjust the positioning depending on your board container */
-/* Make sure the board's parent container has position: relative; */
-#board-container { /* Assuming your board is inside a container */
-  position: relative;
-  /* Other board container styles */
-}
 #promotion-dialog button {
   background: none;
-  border: 2px solid #333;
+  border: 2px solid var(--tg-theme-hint-color);
   border-radius: 5px;
   padding: 5px 15px;
   transition: all 0.2s;
 }
 
 #promotion-dialog button:hover {
-  background: #f0f0f0;
+  background: var(--tg-theme-secondary-bg-color);
   transform: scale(1.1);
-}
-/* Previous move highlights */
-.square.last-move-from {
-  background-color: rgba(247, 247, 105, 0.7) !important;
-}
-
-.square.last-move-to {
-  background-color: rgba(247, 247, 105, 0.7) !important;
 }
 
 .primary-btn {
   padding: 0.75rem 1.5rem;
-  background-color:#6366f1;
-  color: rgb(255, 255, 255);
+  background-color: var(--tg-theme-button-color);
+  color: var(--tg-theme-button-text-color);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -681,10 +457,8 @@ button:hover {
 }
 
 .primary-btn:hover {
-  background-color: var(--primary-dark);
+  opacity: 0.9;
 }
-
-
 
 .modal {
   position: fixed;
@@ -708,13 +482,13 @@ button:hover {
 }
 
 .modal-content {
-  background-color: white;
-  border-radius: var(--radius-lg);
+  background-color: var(--tg-theme-bg-color);
+  border-radius: 12px;
   padding: 2rem;
   max-width: 400px;
   width: 100%;
   text-align: center;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   transform: translateY(-20px);
   transition: transform 0.3s;
 }
@@ -725,19 +499,19 @@ button:hover {
 
 .modal-content h2 {
   margin-bottom: 1rem;
-  color: var(--text-color);
+  color: var(--tg-theme-text-color);
 }
 
 .modal-content p {
   margin-bottom: 1.5rem;
-  color: var(--text-light);
+  color: var(--tg-theme-hint-color);
 }
 
 .result-details {
   margin: 1.5rem 0;
   padding: 1rem;
-  background-color: #f3f4f6;
-  border-radius: var(--radius-md);
+  background-color: var(--tg-theme-secondary-bg-color);
+  border-radius: 8px;
 }
 
 .result-amount {
@@ -747,26 +521,28 @@ button:hover {
   font-size: 1.25rem;
   font-weight: 600;
   gap: 0.5rem;
+  color: var(--tg-theme-text-color);
 }
 
 .result-amount.win {
-  color: var(--success-color);
+  color: #4CAF50;
 }
 
 .result-amount.lose {
-  color: var(--danger-color);
+  color: #dc3545;
 }
 
 .result-amount svg {
   width: 1.5rem;
   height: 1.5rem;
 }
+
 .danger-btn {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: var(--danger-color);
-  border: 1px solid var(--danger-color);
-  border-radius: var(--radius-md);
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   display: flex;
@@ -782,4 +558,38 @@ button:hover {
 .danger-btn svg {
   width: 1rem;
   height: 1rem;
+}
+
+.move-history::-webkit-scrollbar {
+  width: 6px;
+}
+
+.move-history::-webkit-scrollbar-track {
+  background: var(--tg-theme-secondary-bg-color);
+}
+
+.move-history::-webkit-scrollbar-thumb {
+  background: var(--tg-theme-hint-color);
+  border-radius: 3px;
+}
+
+@media (max-width: 400px) {
+  .player {
+    padding: 8px 12px;
+    font-size: 0.9em;
+  }
+  
+  .game-status {
+    font-size: 1em;
+  }
+  
+  .tg-button {
+    padding: 8px 12px;
+    font-size: 0.85em;
+  }
+  
+  .move-history {
+    height: 100px;
+    font-size: 0.8em;
+  }
 }
