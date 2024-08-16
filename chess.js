@@ -904,7 +904,7 @@ async function showFinalResult(gameData) {
     const winnings = gameState.betam * 1.8; // 1.8x payout for winner
     resultAmount.textContent = `+${formatBalance(winnings)}`;
   } else {
-    resultAmount.textContent = `-${formatBalance(betAmount)}`;
+    resultAmount.textContent = `-${formatBalance(betam)}`;
   }
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
