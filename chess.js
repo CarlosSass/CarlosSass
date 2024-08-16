@@ -7,18 +7,22 @@ const board = document.getElementById('board');
 const gameStatus = document.getElementById('game-status');
 const whiteTimeDisplay = document.getElementById('white-time');
 const blackTimeDisplay = document.getElementById('black-time');
-const whiteUsername = document.getElementById('white-username');
-const blackUsername = document.getElementById('black-username');
+
 const moveHistory = document.getElementById('move-history');
 const errorDisplay = document.getElementById('error-message');
+const gameResultModal = document.getElementById('game-result-modal');
 
-// Initialize Supabase (same as before)
+const resultTitle = document.getElementById('result-title');
+const resultMessage = document.getElementById('result-message');
+const resultAmount = document.getElementById('result-amount');
+const resultCloseBtn = document.getElementById('result-close-btn');
+// Initialize Supabase (for authentication and persistence)
 const supabase = createClient(
     'https://evberyanshxxalxtwnnc.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw'
-);
+  );
 
-// Initialize Socket.IO - UPDATED FOR RAILWAY
+// Initialize Socket.IO
 const socket = io('https://chess-game-production-9494.up.railway.app', {
   reconnection: true,
   reconnectionAttempts: 5,
@@ -29,20 +33,21 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
   withCredentials: true
 });
 
-// Game State - UPDATED API URL
+// Game State
 const gameState = {
-  playerColor: 'white',
-  boardFlipped: false,
+  playerColor: 'white', // This will be set from URL params
+  boardFlipped: false ,// Add this new property
   chess: new Chess(),
   selectedSquare: null,
   currentGame: null,
+  playerColor: 'white',
   gameCode: '',
   apiBaseUrl: 'https://chess-game-production-9494.up.railway.app', // Updated
-  isConnected: false
+  isConnected: false,
+  betam:0,
+  onetime:false
+  
 };
-
-// ... [rest of your existing code remains exactly the same] ...
-
 
 // Piece Symbols
 const PIECE_SYMBOLS = {
@@ -236,16 +241,13 @@ async function initGame() {
   const params = new URLSearchParams(window.location.search);
   gameState.gameCode = params.get('code');
   gameState.playerColor = params.get('color') || 'white';
-  gameState.boardFlipped = gameState.playerColor === 'black'; // Add this line
+  gameState.boardFlipped = gameState.playerColor === 'black';
 
-  
   // Display the game code
   const gameCodeElement = document.getElementById('game-code-text');
   if (gameCodeElement) {
     gameCodeElement.textContent = gameState.gameCode || 'Not set';
   }
-
-
 
   if (!gameState.gameCode) {
     showError('No game code provided');
@@ -256,23 +258,36 @@ async function initGame() {
     // Join game room via Socket.IO
     socket.emit('joinGame', gameState.gameCode);
     showWaitingOverlay();
+    
     // Set up Socket.IO listeners
     socket.on('gameState', initializeGameUI);
     socket.on('gameUpdate', handleGameUpdate);
     socket.on('moveError', showError);
     socket.on('drawOffer', handleDrawOffer);
     socket.on('gameOver', handleGameOver);
+    
+    // Add this new listener for player updates
+    socket.on('playerUpdate', (data) => {
+      if (gameState.currentGame) {
+        // Update the game state with new player info
+        if (data.color === 'white') {
+          gameState.currentGame.white_username = data.username;
+        } else {
+          gameState.currentGame.black_username = data.username;
+        }
+        // Update the UI
+        updatePlayerInfo(gameState.currentGame);
+      }
+    });
+
     socket.on('gameReady', (data) => {
       const notification = 'Both players connected! Game is starting...';
-      showNotification(notification, 5000); // Show for 5 seconds
+      showNotification(notification, 5000);
       displayAlert("White must move first!", 'warning');
       initGame();
-      playSound('join'); // Play the join sound
-      // Update UI to show game is ready
-      gameStatus.textContent = 'Game in progress';
+      playSound('join');
       
-      // Enable game controls
-    
+      gameStatus.textContent = 'Game in progress';
     });
   
     // Fallback to REST API if Socket.IO isn't connected after 2 seconds
@@ -305,18 +320,42 @@ document.getElementById('copy-code')?.addEventListener('click', () => {
   });
 });
 // Initialize Game UI with initial state
+// In the initializeGameUI function:
+// In the initializeGameUI function:
+function updateGameState(gameData) {
+  // Update board
+  renderBoard();
+  
+  // Update status
+  if (gameData.status === 'finished') {
+    gameStatus.textContent = `Game over - ${gameData.winner} wins by ${gameData.result}`;
+  } else if (gameData.draw_offer) {
+    gameStatus.textContent = `${gameData.draw_offer} offers a draw`;
+  } else {
+    gameStatus.textContent = `${gameData.turn}'s turn${
+        gameState.chess.in_check() ? ' (CHECK!)' : ''
+      }`;
+  }
+  
+  // Update timers based on player color
+  if (gameData.white_time !== undefined && gameData.black_time !== undefined) {
+    if (gameState.playerColor === 'black') {
+      whiteTimeDisplay.textContent = formatTime(gameData.white_time);
+      blackTimeDisplay.textContent = formatTime(gameData.black_time);
+    } else {
+      // Player is black - swap the times
+      whiteTimeDisplay.textContent = formatTime(gameData.black_time);
+      blackTimeDisplay.textContent = formatTime(gameData.white_time);
+    }
+  }
+}
 function initializeGameUI(gameData) {
   gameState.currentGame = gameData;
   gameState.chess.load(gameData.fen);
-  
-  // Update player info
-  whiteUsername.textContent = gameData.white_username || 'White';
-  blackUsername.textContent = gameData.black_username || 'Black';
-  
-  // Initialize timer display
-  whiteTimeDisplay.textContent = formatTime(gameData.white_time || 600);
-  blackTimeDisplay.textContent = formatTime(gameData.black_time || 600);
-  
+
+  // Update player info based on current player color
+  updatePlayerInfo(gameData);
+
   // Create and render board
   createBoard();
   updateGameState(gameData);
@@ -325,6 +364,28 @@ function initializeGameUI(gameData) {
   updateConnectionStatus();
 }
 
+// New helper function to update player info
+function updatePlayerInfo(gameData) {
+  const whiteUsernameElement = document.getElementById('white-username');
+  const blackUsernameElement = document.getElementById('black-username');
+
+  if (gameState.playerColor === 'black') {
+    whiteUsernameElement.textContent = gameData.white_username || 'White';
+    blackUsernameElement.textContent = gameData.black_username || 'Black';
+    
+    // Initialize timer display (normal)
+    whiteTimeDisplay.textContent = formatTime(gameData.white_time || 600);
+    blackTimeDisplay.textContent = formatTime(gameData.black_time || 600);
+  } else {
+    // Player is black - swap the display
+    whiteUsernameElement.textContent = gameData.black_username || 'Black';
+    blackUsernameElement.textContent = gameData.white_username || 'White';
+    
+    // Swap time displays
+    whiteTimeDisplay.textContent = formatTime(gameData.black_time || 600);
+    blackTimeDisplay.textContent = formatTime(gameData.white_time || 600);
+  }
+}
 // Handle game updates from server
 function handleGameUpdate(update) {
   if (!update || !update.gameState) return;
@@ -337,6 +398,9 @@ function handleGameUpdate(update) {
   gameState.currentGame = update.gameState;
   gameState.chess.load(update.gameState.fen);
   gameState.turn = update.gameState.turn;
+  
+  // Update player info
+  updatePlayerInfo(update.gameState);
   
   if (update.move) {
       // Highlight the previous move regardless of whose turn it is
@@ -365,40 +429,6 @@ function handleGameUpdate(update) {
   
   updateGameState(update.gameState);
 }
-// Update all game state displays
-function updateGameState(gameData) {
-  // Update board
-  renderBoard();
-  
-  // Update status
-  if (gameData.status === 'finished') {
-    gameStatus.textContent = `Game over - ${gameData.winner} wins by ${gameData.result}`;
-  } else if (gameData.draw_offer) {
-    gameStatus.textContent = `${gameData.draw_offer} offers a draw`;
-  } else {
-    gameStatus.textContent = `${gameData.turn}'s turn${
-        gameState.chess.in_check() ? ' (CHECK!)' : ''
-      }`;
-  }
-  
-  // Update timers
-  if (gameData.white_time !== undefined) {
-    whiteTimeDisplay.textContent = formatTime(gameData.white_time);
-  }
-  if (gameData.black_time !== undefined) {
-    blackTimeDisplay.textContent = formatTime(gameData.black_time);
-  }
-  blackUsername.textContent = gameData.black_username || 'Black';
-
-  // Highlight active player
-  document.querySelector('.white-player').classList.toggle('active', gameData.turn === 'white');
-  document.querySelector('.black-player').classList.toggle('active', gameData.turn === 'black');
-  // In updateGameState()
-document.getElementById(`${gameData.turn}-username`).classList.add('active-player');
-document.getElementById(`${gameData.turn === 'white' ? 'black' : 'white'}-username`)
-  .classList.remove('active-player');
-}
-
 // Create Chess Board
 function createBoard() {
   board.innerHTML = '';
@@ -568,10 +598,7 @@ function showError(message) {
     errorDisplay.style.display = 'none';
   }, 3000);
 }
-function update() {
-  blackUsername.textContent = gameData.black_username || 'jj';
 
-}
 function updateConnectionStatus() {
   const statusElement = document.getElementById('connection-status');
   if (!statusElement) return;
@@ -644,15 +671,25 @@ function handleGameOver(result) {
   if (result.reason === 'draw') {
     message = 'Game ended in a draw';
   }
+  showFinalResult(result);
   
-  alert(message);
+  //alert(message);
   gameStatus.textContent = message;
 }
 // Add this listener in initGame():
+
+// Update the timerUpdate listener to handle swapped times:
 socket.on('timerUpdate', ({ whiteTime, blackTime }) => {
+  if (gameState.playerColor === 'black') {
     whiteTimeDisplay.textContent = formatTime(whiteTime);
     blackTimeDisplay.textContent = formatTime(blackTime);
-  });
+  } else {
+    // Player is black - swap the times
+    whiteTimeDisplay.textContent = formatTime(blackTime);
+    blackTimeDisplay.textContent = formatTime(whiteTime);
+  }
+});
+
   // Listen for notifications from the server
 socket.on('notification', (data) => {
   switch(data.type) {
@@ -734,15 +771,15 @@ function showNotification(message) {
 socket.on('gameWon', (data) => {
   // Only show positive animation for winner
   if (data.animation) {
-    showAnimation(data.animation);
+   // showAnimation(data.animation);
   }
-  showNotification(`${data.reason} +$${data.amount}`);
+  //showNotification(`${data.reason} +$${data.amount}`);
 });
 
 // Handle losing the game
 socket.on('gameLost', (data) => {
   // No animation or balance update for loser
-  showNotification(data.reason);
+  //showNotification(data.reason);
   
   // Optional: You could show a different message style
   const notification = document.createElement('div');
@@ -755,9 +792,9 @@ socket.on('gameLost', (data) => {
 socket.on('balanceUpdate', (data) => {
   
   if (data.amountChanged > 0) {
-    showNotification(`+$${data.amountChanged}`);
+    //showNotification(`+$${data.amountChanged}`);
   } else {
-    showNotification(`-$${Math.abs(data.amountChanged)}`);
+    //showNotification(`-$${Math.abs(data.amountChanged)}`);
   }
 });
 
@@ -772,6 +809,11 @@ function updateBetDisplay(betAmount) {
     betElement.textContent = betAmount;
     betElement.classList.add('bet-update');
     setTimeout(() => betElement.classList.remove('bet-update'), 500);
+    if(!gameState.onetime){
+      gameState.onetime=true;
+      gameState.betam = betAmount;
+
+    }
   }
 }
 
@@ -816,7 +858,10 @@ setTimeout(fetchInitialBet, 1000);
 document.addEventListener('DOMContentLoaded', function() {
   // Get the back button
   const backBtn = document.getElementById('back-btn');
-  
+  resultCloseBtn.addEventListener('click', () => {
+    gameResultModal.classList.remove('active');
+    window.location.href = '/';
+});
   if (backBtn) {
       backBtn.addEventListener('click', function() {
          
@@ -828,3 +873,52 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 });
+
+function formatBalance(amount) {
+  const numericAmount = typeof amount === 'number' ? amount : 0;
+  return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
+}
+async function showFinalResult(gameData) {
+  // Ensure gameData exists and has required properties
+  if (!gameData) {
+    console.error('showFinalResult: gameData is undefined');
+    return;
+  }
+
+  const isWinner = gameData.winner === gameState.playerColor;
+  const betAmount = Number(gameData.bet) || 0; // Ensure bet is a number
+  
+  gameResultModal.classList.add('active');
+  isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
+  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+
+  // Handle cases where reason might be missing
+  const reason = gameData.reason || 'game completion';
+  
+  resultMessage.textContent = isWinner
+    ? `You won the game by ${reason}! :)`
+    : `You lost the game by ${reason} :(`;
+
+  // Safely calculate and display amounts
+  if (isWinner) {
+    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
+    resultAmount.textContent = `+${formatBalance(winnings)}`;
+  } else {
+    resultAmount.textContent = `-${formatBalance(betAmount)}`;
+  }
+
+  resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+
+  // Reset game state if needed
+  if (!isWinner && gameState.didwelose) {
+    gameState.didwelose = false;
+  }
+
+  // Debug logging
+  console.log('Final result displayed:', {
+    isWinner,
+    betAmount,
+    calculatedAmount: isWinner ? betAmount * 1.8 : betAmount,
+    gameData
+  });
+}
