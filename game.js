@@ -231,97 +231,7 @@ function evaluateGuess(guess, secret) {
 }
 
 // --- Game Flow Functions ---
-async function submitGuess() {
-    const guess = guessInput.value.trim();
 
-    // Validate input
-    if (!/^\d{4}$/.test(guess)) {
-        displayMessage(gameStatusMessage, 'Please enter a valid 4-digit number', 'error');
-        return;
-    }
-
-    if (new Set(guess.split('')).size !== 4) {
-        displayMessage(gameStatusMessage, 'All digits must be unique', 'error');
-        return;
-    }
-
-    if (gameState.gameStatus !== 'ongoing') {
-        displayMessage(gameStatusMessage, 'Game is not currently accepting guesses.', 'info');
-        return;
-    }
-
-    const phone = localStorage.getItem('phone');
-    const currentPlayer = (gameState.creator.phone === phone) ? gameState.creator : gameState.opponent;
-
-    if (!currentPlayer || !currentPlayer.phone) {
-        console.error("Current player not found in game state.");
-        displayMessage(gameStatusMessage, "Error identifying player.", 'error');
-        return;
-    }
-
-    try {
-        let secretNumber = gameState.secretNumber;
-        if (gameState.playerRole === 'opponent' || !secretNumber) {
-            const { data: gameData } = await supabase
-                .from('guess_number_games')
-                .select('secret_number')
-                .eq('code', gameState.gameCode)
-                .single();
-            
-            if (!gameData || !gameData.secret_number) {
-                console.error("Secret number not found in database.");
-                displayMessage(gameStatusMessage, "Error fetching secret number.", 'error');
-                return;
-            }
-            secretNumber = gameData.secret_number;
-            if (gameState.playerRole === 'creator') {
-                gameState.secretNumber = secretNumber;
-            }
-        }
-
-        const { correctNumbers, correctPositions } = evaluateGuess(guess, secretNumber);
-
-        gameState.guesses.push({
-            player: {
-                phone: currentPlayer.phone,
-                username: currentPlayer.username
-            },
-            guess,
-            correctNumbers,
-            correctPositions,
-            timestamp: new Date().toISOString()
-        });
-        
-        if (correctPositions === 4) {
-            await handleGameWin(currentPlayer);
-        } else {
-            displayMessage(gameStatusMessage, 
-                `Correct numbers: ${correctNumbers}, Correct positions: ${correctPositions}`, 
-                'info');
-        }
-
-        const { error: updateError } = await supabase
-            .from('guess_number_games')
-            .update({
-                guesses: gameState.guesses,
-                status: gameState.gameStatus
-            })
-            .eq('code', gameState.gameCode);
-
-        if (updateError) throw updateError;
-
-        guessInput.value = '';
-        renderGuessHistory();
-        /*displayMessage(gameStatusMessage,
-            `Guess Submitted: ${guess}. Result: Numbers: ${correctNumbers}, Positions: ${correctPositions}`,
-            correctPositions === 4 ? 'success' : (correctPositions > 0 || correctNumbers > 0 ? 'warning' : 'danger')
-        );
-*/
-    } catch (error) {
-        console.error('Error processing guess:', error);
-        displayMessage(gameStatusMessage, 'Error processing your guess', 'error');
-    }
-}
 
 // --- UI Functions ---
 function updateGameUI() {
@@ -469,64 +379,7 @@ function copyGameCode() {
 }
 
 // --- Game Management Functions ---
-async function loadGameData() {
-    try {
-        const { data: gameData, error } = await supabase
-            .from('guess_number_games')
-            .select('*')
-            .eq('code', gameState.gameCode)
-            .single();
 
-        if (error) throw error;
-        if (!gameData) {
-            displayMessage(gameStatusMessage, 'Game not found or already ended.', 'error');
-            disableGuessInput();
-            setTimeout(() => window.location.href = '/', 3000);
-            return;
-        }
-
-        Object.assign(gameState, {
-            betAmount: gameData.bet,
-            gameStatus: gameData.status,
-            creator: {
-                username: gameData.creator_username,
-                phone: gameData.creator_phone
-            },
-            opponent: {
-                username: gameData.opponent_username,
-                phone: gameData.opponent_phone
-            },
-            guesses: gameData.guesses || [],
-            secretNumber: gameData.secret_number
-        });
-
-        const phone = localStorage.getItem('phone');
-        gameState.playerRole = gameData.creator_phone === phone ? 'creator' : 'opponent';
-
-        if (gameState.opponent.phone && gameState.gameStatus === 'waiting') {
-            gameState.gameStatus = 'ongoing';
-            await updateGameInDatabase();
-        }
-
-        if (!gameState.betDeducted && gameState.gameStatus !== 'waiting' && (gameState.opponent.phone || gameState.playerRole === 'creator')) {
-            await deductBetAmount();
-        }
-
-        if (gameState.gameStatus === 'finished') {
-            showFinalResult(gameData);
-        } else if (gameState.gameStatus === 'cancelled') {
-            handleGameCancellation(gameData);
-        }
-
-        updateGameUI();
-
-    } catch (error) {
-        console.error('Game load error:', error);
-        displayMessage(gameStatusMessage, `Failed to load game: ${error.message}`, 'error');
-        disableGuessInput();
-        setTimeout(() => window.location.href = '/', 3000);
-    }
-}
 
 async function deductBetAmount() {
     if (gameState.betDeducted) return;
@@ -858,3 +711,235 @@ async function updateHouseBalance(amount) {
       throw error;
     }
   }
+
+
+  // ... (previous code remains the same until the submitGuess function)
+
+async function submitGuess() {
+    const guess = guessInput.value.trim();
+
+    // Validate input
+    if (!/^\d{4}$/.test(guess)) {
+        displayMessage(gameStatusMessage, 'Please enter a valid 4-digit number', 'error');
+        return;
+    }
+
+    if (new Set(guess.split('')).size !== 4) {
+        displayMessage(gameStatusMessage, 'All digits must be unique', 'error');
+        return;
+    }
+
+    if (gameState.gameStatus !== 'ongoing') {
+        displayMessage(gameStatusMessage, 'Game is not currently accepting guesses.', 'info');
+        return;
+    }
+
+    const phone = localStorage.getItem('phone');
+    const currentPlayer = (gameState.creator.phone === phone) ? gameState.creator : gameState.opponent;
+
+    if (!currentPlayer || !currentPlayer.phone) {
+        console.error("Current player not found in game state.");
+        displayMessage(gameStatusMessage, "Error identifying player.", 'error');
+        return;
+    }
+
+    try {
+        let secretNumber = gameState.secretNumber;
+        if (gameState.playerRole === 'opponent' || !secretNumber) {
+            const { data: gameData } = await supabase
+                .from('guess_number_games')
+                .select('secret_number')
+                .eq('code', gameState.gameCode)
+                .single();
+            
+            if (!gameData || !gameData.secret_number) {
+                console.error("Secret number not found in database.");
+                displayMessage(gameStatusMessage, "Error fetching secret number.", 'error');
+                return;
+            }
+            secretNumber = gameData.secret_number;
+            if (gameState.playerRole === 'creator') {
+                gameState.secretNumber = secretNumber;
+            }
+        }
+
+        const { correctNumbers, correctPositions } = evaluateGuess(guess, secretNumber);
+
+        const guessData = {
+            player: {
+                phone: currentPlayer.phone,
+                username: currentPlayer.username
+            },
+            guess,
+            correctNumbers,
+            correctPositions,
+            timestamp: new Date().toISOString()
+        };
+
+        // Store guess in local storage as backup
+        storeGuessLocally(guessData);
+
+        gameState.guesses.push(guessData);
+        
+        if (correctPositions === 4) {
+            await handleGameWin(currentPlayer);
+        } else {
+            // Only show message for the current player's guess
+            if (currentPlayer.phone === phone) {
+                displayMessage(gameStatusMessage, 
+                    `Correct numbers: ${correctNumbers}, Correct positions: ${correctPositions}`, 
+                    'info');
+            }
+        }
+
+        const { error: updateError } = await supabase
+            .from('guess_number_games')
+            .update({
+                guesses: gameState.guesses,
+                status: gameState.gameStatus
+            })
+            .eq('code', gameState.gameCode);
+
+        if (updateError) {
+            console.error('Error updating game with guess:', updateError);
+            // If Supabase update fails, we already have the guess stored locally
+            throw updateError;
+        }
+
+        guessInput.value = '';
+        renderGuessHistory();
+
+    } catch (error) {
+        console.error('Error processing guess:', error);
+        displayMessage(gameStatusMessage, 'Error processing your guess', 'error');
+    }
+}
+
+// New function to store guesses locally
+function storeGuessLocally(guessData) {
+    try {
+        const gameCode = gameState.gameCode;
+        const localGuesses = JSON.parse(localStorage.getItem('guessNumberGameGuesses') || '{}');
+        
+        if (!localGuesses[gameCode]) {
+            localGuesses[gameCode] = [];
+        }
+        
+        localGuesses[gameCode].push(guessData);
+        localStorage.setItem('guessNumberGameGuesses', JSON.stringify(localGuesses));
+    } catch (error) {
+        console.error('Error storing guess locally:', error);
+    }
+}
+
+// New function to recover guesses from local storage
+async function recoverLocalGuesses() {
+    try {
+        const gameCode = gameState.gameCode;
+        const localGuesses = JSON.parse(localStorage.getItem('guessNumberGameGuesses') || '{}');
+        
+        if (localGuesses[gameCode] && localGuesses[gameCode].length > 0) {
+            // Check if these guesses are already in the game state
+            const newGuesses = localGuesses[gameCode].filter(localGuess => 
+                !gameState.guesses.some(g => 
+                    g.guess === localGuess.guess && 
+                    g.player.phone === localGuess.player.phone
+                )
+            );
+            
+            if (newGuesses.length > 0) {
+                console.log('Recovering', newGuesses.length, 'guesses from local storage');
+                
+                // Add to game state
+                gameState.guesses = [...gameState.guesses, ...newGuesses];
+                
+                // Try to update database
+                const { error } = await supabase
+                    .from('guess_number_games')
+                    .update({ guesses: gameState.guesses })
+                    .eq('code', gameCode);
+                
+                if (!error) {
+                    // If successful, remove from local storage
+                    delete localGuesses[gameCode];
+                    localStorage.setItem('guessNumberGameGuesses', JSON.stringify(localGuesses));
+                }
+                
+                return newGuesses;
+            }
+        }
+    } catch (error) {
+        console.error('Error recovering local guesses:', error);
+    }
+    return [];
+}
+
+// ... (rest of the code remains the same)
+
+// Update the loadGameData function to include local guess recovery
+async function loadGameData() {
+    try {
+        const { data: gameData, error } = await supabase
+            .from('guess_number_games')
+            .select('*')
+            .eq('code', gameState.gameCode)
+            .single();
+
+        if (error) throw error;
+        if (!gameData) {
+            displayMessage(gameStatusMessage, 'Game not found or already ended.', 'error');
+            disableGuessInput();
+            setTimeout(() => window.location.href = '/', 3000);
+            return;
+        }
+
+        Object.assign(gameState, {
+            betAmount: gameData.bet,
+            gameStatus: gameData.status,
+            creator: {
+                username: gameData.creator_username,
+                phone: gameData.creator_phone
+            },
+            opponent: {
+                username: gameData.opponent_username,
+                phone: gameData.opponent_phone
+            },
+            guesses: gameData.guesses || [],
+            secretNumber: gameData.secret_number
+        });
+
+        // Recover any locally stored guesses
+        const recoveredGuesses = await recoverLocalGuesses();
+        if (recoveredGuesses.length > 0) {
+            gameState.guesses = [...gameState.guesses, ...recoveredGuesses];
+        }
+
+        const phone = localStorage.getItem('phone');
+        gameState.playerRole = gameData.creator_phone === phone ? 'creator' : 'opponent';
+
+        if (gameState.opponent.phone && gameState.gameStatus === 'waiting') {
+            gameState.gameStatus = 'ongoing';
+            await updateGameInDatabase();
+        }
+
+        if (!gameState.betDeducted && gameState.gameStatus !== 'waiting' && (gameState.opponent.phone || gameState.playerRole === 'creator')) {
+            await deductBetAmount();
+        }
+
+        if (gameState.gameStatus === 'finished') {
+            showFinalResult(gameData);
+        } else if (gameState.gameStatus === 'cancelled') {
+            handleGameCancellation(gameData);
+        }
+
+        updateGameUI();
+
+    } catch (error) {
+        console.error('Game load error:', error);
+        displayMessage(gameStatusMessage, `Failed to load game: ${error.message}`, 'error');
+        disableGuessInput();
+        setTimeout(() => window.location.href = '/', 3000);
+    }
+}
+
+// ... (rest of the code remains the same)
