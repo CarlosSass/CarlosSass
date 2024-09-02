@@ -192,12 +192,12 @@ button:hover {
     fill: inherit;
     stroke: inherit;
   }
-  .piece[data-piece^="w"] svg * {
-    fill: #fff !important;
-  }
-  .piece[data-piece^="b"] svg * {
-    fill: #000 !important;
-  }
+.piece[data-piece^="w"] svg g {
+  fill: #fff;
+}
+.piece[data-piece^="b"] svg g {
+  fill: #000;
+}
 .piece.moved {
   animation: pop 0.3s ease-out;
 }
@@ -598,4 +598,41 @@ button:hover {
     height: 100px;
     font-size: 0.8em;
   }
+}
+#promotion-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.promotion-options {
+  display: flex;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  gap: 10px;
+}
+
+.promotion-option {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.promotion-option:hover {
+  transform: scale(1.1);
+  background: #f5f5f5;
 }
