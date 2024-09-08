@@ -1,4 +1,4 @@
-/* Chess Game CSS for Telegram Mini App */
+/* Chess Game CSS for Telegram Mini App - FULLY FIXED VERSION */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -170,14 +170,15 @@ body {
 button:hover {
   opacity: 0.9;
 }
-/* Chess pieces */
-/* Chess pieces - Fixed version */
+
+/* CHESS PIECES - COMPLETELY FIXED */
 .piece {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 
 .piece svg {
@@ -186,48 +187,47 @@ button:hover {
   pointer-events: none;
 }
 
-/* Remove these generic fill rules as they override SVG colors */
-/* .piece[data-piece^="w"] svg g:not([fill]) { fill: #fff; } */
-/* .piece[data-piece^="b"] svg g:not([fill]) { fill: #000; } */
-
-/* Promotion dialog - Fixed version */
+/* PROMOTION DIALOG - COMPLETELY FIXED */
 #promotion-dialog {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.7);
+  background-color: rgba(0,0,0,0.85);
   display: none;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(3px);
 }
 
 .promotion-options {
   display: flex;
   background: #f0d9b5;
   padding: 20px;
-  border-radius: 10px;
-  gap: 10px;
+  border-radius: 12px;
+  gap: 15px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
 }
 
 .promotion-option {
-  width: 60px;
-  height: 60px;
+  width: 65px;
+  height: 65px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  transition: all 0.2s;
+  border: 2px solid #b58863;
+  border-radius: 8px;
+  transition: all 0.2s ease;
   background-color: #f0d9b5;
 }
 
 .promotion-option:hover {
-  transform: scale(1.1);
-  background: #f5f5f5;
+  transform: scale(1.15);
+  background: #e8d0a5;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
 .promotion-option svg {
@@ -236,7 +236,7 @@ button:hover {
   pointer-events: none;
 }
 
-
+/* Rest of the CSS remains exactly the same */
 .piece.moved {
   animation: pop 0.3s ease-out;
 }
@@ -637,5 +637,15 @@ button:hover {
     height: 100px;
     font-size: 0.8em;
   }
+  
+  /* Mobile-specific promotion dialog */
+  .promotion-option {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .promotion-options {
+    padding: 15px;
+    gap: 10px;
+  }
 }
-
