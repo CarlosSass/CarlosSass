@@ -90,7 +90,24 @@ const PIECE_SYMBOLS = {
     }
   }
   
-
+  // Add CSS to style the SVG pieces
+  const style = document.createElement('style');
+  style.textContent = `
+    .piece svg {
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .piece {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  `;
+  document.head.appendChild(style);
+  
   // ... rest of your existing code ...
 // Sound Effects
 const sounds = {
