@@ -69,7 +69,8 @@ const PIECE_SYMBOLS = {
     'p': '<svg viewBox="0 0 45 45"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#000" stroke="#000" stroke-width="1.5" stroke-linecap="round"/></svg>'
 };
   // Modify the renderBoard function to use SVG pieces
-  function renderBoard() {
+// Update the renderBoard function to properly display SVG pieces
+function renderBoard() {
     document.querySelectorAll('.piece').forEach(p => p.remove());
     
     for (let row = 0; row < 8; row++) {
@@ -84,30 +85,135 @@ const PIECE_SYMBOLS = {
         pieceElement.className = 'piece';
         pieceElement.innerHTML = PIECE_SYMBOLS[piece.type] || '';
         pieceElement.dataset.piece = `${piece.color}${piece.type}`;
-  
+        
+        // Add color class for easier styling
+        pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
+        
         square.appendChild(pieceElement);
       }
     }
   }
   
-  // Add CSS to style the SVG pieces
+  // Update the showPromotionDialog function
+  function showPromotionDialog(color) {
+    const dialog = document.getElementById('promotion-dialog');
+    const options = dialog.querySelectorAll('.promotion-option');
+    
+    // Clear any existing content
+    options.forEach(option => {
+      option.innerHTML = '';
+      option.className = 'promotion-option'; // Reset classes
+      option.classList.add(color === 'w' ? 'white-promotion' : 'black-promotion');
+    });
+    
+    // Set the appropriate pieces based on color
+    options.forEach(option => {
+      const pieceType = option.dataset.piece;
+      const symbol = color === 'w' 
+        ? PIECE_SYMBOLS[pieceType.toUpperCase()]
+        : PIECE_SYMBOLS[pieceType.toLowerCase()];
+      
+      // Create container for the piece
+      const pieceContainer = document.createElement('div');
+      pieceContainer.className = 'promotion-piece';
+      pieceContainer.innerHTML = symbol;
+      
+      option.appendChild(pieceContainer);
+    });
+    
+    dialog.style.display = 'flex';
+  }
+  
+  // Update the CSS for pieces and promotion dialog
   const style = document.createElement('style');
   style.textContent = `
-    .piece svg {
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
+    /* Chess pieces */
     .piece {
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
+    }
+    
+    .piece svg {
+      width: 80%;
+      height: 80%;
+      pointer-events: none;
+    }
+    
+    /* Promotion dialog */
+    #promotion-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(3px);
+    }
+    
+    .promotion-options {
+      display: flex;
+      background: #f0d9b5;
+      padding: 20px;
+      border-radius: 12px;
+      gap: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    
+    .promotion-option {
+      width: 65px;
+      height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid #b58863;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      background-color: #f0d9b5;
+    }
+    
+    .promotion-option:hover {
+      transform: scale(1.15);
+      background: #e8d0a5;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    
+    .promotion-piece {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .promotion-piece svg {
+      width: 80%;
+      height: 80%;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 400px) {
+      .promotion-option {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .promotion-options {
+        padding: 15px;
+        gap: 10px;
+      }
     }
   `;
   document.head.appendChild(style);
-  
+
   // ... rest of your existing code ...
 // Sound Effects
 const sounds = {
@@ -179,21 +285,6 @@ function handleBoardClick(event) {
 }
 
 // Add this new function to show the promotion dialog
-function showPromotionDialog(color) {
-  const dialog = document.getElementById('promotion-dialog');
-  const options = dialog.querySelectorAll('.promotion-option');
-  
-  // Set the appropriate pieces based on color
-  options.forEach(option => {
-    const pieceType = option.dataset.piece;
-    const symbol = color === 'w' 
-      ? PIECE_SYMBOLS[pieceType.toUpperCase()]
-      : PIECE_SYMBOLS[pieceType.toLowerCase()];
-    option.textContent = symbol;
-  });
-  
-  dialog.style.display = 'flex';
-}
 
 // Update the promotion button event listeners
 document.querySelectorAll('.promotion-option').forEach(button => {
