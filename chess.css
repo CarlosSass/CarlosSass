@@ -187,6 +187,14 @@ button:hover {
   pointer-events: none;
 }
 
+.white-piece svg {
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
+}
+
+.black-piece svg {
+  filter: drop-shadow(0 0 1px rgba(255,255,255,0.5));
+}
+
 /* PROMOTION DIALOG - COMPLETELY FIXED */
 #promotion-dialog {
   position: fixed;
