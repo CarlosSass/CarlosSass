@@ -71,29 +71,29 @@ const PIECE_SYMBOLS = {
   // Modify the renderBoard function to use SVG pieces
 // Update the renderBoard function to properly display SVG pieces
 function renderBoard() {
+    // Clear existing pieces
     document.querySelectorAll('.piece').forEach(p => p.remove());
     
     for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const algebraic = rowColToAlgebraic(row, col);
-        const piece = gameState.chess.get(algebraic);
-        if (!piece) continue;
-        
-        const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-        
-        const pieceElement = document.createElement('div');
-        pieceElement.className = 'piece';
-        pieceElement.innerHTML = PIECE_SYMBOLS[piece.type] || '';
-        pieceElement.dataset.piece = `${piece.color}${piece.type}`;
-        
-        // Add color class for easier styling
-        pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
-        
-        square.appendChild(pieceElement);
-      }
+        for (let col = 0; col < 8; col++) {
+            const algebraic = rowColToAlgebraic(row, col);
+            const piece = gameState.chess.get(algebraic);
+            if (!piece) continue;
+            
+            const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            const pieceElement = document.createElement('div');
+            pieceElement.className = 'piece';
+            
+            // Get the correct SVG based on piece color and type
+            const pieceKey = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
+            pieceElement.innerHTML = PIECE_SYMBOLS[pieceKey] || '';
+            
+            // Add color class for styling
+            pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
+            square.appendChild(pieceElement);
+        }
     }
-  }
-  
+}
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
     const dialog = document.getElementById('promotion-dialog');
