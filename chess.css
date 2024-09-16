@@ -172,29 +172,38 @@ button:hover {
 }
 
 /* CHESS PIECES - COMPLETELY FIXED */
+/* Ensure SVG pieces display correctly */
 .piece {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .piece svg {
-  width: 80%;
-  height: 80%;
-  pointer-events: none;
+    width: 80%;
+    height: 80%;
+    pointer-events: none; /* Prevent SVG from blocking clicks */
 }
 
-.white-piece svg {
-  filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
+/* Explicitly set colors for pieces */
+.white-piece svg [fill="#ffffff"] {
+    fill: #ffffff !important;
 }
 
-.black-piece svg {
-  filter: drop-shadow(0 0 1px rgba(255,255,255,0.5));
+.black-piece svg [fill="#333333"] {
+    fill: #333333 !important;
 }
 
+/* Ensure strokes are visible */
+.white-piece svg [stroke="#000000"] {
+    stroke: #000000 !important;
+}
+
+.black-piece svg [stroke="#ffffff"] {
+    stroke: #ffffff !important;
+}
 /* PROMOTION DIALOG - COMPLETELY FIXED */
 #promotion-dialog {
   position: fixed;
