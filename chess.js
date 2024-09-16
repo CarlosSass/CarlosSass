@@ -1015,7 +1015,7 @@ async function showFinalResult(gameData) {
     const winnings = gameState.betam * 1.8; // 1.8x payout for winner
     resultAmount.textContent = `+${formatBalance(winnings)}`;
   } else {
-    resultAmount.textContent = `-${formatBalance(betam)}`;
+    resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
   }
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
@@ -1025,11 +1025,5 @@ async function showFinalResult(gameData) {
     gameState.didwelose = false;
   }
 
-  // Debug logging
-  console.log('Final result displayed:', {
-    isWinner,
-    betAmount,
-    calculatedAmount: isWinner ? betAmount * 1.8 : betAmount,
-    gameData
-  });
+
 }
