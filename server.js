@@ -663,111 +663,115 @@ async function updatePlayerBalance(phone, amount, transactionType, gameCode = nu
   }
 }
 function startGameTimer(gameCode, initialTime = 600) {
-  if (gameTimers[gameCode]) {
-    clearInterval(gameTimers[gameCode].interval);
-    delete gameTimers[gameCode];
+    if (gameTimers[gameCode]) {
+      clearInterval(gameTimers[gameCode].interval);
+      delete gameTimers[gameCode];
+    }
+  
+    gameTimers[gameCode] = {
+      whiteTime: initialTime,
+      blackTime: initialTime,
+      lastUpdate: Date.now(),
+      currentTurn: 'white', // Changed from 'black' to 'white' since white moves first
+      interval: setInterval(async () => {
+        try {
+          const now = Date.now();
+          const elapsed = Math.floor((now - gameTimers[gameCode].lastUpdate) / 1000);
+          gameTimers[gameCode].lastUpdate = now;
+  
+          const room = gameRooms.get(gameCode);
+          const game = activeGames.get(gameCode);
+  
+          // Update current player's time
+          if (gameTimers[gameCode].currentTurn === 'white') {
+            gameTimers[gameCode].whiteTime = Math.max(0, gameTimers[gameCode].whiteTime - elapsed);
+            
+            if (gameTimers[gameCode].whiteTime <= 0) {
+              // End game due to white's timeout
+              const endedGame = await endGame(gameCode, 'black', 'timeout');
+              
+              // Notify players if still connected
+              if (room?.black && io.sockets.sockets.has(room.black)) {
+                io.to(room.black).emit('gameWon', {
+                  animation: 'moneyIncrease',
+                  amount: endedGame.winningAmount,
+                  newBalance: endedGame.winnerNewBalance,
+                  reason: 'Opponent ran out of time! You won!'
+                });
+              }
+              
+              if (room?.white && io.sockets.sockets.has(room.white)) {
+                io.to(room.white).emit('gameLost', {
+                  animation: 'moneyDecrease',
+                  amount: -endedGame.betAmount,
+                  newBalance: endedGame.loserNewBalance,
+                  reason: 'You ran out of time!'
+                });
+              }
+  
+              // Clean up timer
+              clearInterval(gameTimers[gameCode].interval);
+              delete gameTimers[gameCode];
+              return;
+            }
+          } else {
+            gameTimers[gameCode].blackTime = Math.max(0, gameTimers[gameCode].blackTime - elapsed);
+            
+            if (gameTimers[gameCode].blackTime <= 0) {
+              // End game due to black's timeout
+              const endedGame = await endGame(gameCode, 'white', 'timeout');
+              
+              // Notify players if still connected
+              if (room?.white && io.sockets.sockets.has(room.white)) {
+                io.to(room.white).emit('gameWon', {
+                  animation: 'moneyIncrease',
+                  amount: endedGame.winningAmount,
+                  newBalance: endedGame.winnerNewBalance,
+                  reason: 'Opponent ran out of time! You won!'
+                });
+              }
+              
+              if (room?.black && io.sockets.sockets.has(room.black)) {
+                io.to(room.black).emit('gameLost', {
+                  animation: 'moneyDecrease',
+                  amount: -endedGame.betAmount,
+                  newBalance: endedGame.loserNewBalance,
+                  reason: 'You ran out of time!'
+                });
+              }
+  
+              // Clean up timer
+              clearInterval(gameTimers[gameCode].interval);
+              delete gameTimers[gameCode];
+              return;
+            }
+          }
+  
+          // Send timer updates to all clients in the room
+          io.to(gameCode).emit('timerUpdate', {
+            whiteTime: gameTimers[gameCode].whiteTime,
+            blackTime: gameTimers[gameCode].blackTime,
+            currentTurn: gameTimers[gameCode].currentTurn
+          });
+  
+        } catch (error) {
+          console.error('Timer error:', error);
+          // Clean up timer on error
+          if (gameTimers[gameCode]) {
+            clearInterval(gameTimers[gameCode].interval);
+            delete gameTimers[gameCode];
+          }
+        }
+      }, 1000)
+    };
+  
+    // Send initial timer state
+    io.to(gameCode).emit('timerUpdate', {
+      whiteTime: gameTimers[gameCode].whiteTime,
+      blackTime: gameTimers[gameCode].blackTime,
+      currentTurn: gameTimers[gameCode].currentTurn
+    });
   }
-
-  gameTimers[gameCode] = {
-    whiteTime: initialTime,
-    blackTime: initialTime,
-    lastUpdate: Date.now(),
-    currentTurn: 'black',
-    interval: setInterval(async () => {
-      try {
-        const now = Date.now();
-        const elapsed = Math.floor((now - gameTimers[gameCode].lastUpdate) / 1000);
-        gameTimers[gameCode].lastUpdate = now;
-
-        const room = gameRooms.get(gameCode);
-        const game = activeGames.get(gameCode);
-
-        // Update current player's time
-        if (gameTimers[gameCode].currentTurn === 'white') {
-          gameTimers[gameCode].whiteTime = Math.max(0, gameTimers[gameCode].whiteTime - elapsed);
-          
-          if (gameTimers[gameCode].whiteTime <= 0) {
-            const endedGame = await endGame(gameCode, 'black', 'timeout');
-            
-            // Notify black player (winner)
-            if (room?.black) {
-              io.to(room.black).emit('gameWon', {
-                animation: 'moneyIncrease',
-                amount: endedGame.winningAmount,
-                newBalance: endedGame.winnerNewBalance,
-                reason: 'Time out! You won!'
-              });
-            }
-            
-            // Notify white player (loser)
-            if (room?.white) {
-              io.to(room.white).emit('gameLost', {
-                animation: 'moneyDecrease',
-                amount: -endedGame.betAmount,
-                newBalance: endedGame.loserNewBalance,
-                reason: 'You ran out of time!'
-              });
-            }
-
-            clearInterval(gameTimers[gameCode].interval);
-            delete gameTimers[gameCode];
-            return;
-          }
-        } else {
-          gameTimers[gameCode].blackTime = Math.max(0, gameTimers[gameCode].blackTime - elapsed);
-          if (gameTimers[gameCode].blackTime <= 0) {
-            const endedGame = await endGame(gameCode, 'white', 'timeout');
-            
-            // Notify white player (winner)
-            if (room?.white) {
-              io.to(room.white).emit('gameWon', {
-                animation: 'moneyIncrease',
-                amount: endedGame.winningAmount,
-                newBalance: endedGame.winnerNewBalance,
-                reason: 'Time out! You won!'
-              });
-            }
-            
-            // Notify black player (loser)
-            if (room?.black) {
-              io.to(room.black).emit('gameLost', {
-                animation: 'moneyDecrease',
-                amount: -endedGame.betAmount,
-                newBalance: endedGame.loserNewBalance,
-                reason: 'You ran out of time!'
-              });
-            }
-
-            clearInterval(gameTimers[gameCode].interval);
-            delete gameTimers[gameCode];
-            return;
-          }
-        }
-
-        // Send timer updates
-        io.to(gameCode).emit('timerUpdate', {
-          whiteTime: gameTimers[gameCode].whiteTime,
-          blackTime: gameTimers[gameCode].blackTime,
-          currentTurn: gameTimers[gameCode].currentTurn
-        });
-
-      } catch (error) {
-        console.error('Timer error:', error);
-        if (gameTimers[gameCode]) {
-          clearInterval(gameTimers[gameCode].interval);
-          delete gameTimers[gameCode];
-        }
-      }
-    }, 1000)
-  };
-
-  // Send initial timer state
-  io.to(gameCode).emit('timerUpdate', {
-    whiteTime: gameTimers[gameCode].whiteTime,
-    blackTime: gameTimers[gameCode].blackTime,
-    currentTurn: gameTimers[gameCode].currentTurn
-  });
-}
 async function endGame(gameCode, winner, result) {
   try {
     // 1. Get game data
