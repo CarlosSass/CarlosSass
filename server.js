@@ -217,66 +217,75 @@ io.on('connection', (socket) => {
   // Handle disconnections
 // Inside your socket.io 'disconnect' handler
 const disconnectTimers = {};
-
 socket.on('disconnect', async () => {
-  try {
-    console.log(`Client disconnected: ${socket.id}`);
-    if (!socket.gameCode) return;
-
-    const room = gameRooms.get(socket.gameCode);
-    if (!room) return;
-
-    // Determine which player disconnected
-    let disconnectedRole = null;
-    if (room.white === socket.id) {
-      disconnectedRole = 'white';
-      room.white = null;
-    } else if (room.black === socket.id) {
-      disconnectedRole = 'black';
-      room.black = null;
-    }
-
-    if (!disconnectedRole) return;
-
-    const game = activeGames.get(socket.gameCode);
-    const isGameActive = game?.status === 'ongoing';
-
-    // Set a timer to end the game if player doesn't reconnect
-    if (isGameActive) {
-      disconnectTimers[socket.id] = setTimeout(async () => {
-        try {
-          const winner = disconnectedRole === 'white' ? 'black' : 'white';
-          const remainingSocketId = room[winner];
-          
-          // Only end game if remaining player is still connected
-          if (io.sockets.sockets.has(remainingSocketId)) {
-            const endedGame = await endGame(socket.gameCode, winner, 'abandonment');
+    try {
+      console.log(`Client disconnected: ${socket.id}`);
+      if (!socket.gameCode) return;
+  
+      const room = gameRooms.get(socket.gameCode);
+      if (!room) return;
+  
+      // Determine which player disconnected
+      let disconnectedRole = null;
+      if (room.white === socket.id) {
+        disconnectedRole = 'white';
+        room.white = null;
+      } else if (room.black === socket.id) {
+        disconnectedRole = 'black';
+        room.black = null;
+      }
+  
+      if (!disconnectedRole) return;
+  
+      const game = activeGames.get(socket.gameCode);
+      const isGameActive = game?.status === 'ongoing';
+  
+      // Set a timer to end the game if player doesn't reconnect
+      if (isGameActive) {
+        const timerKey = `${socket.gameCode}_${disconnectedRole}`;
+        
+        disconnectTimers[timerKey] = setTimeout(async () => {
+          try {
+            const currentRoom = gameRooms.get(socket.gameCode);
+            const currentGame = activeGames.get(socket.gameCode);
             
-            io.to(remainingSocketId).emit('gameOver', {
-              winner,
-              reason: 'Opponent abandoned the game',
-              ...(game.bet && {
-                animation: 'moneyIncrease',
-                amount: endedGame.winningAmount,
-                newBalance: endedGame.winnerNewBalance
-              })
-            });
-            
-            // Clean up game resources
-            cleanupGameResources(socket.gameCode);
+            // Only proceed if game is still active and disconnected player hasn't reconnected
+            if (currentGame?.status === 'ongoing' && 
+                ((disconnectedRole === 'white' && !currentRoom.white) || 
+                 (disconnectedRole === 'black' && !currentRoom.black))) {
+              
+              const winner = disconnectedRole === 'white' ? 'black' : 'white';
+              const remainingSocketId = currentRoom[winner];
+              
+              const endedGame = await endGame(socket.gameCode, winner, 'abandonment');
+              
+              // Notify remaining player if still connected
+              if (remainingSocketId && io.sockets.sockets.has(remainingSocketId)) {
+                io.to(remainingSocketId).emit('gameOver', {
+                  winner,
+                  reason: 'Opponent disconnected',
+                  ...(currentGame.bet && {
+                    animation: 'moneyIncrease',
+                    amount: endedGame.winningAmount,
+                    newBalance: endedGame.winnerNewBalance
+                  })
+                });
+              }
+              
+              // Clean up game resources
+              cleanupGameResources(socket.gameCode);
+            }
+          } catch (error) {
+            console.error('Abandonment handler error:', error);
+          } finally {
+            delete disconnectTimers[timerKey];
           }
-        } catch (error) {
-          console.error('Abandonment handler error:', error);
-        } finally {
-          delete disconnectTimers[socket.id];
-        }
-      }, ABANDON_TIMEOUT);
+        }, ABANDON_TIMEOUT);
+      }
+    } catch (error) {
+      console.error('Disconnect handler error:', error);
     }
-
-  } catch (error) {
-    console.error('Disconnect handler error:', error);
-  }
-});
+  });
 
 // Clear disconnect timer if player reconnects
 socket.on('reconnect', () => {
@@ -743,7 +752,7 @@ function startGameTimer(gameCode, initialTime = 600) {
       whiteTime: initialTime,
       blackTime: initialTime,
       lastUpdate: Date.now(),
-      currentTurn: 'black', 
+      currentTurn: 'black', // Start with white's turn
       interval: setInterval(async () => {
         try {
           const now = Date.now();
@@ -752,6 +761,12 @@ function startGameTimer(gameCode, initialTime = 600) {
   
           const room = gameRooms.get(gameCode);
           const game = activeGames.get(gameCode);
+  
+          if (!game || game.status !== 'ongoing') {
+            clearInterval(gameTimers[gameCode].interval);
+            delete gameTimers[gameCode];
+            return;
+          }
   
           // Update current player's time
           if (gameTimers[gameCode].currentTurn === 'white') {
@@ -763,26 +778,31 @@ function startGameTimer(gameCode, initialTime = 600) {
               
               // Notify players if still connected
               if (room?.black && io.sockets.sockets.has(room.black)) {
-                io.to(room.black).emit('gameWon', {
-                  animation: 'moneyIncrease',
-                  amount: endedGame.winningAmount,
-                  newBalance: endedGame.winnerNewBalance,
-                  reason: 'Opponent ran out of time! You won!'
+                io.to(room.black).emit('gameOver', {
+                  winner: 'black',
+                  reason: 'Opponent ran out of time',
+                  ...(game.bet && {
+                    amount: endedGame.winningAmount,
+                    newBalance: endedGame.winnerNewBalance
+                  })
                 });
               }
               
               if (room?.white && io.sockets.sockets.has(room.white)) {
-                io.to(room.white).emit('gameLost', {
-                  animation: 'moneyDecrease',
-                  amount: -endedGame.betAmount,
-                  newBalance: endedGame.loserNewBalance,
-                  reason: 'You ran out of time!'
+                io.to(room.white).emit('gameOver', {
+                  winner: 'black',
+                  reason: 'You ran out of time',
+                  ...(game.bet && {
+                    amount: -game.bet,
+                    newBalance: endedGame.loserNewBalance
+                  })
                 });
               }
   
               // Clean up timer
               clearInterval(gameTimers[gameCode].interval);
               delete gameTimers[gameCode];
+              cleanupGameResources(gameCode);
               return;
             }
           } else {
@@ -794,26 +814,31 @@ function startGameTimer(gameCode, initialTime = 600) {
               
               // Notify players if still connected
               if (room?.white && io.sockets.sockets.has(room.white)) {
-                io.to(room.white).emit('gameWon', {
-                  animation: 'moneyIncrease',
-                  amount: endedGame.winningAmount,
-                  newBalance: endedGame.winnerNewBalance,
-                  reason: 'Opponent ran out of time! You won!'
+                io.to(room.white).emit('gameOver', {
+                  winner: 'white',
+                  reason: 'Opponent ran out of time',
+                  ...(game.bet && {
+                    amount: endedGame.winningAmount,
+                    newBalance: endedGame.winnerNewBalance
+                  })
                 });
               }
               
               if (room?.black && io.sockets.sockets.has(room.black)) {
-                io.to(room.black).emit('gameLost', {
-                  animation: 'moneyDecrease',
-                  amount: -endedGame.betAmount,
-                  newBalance: endedGame.loserNewBalance,
-                  reason: 'You ran out of time!'
+                io.to(room.black).emit('gameOver', {
+                  winner: 'white',
+                  reason: 'You ran out of time',
+                  ...(game.bet && {
+                    amount: -game.bet,
+                    newBalance: endedGame.loserNewBalance
+                  })
                 });
               }
   
               // Clean up timer
               clearInterval(gameTimers[gameCode].interval);
               delete gameTimers[gameCode];
+              cleanupGameResources(gameCode);
               return;
             }
           }
@@ -1445,12 +1470,3 @@ app.post('/api/accept-draw', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-
-
-
-
-
-
-
-
-
