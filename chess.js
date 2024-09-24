@@ -74,6 +74,18 @@ function renderBoard() {
     // Clear existing pieces
     document.querySelectorAll('.piece').forEach(p => p.remove());
     
+    // Play move sound when the board updates (unless it's the initial render)
+    if (gameState.chess.history().length > 0) {
+        const lastMove = gameState.chess.history({ verbose: true })[gameState.chess.history().length - 1];
+        if (lastMove.captured) {
+            playSound('capture');
+        } else if (gameState.chess.in_check()) {
+            playSound('check');
+        } else {
+            playSound('move');
+        }
+    }
+    
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const algebraic = rowColToAlgebraic(row, col);
@@ -94,6 +106,42 @@ function renderBoard() {
         }
     }
 }
+
+function handleGameUpdate(update) {
+    if (!update || !update.gameState) return;
+    
+    // Always clear previous move highlights first
+    document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
+        el.classList.remove('last-move-from', 'last-move-to');
+    });
+    
+    gameState.currentGame = update.gameState;
+    gameState.chess.load(update.gameState.fen);
+    gameState.turn = update.gameState.turn;
+    
+    // Update player info
+    updatePlayerInfo(update.gameState);
+    
+    if (update.move) {
+        // Highlight the previous move regardless of whose turn it is
+        if (update.move.from) {
+            const { row: fromRow, col: fromCol } = algebraicToRowCol(update.move.from);
+            const fromSquare = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
+            if (fromSquare) fromSquare.classList.add('last-move-from');
+        }
+        
+        if (update.move.to) {
+            const { row: toRow, col: toCol } = algebraicToRowCol(update.move.to);
+            const toSquare = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
+            if (toSquare) toSquare.classList.add('last-move-to');
+        }
+        
+        // Sound is now handled in renderBoard()
+        addMoveToHistory(update.move);
+    }
+    
+    updateGameState(update.gameState);
+  }
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
     const dialog = document.getElementById('promotion-dialog');
@@ -208,7 +256,7 @@ const sounds = {
   move: new Audio('move-self.mp3'),
   capture: new Audio('capture.mp3'),
   check: new Audio('notify.mp3'),
-  join: new Audio('mixkit-positive-notification-951.mp3')
+  join: new Audio('join.mp3')
 };
 
 // Initialize the game when DOM is loaded
@@ -365,6 +413,7 @@ function removeWaitingOverlay() {
   const overlay = document.getElementById('waiting-overlay');
   if (overlay) {
       overlay.classList.add('hidden');
+      playSound("join");
   }
 }
 // Initialize Game
@@ -518,48 +567,7 @@ function updatePlayerInfo(gameData) {
   }
 }
 // Handle game updates from server
-function handleGameUpdate(update) {
-  if (!update || !update.gameState) return;
-  
-  // Always clear previous move highlights first
-  document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
-      el.classList.remove('last-move-from', 'last-move-to');
-  });
-  
-  gameState.currentGame = update.gameState;
-  gameState.chess.load(update.gameState.fen);
-  gameState.turn = update.gameState.turn;
-  
-  // Update player info
-  updatePlayerInfo(update.gameState);
-  
-  if (update.move) {
-      // Highlight the previous move regardless of whose turn it is
-      if (update.move.from) {
-          const { row: fromRow, col: fromCol } = algebraicToRowCol(update.move.from);
-          const fromSquare = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
-          if (fromSquare) fromSquare.classList.add('last-move-from');
-      }
-      
-      if (update.move.to) {
-          const { row: toRow, col: toCol } = algebraicToRowCol(update.move.to);
-          const toSquare = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
-          if (toSquare) toSquare.classList.add('last-move-to');
-      }
-      
-      if (update.move.captured) {
-          playSound('capture');
-      } else if (gameState.chess.in_check()) {
-          playSound('check');
-      } else {
-          playSound('move');
-      }
-      
-      addMoveToHistory(update.move);
-  }
-  
-  updateGameState(update.gameState);
-}
+
 // Create Chess Board
 function createBoard() {
   board.innerHTML = '';
