@@ -671,6 +671,15 @@ function clearHighlights() {
 function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
+    
+    // Add warning class if time is low
+    const timeDisplay = gameState.playerColor === 'black' ? whiteTimeDisplay : blackTimeDisplay;
+    if (seconds <= 10) {
+      timeDisplay.classList.add('time-warning');
+    } else {
+      timeDisplay.classList.remove('time-warning');
+    }
+    
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
@@ -784,31 +793,26 @@ function handleDrawOffer(offer) {
   }
 }
 
-// Handle game over
-function handleGameOver(result) {
-  let message = `Game over - ${result.winner} wins by ${result.reason}`;
-  if (result.reason === 'draw') {
-    message = 'Game ended in a draw';
-  }
-  showFinalResult(result);
-  
-  //alert(message);
-  gameStatus.textContent = message;
-}
+
 // Add this listener in initGame():
 
 // Update the timerUpdate listener to handle swapped times:
-socket.on('timerUpdate', ({ whiteTime, blackTime }) => {
-  if (gameState.playerColor === 'black') {
-    whiteTimeDisplay.textContent = formatTime(whiteTime);
-    blackTimeDisplay.textContent = formatTime(blackTime);
-  } else {
-    // Player is black - swap the times
-    whiteTimeDisplay.textContent = formatTime(blackTime);
-    blackTimeDisplay.textContent = formatTime(whiteTime);
-  }
-});
-
+socket.on('timerUpdate', ({ whiteTime, blackTime, currentTurn }) => {
+    // Update displays
+    if (gameState.playerColor === 'black') {
+      whiteTimeDisplay.textContent = formatTime(whiteTime);
+      blackTimeDisplay.textContent = formatTime(blackTime);
+    } else {
+      whiteTimeDisplay.textContent = formatTime(blackTime);
+      blackTimeDisplay.textContent = formatTime(whiteTime);
+    }
+    
+    // Highlight current player's timer
+    if (currentTurn === gameState.playerColor) {
+      document.getElementById(`${gameState.playerColor}-time`).classList.add('active-turn');
+      document.getElementById(`${gameState.playerColor === 'white' ? 'black' : 'white'}-time`).classList.remove('active-turn');
+    }
+  });
   // Listen for notifications from the server
 socket.on('notification', (data) => {
   switch(data.type) {
@@ -997,41 +1001,90 @@ function formatBalance(amount) {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
-async function showFinalResult(gameData) {
-  // Ensure gameData exists and has required properties
-  if (!gameData) {
-    console.error('showFinalResult: gameData is undefined');
-    return;
-  }
-
-  const isWinner = gameData.winner === gameState.playerColor;
-  const betAmount = Number(gameData.bet) || 0; // Ensure bet is a number
+function showFinalResult(gameData) {
+    if (!gameData) {
+      console.error('showFinalResult: gameData is undefined');
+      return;
+    }
   
-  gameResultModal.classList.add('active');
-  isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
-  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-
-  // Handle cases where reason might be missing
-  const reason = gameData.reason || 'game completion';
+    const isWinner = gameData.winner === gameState.playerColor;
+    const isTimeout = gameData.reason.includes('time');
+    const betAmount = Number(gameData.bet) || 0;
+    
+    gameResultModal.classList.add('active');
+    isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
+    
+    // Set appropriate title based on result type
+    if (isTimeout) {
+      resultTitle.textContent = isWinner ? 'Opponent Timed Out!' : 'You Timed Out!';
+    } else {
+      resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+    }
   
-  resultMessage.textContent = isWinner
-    ? `You won the game by ${reason}! :)`
-    : `You lost the game by ${reason} :(`;
+    // Set appropriate message
+    let reasonMessage = '';
+    if (isTimeout) {
+      reasonMessage = isWinner 
+        ? 'Your opponent ran out of time!' 
+        : 'You ran out of time!';
+    } else {
+      reasonMessage = gameData.reason || 'game completion';
+    }
+    
+    resultMessage.textContent = isWinner
+      ? `You won by ${reasonMessage}`
+      : `You lost by ${reasonMessage}`;
+  
+    // Display winnings/losses
 
-  // Safely calculate and display amounts
-  if (isWinner) {
-    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-    resultAmount.textContent = `+${formatBalance(winnings)}`;
-  } else {
-    resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
+
+    
+    if ( gameState.betam > 0) {
+        if (isWinner) {
+            const winnings = gameState.betam * 1.8; // 1.8x payout for winner
+            resultAmount.textContent = `+${formatBalance(winnings)}`;
+          } else {
+            resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
+          }
+      resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+    } else {
+      resultAmount.textContent = '';
+    }
+  
+    // Add visual effects
+    const resultContent = document.getElementById('result-content');
+    if (isTimeout) {
+      resultContent.classList.add('timeout-result');
+    } else {
+      resultContent.classList.remove('timeout-result');
+    }
   }
-
-  resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-
-  // Reset game state if needed
-  if (!isWinner && gameState.didwelose) {
-    gameState.didwelose = false;
+function handleGameOver(result) {
+    // Determine if this was a timeout
+    const isTimeout = result.reason.includes('time');
+    
+    // Update the message based on the result
+    let message;
+    if (result.winner) {
+      if (isTimeout) {
+        message = `Time out! ${result.winner} wins by timeout`;
+      } else {
+        message = `Checkmate! ${result.winner} wins`;
+      }
+    } else {
+      message = 'Game ended in a draw';
+    }
+  
+    // Show the final result modal
+    showFinalResult(result);
+    
+    // Update the game status display
+    gameStatus.textContent = message;
+    
+    // Play appropriate sound
+    if (isTimeout) {
+      playSound('check'); // Or create a specific timeout sound
+    } else if (result.winner) {
+      playSound('check'); // Or create a victory sound
+    }
   }
-
-
-}
