@@ -666,3 +666,28 @@ button:hover {
     gap: 10px;
   }
 }
+.timeout-result {
+    border: 3px solid #ff5722;
+    animation: pulseTimeout 1.5s infinite;
+  }
+  
+  @keyframes pulseTimeout {
+    0% { border-color: #ff5722; }
+    50% { border-color: #ff9800; }
+    100% { border-color: #ff5722; }
+  }
+  
+  #result-title.timeout {
+    color: #ff5722;
+  }
+  .time-warning {
+    color: #ff5722;
+    font-weight: bold;
+    animation: blink 1s infinite;
+  }
+  
+  @keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
