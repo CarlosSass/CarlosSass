@@ -445,7 +445,10 @@ async function initGame() {
     socket.on('moveError', showError);
     socket.on('drawOffer', handleDrawOffer);
     socket.on('gameOver', handleGameOver);
-    
+    // In your initGame() function, update the socket listeners:
+socket.on('resignationResult', handleGameOver);
+socket.on('gameWon', handleGameOver);
+socket.on('gameLost', handleGameOver);
     // Add this new listener for player updates
     socket.on('playerUpdate', (data) => {
       if (gameState.currentGame) {
@@ -1002,89 +1005,95 @@ function formatBalance(amount) {
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
 function showFinalResult(gameData) {
-    if (!gameData) {
-      console.error('showFinalResult: gameData is undefined');
-      return;
-    }
-  
-    const isWinner = gameData.winner === gameState.playerColor;
-    const isTimeout = gameData.reason.includes('time');
-    const betAmount = Number(gameData.bet) || 0;
-    
-    gameResultModal.classList.add('active');
-    isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
-    
-    // Set appropriate title based on result type
-    if (isTimeout) {
-      resultTitle.textContent = isWinner ? 'Opponent Timed Out!' : 'You Timed Out!';
-    } else {
-      resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-    }
-  
-    // Set appropriate message
-    let reasonMessage = '';
-    if (isTimeout) {
-      reasonMessage = isWinner 
-        ? 'Your opponent ran out of time!' 
-        : 'You ran out of time!';
-    } else {
-      reasonMessage = gameData.reason || 'game completion';
-    }
-    
-    resultMessage.textContent = isWinner
-      ? `You won by ${reasonMessage}`
-      : `You lost by ${reasonMessage}`;
-  
-    // Display winnings/losses
+  if (!gameData) return;
 
-
-    
-    if ( gameState.betam > 0) {
-        if (isWinner) {
-            const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-            resultAmount.textContent = `+${formatBalance(winnings)}`;
-          } else {
-            resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
-          }
-      resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-    } else {
-      resultAmount.textContent = '';
-    }
+  const isWinner = gameData.winner === gameState.playerColor;
+  const isResignation = gameData.reason.includes('resign');
+  const isDisconnect = gameData.reason.includes('disconnect') || gameData.reason.includes('abandon');
   
-    // Add visual effects
-    const resultContent = document.getElementById('result-content');
-    if (isTimeout) {
-      resultContent.classList.add('timeout-result');
-    } else {
-      resultContent.classList.remove('timeout-result');
-    }
+  gameResultModal.classList.add('active');
+  
+  // Set title and animation based on result
+  if (isWinner) {
+    resultTitle.textContent = 'You Won!';
+    showAnimation('moneyIncrease');
+  } else {
+    resultTitle.textContent = 'Game Over';
+    showAnimation('moneyDecrease');
   }
-function handleGameOver(result) {
-    // Determine if this was a timeout
+
+  // Set the main message
+  resultMessage.textContent = gameData.reason;
+
+  // Display the amount won/lost
+  if (gameData.amountMessage) {
+    resultAmount.textContent = gameData.amountMessage;
+    resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+  } else {
+    resultAmount.textContent = '';
+  }
+
+  // Special styling for resignation/disconnect
+  const resultContent = document.getElementById('result-content');
+  if (isResignation || isDisconnect) {
+    resultContent.classList.add('instant-result');
+  } else {
+    resultContent.classList.remove('instant-result');
+  }
+}
+  function handleGameOver(result) {
+    // Determine the type of game end
+    const isResignation = result.reason.includes('resign');
+    const isDisconnect = result.reason.includes('disconnect') || result.reason.includes('abandon');
     const isTimeout = result.reason.includes('time');
     
-    // Update the message based on the result
-    let message;
-    if (result.winner) {
-      if (isTimeout) {
-        message = `Time out! ${result.winner} wins by timeout`;
-      } else {
-        message = `Checkmate! ${result.winner} wins`;
+    // Prepare the message based on how the game ended
+    let message = '';
+    let amountMessage = '';
+    
+    if (result.winner === gameState.playerColor) {
+      // Current player won
+      if (isResignation) {
+        message = 'Opponent resigned!';
+        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
+      } 
+      else if (isDisconnect) {
+        message = 'Opponent disconnected!';
+        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
+      }
+      else if (isTimeout) {
+        message = 'Opponent ran out of time!';
+        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
+      }
+      else {
+        message = 'Checkmate! You won!';
+        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
       }
     } else {
-      message = 'Game ended in a draw';
+      // Current player lost
+      if (isResignation) {
+        message = 'You resigned!';
+        amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+      }
+      else if (isTimeout) {
+        message = 'You ran out of time!';
+        amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+      }
+      else {
+        message = 'You lost!';
+        amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+      }
     }
   
-    // Show the final result modal
-    showFinalResult(result);
-    
-    // Update the game status display
+    // Show the result immediately
+    showFinalResult({
+      winner: result.winner,
+      reason: message,
+      winningAmount: result.winningAmount,
+      betAmount: result.betAmount,
+      amountMessage: amountMessage
+    });
+  
+    // Update game status
     gameStatus.textContent = message;
-    
-    // Play appropriate sound
-    if (isTimeout) {
-      playSound('check'); // Or create a specific timeout sound
-    } else if (result.winner) {
-      playSound('check'); // Or create a victory sound
-    }
   }
