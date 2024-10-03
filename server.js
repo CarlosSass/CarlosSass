@@ -327,163 +327,136 @@ socket.on('acceptDraw', async ({ gameCode, player }) => {
   }
 });
 // Updated resignation handler
+
+// Updated resignation handler with immediate payout display
 socket.on('resign', async ({ gameCode, player }) => {
   try {
-      if (!gameCode || !player) {
-          throw new Error('Missing game code or player information');
-      }
+    // Validate input
+    if (!gameCode || !player) throw new Error('Missing game code or player');
 
-      const game = activeGames.get(gameCode);
-      if (!game) throw new Error('Game not found');
-      if (game.status !== 'ongoing') throw new Error('Game is not in progress');
+    const game = activeGames.get(gameCode);
+    if (!game) throw new Error('Game not found');
+    if (game.status !== 'ongoing') throw new Error('Game not in progress');
 
-      const room = gameRooms.get(gameCode);
-      if (!room) throw new Error('Game room not found');
+    const room = gameRooms.get(gameCode);
+    if (!room) throw new Error('Room not found');
 
-      // Determine winner and loser
-      const winner = player === 'white' ? 'black' : 'white';
-      const loser = player;
-      
-      // Get player details
-      const winnerPhone = winner === 'white' ? game.white_phone : game.black_phone;
-      const loserPhone = loser === 'white' ? game.white_phone : game.black_phone;
-      const winnerSocket = winner === 'white' ? room.white : room.black;
-      const loserSocket = loser === 'white' ? room.white : room.black;
+    // Determine winner and loser
+    const winner = player === 'white' ? 'black' : 'white';
+    const winnerSocket = winner === 'white' ? room.white : room.black;
+    const loserSocket = player === 'white' ? room.white : room.black;
 
-      // End the game and process transactions
-      const endedGame = await endGame(gameCode, winner, 'resignation');
+    // Process game end and payments
+    const endedGame = await endGame(gameCode, winner, 'resignation');
 
-      // Prepare result data with enhanced financial info
-      const resultData = {
-          winner,
-          reason: 'resignation',
-          gameCode,
-          endedAt: new Date().toISOString(),
-          betAmount: game.bet,
-          winningAmount: endedGame.winningAmount,
-          winnerNewBalance: endedGame.winnerNewBalance,
-          loserNewBalance: endedGame.loserNewBalance
-      };
+    // Prepare detailed result data
+    const resultData = {
+      winner,
+      reason: 'resignation',
+      betAmount: game.bet,
+      winningAmount: endedGame.winningAmount,
+      winnerNewBalance: endedGame.winnerNewBalance,
+      loserNewBalance: endedGame.loserNewBalance,
+      endedAt: new Date().toISOString()
+    };
 
-      // Enhanced winner notification
-      if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
-          io.to(winnerSocket).emit('gameOver', {
-              winner,
-              reason: 'Opponent resigned!',
-              amount: endedGame.winningAmount,
-              newBalance: endedGame.winnerNewBalance,
-              details: {
-                  type: 'resignation',
-                  opponent: loser,
-                  bet: game.bet,
-                  payout: endedGame.winningAmount,
-                  newBalance: endedGame.winnerNewBalance
-              }
-          });
-      }
-
-      // Enhanced loser notification
-      if (loserSocket && io.sockets.sockets.has(loserSocket)) {
-          io.to(loserSocket).emit('gameOver', {
-              winner,
-              reason: 'You resigned the game',
-              amount: -game.bet,
-              newBalance: endedGame.loserNewBalance,
-              details: {
-                  type: 'resignation',
-                  bet: game.bet,
-                  amountLost: game.bet,
-                  newBalance: endedGame.loserNewBalance
-              }
-          });
-      }
-
-      // Clean up game resources
-      cleanupGameResources(gameCode);
-
-      // Log the resignation
-      console.log(`Game ${gameCode}: ${player} resigned, ${winner} wins`);
-      
-  } catch (error) {
-      console.error('Resignation error:', error);
-      socket.emit('error', {
-          type: 'resignation_failed',
-          message: error.message
+    // Notify winner immediately with payout details
+    if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
+      io.to(winnerSocket).emit('gameWon', {
+        type: 'resignation',
+        message: 'Opponent resigned!',
+        amount: endedGame.winningAmount,
+        bet: game.bet,
+        newBalance: endedGame.winnerNewBalance,
+        animation: 'moneyIncrease'
       });
+    }
+
+    // Notify loser immediately
+    if (loserSocket && io.sockets.sockets.has(loserSocket)) {
+      io.to(loserSocket).emit('gameLost', {
+        type: 'resignation',
+        message: 'You resigned the game',
+        amount: -game.bet,
+        newBalance: endedGame.loserNewBalance,
+        animation: 'moneyDecrease'
+      });
+    }
+
+    // Clean up game state
+    cleanupGameResources(gameCode);
+
+  } catch (error) {
+    console.error('Resignation failed:', error);
+    socket.emit('error', {
+      type: 'resignation_error',
+      message: error.message
+    });
   }
 });
 
-// Updated disconnect handler
+// Updated disconnect handler with immediate payout
 socket.on('disconnect', async () => {
   try {
-      if (!socket.gameCode) return;
+    if (!socket.gameCode) return;
 
-      const room = gameRooms.get(socket.gameCode);
-      if (!room) return;
+    const room = gameRooms.get(socket.gameCode);
+    if (!room) return;
 
-      // Determine which player disconnected
-      let disconnectedRole = null;
-      if (room.white === socket.id) {
-          disconnectedRole = 'white';
-          room.white = null;
-      } else if (room.black === socket.id) {
-          disconnectedRole = 'black';
-          room.black = null;
-      }
+    // Determine disconnected player
+    let disconnectedRole = null;
+    if (room.white === socket.id) {
+      disconnectedRole = 'white';
+      room.white = null;
+    } else if (room.black === socket.id) {
+      disconnectedRole = 'black';
+      room.black = null;
+    }
 
-      if (!disconnectedRole) return;
+    if (!disconnectedRole) return;
 
-      const game = activeGames.get(socket.gameCode);
-      const isGameActive = game?.status === 'ongoing';
+    const game = activeGames.get(socket.gameCode);
+    if (game?.status !== 'ongoing') return;
 
-      // Set a timer to end the game if player doesn't reconnect
-      if (isGameActive) {
-          const timerKey = `${socket.gameCode}_${disconnectedRole}`;
+    // Set abandonment timer
+    const timerKey = `${socket.gameCode}_${disconnectedRole}`;
+    
+    disconnectTimers[timerKey] = setTimeout(async () => {
+      try {
+        const currentRoom = gameRooms.get(socket.gameCode);
+        const currentGame = activeGames.get(socket.gameCode);
+        
+        // Verify game is still active and player hasn't reconnected
+        if (currentGame?.status === 'ongoing') {
+          const winner = disconnectedRole === 'white' ? 'black' : 'white';
+          const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
           
-          disconnectTimers[timerKey] = setTimeout(async () => {
-              try {
-                  const currentRoom = gameRooms.get(socket.gameCode);
-                  const currentGame = activeGames.get(socket.gameCode);
-                  
-                  // Only proceed if game is still active and disconnected player hasn't reconnected
-                  if (currentGame?.status === 'ongoing' && 
-                      ((disconnectedRole === 'white' && !currentRoom.white) || 
-                       (disconnectedRole === 'black' && !currentRoom.black))) {
-                      
-                      const winner = disconnectedRole === 'white' ? 'black' : 'white';
-                      const remainingSocketId = currentRoom[winner];
-                      
-                      const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
-                      
-                      // Enhanced winner notification with immediate payout display
-                      if (remainingSocketId && io.sockets.sockets.has(remainingSocketId)) {
-                          io.to(remainingSocketId).emit('gameOver', {
-                              winner,
-                              reason: 'Opponent disconnected!',
-                              amount: endedGame.winningAmount,
-                              newBalance: endedGame.winnerNewBalance,
-                              details: {
-                                  type: 'disconnection',
-                                  opponent: disconnectedRole,
-                                  bet: currentGame.bet,
-                                  payout: endedGame.winningAmount,
-                                  newBalance: endedGame.winnerNewBalance
-                              }
-                          });
-                      }
-                      
-                      // Clean up game resources
-                      cleanupGameResources(socket.gameCode);
-                  }
-              } catch (error) {
-                  console.error('Disconnection handler error:', error);
-              } finally {
-                  delete disconnectTimers[timerKey];
-              }
-          }, ABANDON_TIMEOUT);
+          // Only proceed if winner is still connected
+          if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
+            const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
+            
+            // Immediate payout notification
+            io.to(winnerSocket).emit('gameWon', {
+              type: 'disconnection',
+              message: 'Opponent disconnected!',
+              amount: endedGame.winningAmount,
+              bet: currentGame.bet,
+              newBalance: endedGame.winnerNewBalance,
+              animation: 'moneyIncrease'
+            });
+          }
+          
+          cleanupGameResources(socket.gameCode);
+        }
+      } catch (error) {
+        console.error('Disconnection error:', error);
+      } finally {
+        delete disconnectTimers[timerKey];
       }
+    }, ABANDON_TIMEOUT);
+
   } catch (error) {
-      console.error('Disconnect handler error:', error);
+    console.error('Disconnect handler error:', error);
   }
 });
   // Handle disconnections
