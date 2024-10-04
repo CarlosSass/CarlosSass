@@ -341,6 +341,12 @@ socket.on('resign', async ({ gameCode, player }) => {
     const room = gameRooms.get(gameCode);
     if (!room) throw new Error('Room not found');
 
+    // Stop the game timer immediately
+    if (gameTimers[gameCode]) {
+      clearInterval(gameTimers[gameCode].interval);
+      delete gameTimers[gameCode];
+    }
+
     // Determine winner and loser
     const winner = player === 'white' ? 'black' : 'white';
     const winnerSocket = winner === 'white' ? room.white : room.black;
@@ -431,6 +437,12 @@ socket.on('disconnect', async () => {
           const winner = disconnectedRole === 'white' ? 'black' : 'white';
           const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
           
+          // Stop the game timer
+          if (gameTimers[socket.gameCode]) {
+            clearInterval(gameTimers[socket.gameCode].interval);
+            delete gameTimers[socket.gameCode];
+          }
+
           // Only proceed if winner is still connected
           if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
             const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
@@ -459,7 +471,21 @@ socket.on('disconnect', async () => {
     console.error('Disconnect handler error:', error);
   }
 });
-  // Handle disconnections
+
+// Timer cleanup function
+function cleanupGameResources(gameCode) {
+  // Clear timer if exists
+  if (gameTimers[gameCode]) {
+    clearInterval(gameTimers[gameCode].interval);
+    delete gameTimers[gameCode];
+  }
+  
+  // Remove from active games
+  activeGames.delete(gameCode);
+  
+  // Clean up room
+  gameRooms.delete(gameCode);
+}
   
 });
 
