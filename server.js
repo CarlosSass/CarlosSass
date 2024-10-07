@@ -437,12 +437,6 @@ socket.on('disconnect', async () => {
           const winner = disconnectedRole === 'white' ? 'black' : 'white';
           const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
           
-          // Stop the game timer
-          if (gameTimers[socket.gameCode]) {
-            clearInterval(gameTimers[socket.gameCode].interval);
-            delete gameTimers[socket.gameCode];
-          }
-
           // Only proceed if winner is still connected
           if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
             const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
@@ -466,12 +460,10 @@ socket.on('disconnect', async () => {
         delete disconnectTimers[timerKey];
       }
     }, ABANDON_TIMEOUT);
-
   } catch (error) {
     console.error('Disconnect handler error:', error);
   }
 });
-
 // Timer cleanup function
 function cleanupGameResources(gameCode) {
   // Clear timer if exists
