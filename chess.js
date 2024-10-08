@@ -876,7 +876,27 @@ function showAnimation(type) {
 }
 
 // Update balance display
+// In your initGame() function, update the socket listeners:
+socket.on('gameWon', (data) => {
+  handleGameOver({
+    winner: gameState.playerColor,
+    reason: data.message,
+    winningAmount: data.amount,
+    betAmount: data.bet
+  });
+});
 
+socket.on('gameLost', (data) => {
+  handleGameOver({
+    winner: gameState.playerColor === 'white' ? 'black' : 'white',
+    reason: data.message,
+    betAmount: data.bet
+  });
+});
+
+socket.on('gameOver', (data) => {
+  handleGameOver(data);
+});
 
 // Show notification
 function showNotification(message) {
@@ -894,26 +914,10 @@ function showNotification(message) {
 // CSS for notifications
 // Handle winning the game
 // Handle winning the game
-socket.on('gameWon', (data) => {
-  // Only show positive animation for winner
-  if (data.animation) {
-   // showAnimation(data.animation);
-  }
-  //showNotification(`${data.reason} +$${data.amount}`);
-});
+
 
 // Handle losing the game
-socket.on('gameLost', (data) => {
-  // No animation or balance update for loser
-  //showNotification(data.reason);
-  
-  // Optional: You could show a different message style
-  const notification = document.createElement('div');
-  notification.className = 'game-notification lost';
-  notification.textContent = data.reason;
-  document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 5000);
-});
+
 // Handle balance updates (for real-time updates)
 socket.on('balanceUpdate', (data) => {
   
@@ -1010,6 +1014,7 @@ function showFinalResult(gameData) {
   const isWinner = gameData.winner === gameState.playerColor;
   const isResignation = gameData.reason.includes('resign');
   const isDisconnect = gameData.reason.includes('disconnect') || gameData.reason.includes('abandon');
+  const isDraw = !gameData.winner;
   
   gameResultModal.classList.add('active');
   
@@ -1017,6 +1022,8 @@ function showFinalResult(gameData) {
   if (isWinner) {
     resultTitle.textContent = 'You Won!';
     showAnimation('moneyIncrease');
+  } else if (isDraw) {
+    resultTitle.textContent = 'Game Drawn';
   } else {
     resultTitle.textContent = 'Game Over';
     showAnimation('moneyDecrease');
@@ -1041,59 +1048,67 @@ function showFinalResult(gameData) {
     resultContent.classList.remove('instant-result');
   }
 }
-  function handleGameOver(result) {
-    // Determine the type of game end
-    const isResignation = result.reason.includes('resign');
-    const isDisconnect = result.reason.includes('disconnect') || result.reason.includes('abandon');
-    const isTimeout = result.reason.includes('time');
-    
-    // Prepare the message based on how the game ended
-    let message = '';
-    let amountMessage = '';
-    
-    if (result.winner === gameState.playerColor) {
-      // Current player won
-      if (isResignation) {
-        message = 'Opponent resigned!';
-        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-      } 
-      else if (isDisconnect) {
-        message = 'Opponent disconnected!';
-        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-      }
-      else if (isTimeout) {
-        message = 'Opponent ran out of time!';
-        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-      }
-      else {
-        message = 'Checkmate! You won!';
-        amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-      }
-    } else {
-      // Current player lost
-      if (isResignation) {
-        message = 'You resigned!';
-        amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-      }
-      else if (isTimeout) {
-        message = 'You ran out of time!';
-        amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-      }
-      else {
-        message = 'You lost!';
-        amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-      }
+function handleGameOver(result) {
+  // Determine the type of game end
+  const isResignation = result.reason.includes('resign');
+  const isDisconnect = result.reason.includes('disconnect') || result.reason.includes('abandon');
+  const isTimeout = result.reason.includes('time');
+  const isDraw = !result.winner;
+  
+  // Prepare the message based on how the game ended
+  let message = '';
+  let amountMessage = '';
+  
+  if (result.winner === gameState.playerColor) {
+    // Current player won
+    if (isResignation) {
+      message = 'Opponent resigned!';
+      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
+    } 
+    else if (isDisconnect) {
+      message = 'Opponent disconnected!';
+      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
     }
-  
-    // Show the result immediately
-    showFinalResult({
-      winner: result.winner,
-      reason: message,
-      winningAmount: result.winningAmount,
-      betAmount: result.betAmount,
-      amountMessage: amountMessage
-    });
-  
-    // Update game status
-    gameStatus.textContent = message;
+    else if (isTimeout) {
+      message = 'Opponent ran out of time!';
+      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
+    }
+    else {
+      message = 'Checkmate! You won!';
+      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
+    }
+  } else if (isDraw) {
+    message = 'Game ended in a draw';
+    amountMessage = result.betAmount ? `Refunded ${formatBalance(result.betAmount)}` : '';
+  } else {
+    // Current player lost
+    if (isResignation) {
+      message = 'You resigned!';
+      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+    }
+    else if (isTimeout) {
+      message = 'You ran out of time!';
+      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+    }
+    else if (isDisconnect) {
+      message = 'You disconnected!';
+      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+    }
+    else {
+      message = 'You lost!';
+      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
+    }
   }
+
+  // Show the result immediately
+  showFinalResult({
+    winner: result.winner,
+    reason: message,
+    winningAmount: result.winningAmount,
+    betAmount: result.betAmount,
+    amountMessage: amountMessage
+  });
+
+  // Update game status
+  gameStatus.textContent = message;
+}
