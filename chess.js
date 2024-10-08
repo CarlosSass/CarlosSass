@@ -444,11 +444,12 @@ async function initGame() {
     socket.on('gameUpdate', handleGameUpdate);
     socket.on('moveError', showError);
     socket.on('drawOffer', handleDrawOffer);
-    socket.on('gameOver', handleGameOver);
-    // In your initGame() function, update the socket listeners:
-socket.on('resignationResult', handleGameOver);
-socket.on('gameWon', handleGameOver);
-socket.on('gameLost', handleGameOver);
+// In initGame()
+socket.on('gameOver', (data) => {
+  handleGameResult(data);
+});
+
+// Remove other result handlers (gameWon, gameLost) since we'll handle everything through gameOver
     // Add this new listener for player updates
     socket.on('playerUpdate', (data) => {
       if (gameState.currentGame) {
@@ -1049,66 +1050,89 @@ function showFinalResult(gameData) {
   }
 }
 function handleGameOver(result) {
-  // Determine the type of game end
-  const isResignation = result.reason.includes('resign');
-  const isDisconnect = result.reason.includes('disconnect') || result.reason.includes('abandon');
-  const isTimeout = result.reason.includes('time');
+  handleGameResult(result);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+function handleGameResult(result) {
+  // Determine if current player is the winner
+  const isWinner = result.winner === gameState.playerColor;
   const isDraw = !result.winner;
   
-  // Prepare the message based on how the game ended
-  let message = '';
+  // Prepare message based on result reason
+  let message = result.reason || (isWinner ? 'You won the game!' : 'You lost the game');
   let amountMessage = '';
   
-  if (result.winner === gameState.playerColor) {
-    // Current player won
-    if (isResignation) {
-      message = 'Opponent resigned!';
-      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-    } 
-    else if (isDisconnect) {
-      message = 'Opponent disconnected!';
-      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-    }
-    else if (isTimeout) {
-      message = 'Opponent ran out of time!';
-      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-    }
-    else {
-      message = 'Checkmate! You won!';
-      amountMessage = `You won ${result.winningAmount ? formatBalance(result.winningAmount) : ''}`;
-    }
+  if (isWinner) {
+    amountMessage = result.winningAmount ? `+${formatBalance(result.winningAmount)}` : '';
   } else if (isDraw) {
-    message = 'Game ended in a draw';
+    message = result.reason || 'Game ended in a draw';
     amountMessage = result.betAmount ? `Refunded ${formatBalance(result.betAmount)}` : '';
   } else {
-    // Current player lost
-    if (isResignation) {
-      message = 'You resigned!';
-      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-    }
-    else if (isTimeout) {
-      message = 'You ran out of time!';
-      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-    }
-    else if (isDisconnect) {
-      message = 'You disconnected!';
-      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-    }
-    else {
-      message = 'You lost!';
-      amountMessage = result.betAmount ? `Lost ${formatBalance(result.betAmount)}` : '';
-    }
+    amountMessage = result.betAmount ? `-${formatBalance(Math.abs(result.betAmount))}` : '';
   }
 
-  // Show the result immediately
-  showFinalResult({
-    winner: result.winner,
-    reason: message,
-    winningAmount: result.winningAmount,
-    betAmount: result.betAmount,
-    amountMessage: amountMessage
+  // Show modal with result
+  showGameResultModal({
+    isWinner,
+    isDraw,
+    message,
+    amount: amountMessage,
+    bet: result.betAmount,
+    newBalance: isWinner ? result.winnerNewBalance : result.loserNewBalance
   });
 
-  // Update game status
+  // Update game status display
   gameStatus.textContent = message;
+  
+  // Play appropriate sound
+  if (isWinner) {
+    playSound('check'); // Or create a 'win' sound
+  } else if (isDraw) {
+    playSound('move');
+  } else {
+    playSound('capture');
+  }
+}
+
+
+function showGameResultModal(data) {
+  const { isWinner, isDraw, message, amount, bet, newBalance } = data;
+  
+  // Set modal content
+  resultTitle.textContent = isWinner ? 'You Won!' : isDraw ? 'Game Drawn' : 'Game Over';
+  resultMessage.textContent = message;
+  
+  if (amount) {
+    resultAmount.textContent = amount;
+    resultAmount.className = isWinner ? 'win' : isDraw ? 'draw' : 'lose';
+  } else {
+    resultAmount.textContent = '';
+  }
+
+  // Update balance display if available
+  if (newBalance !== undefined) {
+    document.getElementById('balance-display').textContent = formatBalance(newBalance);
+  }
+
+  // Show appropriate animation
+  if (isWinner) {
+    showAnimation('moneyIncrease');
+  } else if (!isDraw) {
+    showAnimation('moneyDecrease');
+  }
+
+  // Show the modal
+  gameResultModal.classList.add('active');
 }
