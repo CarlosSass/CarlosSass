@@ -439,6 +439,7 @@ socket.on('disconnect', async () => {
           
           // Only proceed if winner is still connected
           if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
+            endGame(socket.gameCode, winner, 'disconnection');
             const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
             
             // Immediate payout notification
