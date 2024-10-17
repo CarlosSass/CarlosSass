@@ -888,24 +888,25 @@ function showNotification(message) {
 // Handle winning the game
 // Handle winning the game
 socket.on('gameWon', (data) => {
-  // Only show positive animation for winner
-  if (data.animation) {
-   // showAnimation(data.animation);
-  }
-  //showNotification(`${data.reason} +$${data.amount}`);
+  showFinalResult({
+    winner: gameState.playerColor,
+    reason: data.message,
+    bet: data.bet
+  });
+  
+  // Update UI
+  gameStatus.textContent = `You won! ${data.message}`;
 });
 
-// Handle losing the game
 socket.on('gameLost', (data) => {
-  // No animation or balance update for loser
-  //showNotification(data.reason);
+  showFinalResult({
+    winner: gameState.playerColor === 'white' ? 'black' : 'white',
+    reason: data.message,
+    bet: data.bet
+  });
   
-  // Optional: You could show a different message style
-  const notification = document.createElement('div');
-  notification.className = 'game-notification lost';
-  notification.textContent = data.reason;
-  document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 5000);
+  // Update UI
+  gameStatus.textContent = `You lost! ${data.message}`;
 });
 // Handle balance updates (for real-time updates)
 socket.on('balanceUpdate', (data) => {
@@ -997,41 +998,28 @@ function formatBalance(amount) {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
-async function showFinalResult(gameData) {
-  // Ensure gameData exists and has required properties
-  if (!gameData) {
-    console.error('showFinalResult: gameData is undefined');
-    return;
-  }
+function showFinalResult(result) {
+  if (!result) return;
 
-  const isWinner = gameData.winner === gameState.playerColor;
-  const betAmount = Number(gameData.bet) || 0; // Ensure bet is a number
+  const isWinner = result.winner === gameState.playerColor;
+  const betAmount = Number(result.bet) || 0;
   
   gameResultModal.classList.add('active');
-  isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
-  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-
-  // Handle cases where reason might be missing
-  const reason = gameData.reason || 'game completion';
   
-  resultMessage.textContent = isWinner
-    ? `You won the game by ${reason}! :)`
-    : `You lost the game by ${reason} :(`;
+  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+  resultMessage.textContent = result.reason || 
+    (isWinner ? 'You won the game!' : 'You lost the game');
 
-  // Safely calculate and display amounts
-  if (isWinner) {
-    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-    resultAmount.textContent = `+${formatBalance(winnings)}`;
+  if (betAmount > 0) {
+    if (isWinner) {
+      const winnings = betAmount * 1.8; // 1.8x payout
+      resultAmount.textContent = `+${formatBalance(winnings)}`;
+    } else {
+      resultAmount.textContent = `-${formatBalance(betAmount)}`;
+    }
   } else {
-    resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
+    resultAmount.textContent = '';
   }
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-
-  // Reset game state if needed
-  if (!isWinner && gameState.didwelose) {
-    gameState.didwelose = false;
-  }
-
-
 }
