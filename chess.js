@@ -484,6 +484,8 @@ async function initGame() {
     console.error('Init error:', error);
     showError('Error loading game');
   }
+  // Call this in initGame()
+setupReconnectionUI();
 }
 // Add click handler for the copy button
 document.getElementById('copy-code')?.addEventListener('click', () => {
@@ -1012,10 +1014,10 @@ function showFinalResult(result) {
 
   if (betAmount > 0) {
     if (isWinner) {
-      const winnings = betAmount * 1.8; // 1.8x payout
+      const winnings = gameState.betam * 1.8; // 1.8x payout for winner
       resultAmount.textContent = `+${formatBalance(winnings)}`;
     } else {
-      resultAmount.textContent = `-${formatBalance(betAmount)}`;
+      resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
     }
   } else {
     resultAmount.textContent = '';
@@ -1023,3 +1025,69 @@ function showFinalResult(result) {
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
 }
+
+
+
+
+
+
+
+
+
+// Add to gameState
+gameState.reconnectAttempts = 0;
+gameState.maxReconnectAttempts = 5;
+gameState.reconnectDelay = 2000; // 2 seconds
+
+// Add connection listeners
+socket.on('disconnect', () => {
+  gameStatus.textContent = 'Connection lost - attempting to reconnect...';
+  attemptReconnect();
+});
+
+socket.on('reconnect', () => {
+  gameStatus.textContent = 'Reconnected! Game resumed';
+  // Request latest game state if needed
+  socket.emit('requestGameState', { gameCode: gameState.gameCode });
+});
+
+socket.on('playerReconnected', (data) => {
+  showNotification(`${data.player} has reconnected`);
+});
+
+// Reconnect logic
+function attemptReconnect() {
+  if (gameState.reconnectAttempts < gameState.maxReconnectAttempts) {
+    gameState.reconnectAttempts++;
+    setTimeout(() => {
+      if (!gameState.isConnected) {
+        socket.connect();
+        gameStatus.textContent = `Reconnecting... (Attempt ${gameState.reconnectAttempts}/${gameState.maxReconnectAttempts})`;
+        attemptReconnect();
+      }
+    }, gameState.reconnectDelay);
+  } else {
+    gameStatus.textContent = 'Failed to reconnect. Please refresh the page.';
+    showError('Connection lost. Please refresh to continue playing.');
+  }
+}
+
+
+// Add to your initialization
+function setupReconnectionUI() {
+  const reconnectBtn = document.createElement('button');
+  reconnectBtn.id = 'reconnect-btn';
+  reconnectBtn.textContent = 'Reconnect Now';
+  reconnectBtn.style.display = 'none';
+  reconnectBtn.addEventListener('click', () => {
+    socket.connect();
+    reconnectBtn.style.display = 'none';
+  });
+  
+  document.body.appendChild(reconnectBtn);
+
+  socket.on('connect_error', () => {
+    reconnectBtn.style.display = 'block';
+  });
+}
+
