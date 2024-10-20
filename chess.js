@@ -23,16 +23,27 @@ const supabase = createClient(
   );
 
 // Initialize Socket.IO
+// Replace your existing socket initialization with:
 const socket = io('https://chess-game-production-9494.up.railway.app', {
+  // Reconnection settings
   reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  timeout: 20000,
-  transports: ['websocket'], // Force WebSocket protocol
-  secure: true,
-  withCredentials: true
+  reconnectionAttempts: Infinity,  // Keep trying forever
+  reconnectionDelay: 1000,        // Start with 1 second delay
+  reconnectionDelayMax: 30000,    // Max 30 second delay
+  randomizationFactor: 0.5,       // Randomize delays
+  
+  // Transport settings
+  transports: ['websocket'],      // Force WebSocket
+  upgrade: false,                 // Disable transport upgrade
+  
+  // Timeout settings
+  timeout: 20000,                 // 20 second connection timeout
+  
+  // Auth settings (if you use authentication)
+  auth: {
+    token: localStorage.getItem('authToken') // Example
+  }
 });
-
 // Game State
 const gameState = {
   playerColor: 'white', // This will be set from URL params
@@ -45,9 +56,18 @@ const gameState = {
   apiBaseUrl: 'https://chess-game-production-9494.up.railway.app', // Updated
   isConnected: false,
   betam:0,
-  onetime:false
-  
+  onetime:false,
+  reconnectAttempts: 0,
+  maxReconnectAttempts: 5,
+  reconnectDelay: 2000, // Start with 2 seconds
+  connectionState: {
+    lastPacketReceived: Date.now(),
+    stableConnection: true,
+    latency: 0
+  }
 };
+
+
 
 // Piece Symbols
 // Replace the PIECE_SYMBOLS with SVG icons or image references
@@ -469,7 +489,70 @@ async function initGame() {
       
       gameStatus.textContent = 'Game in progress';
     });
+  // Replace existing connection listeners with these:
+socket.on('connect', () => {
+  gameState.isConnected = true;
+  gameState.connectionState.stableConnection = true;
+  gameState.reconnectAttempts = 0;
+  updateConnectionStatus();
   
+  // Request fresh game state if reconnecting
+  if (gameState.gameCode) {
+    socket.emit('requestGameState', { gameCode: gameState.gameCode });
+  }
+});
+
+socket.on('disconnect', (reason) => {
+  gameState.isConnected = false;
+  gameState.connectionState.stableConnection = false;
+  updateConnectionStatus();
+  
+  // Only attempt reconnect for unexpected disconnects
+  if (reason !== 'io client disconnect') {
+    gameStatus.textContent = 'Connection lost - attempting to reconnect...';
+    attemptReconnect();
+  }
+});
+
+// Add these new listeners:
+socket.on('ping', () => {
+  gameState.connectionState.lastPingTime = Date.now();
+});
+
+socket.on('pong', (latency) => {
+  const now = Date.now();
+  gameState.connectionState.lastPacketReceived = now;
+  gameState.connectionState.latency = now - gameState.connectionState.lastPingTime;
+  
+  if (gameState.connectionState.latency > 1000) {
+    gameState.connectionState.stableConnection = false;
+    gameStatus.textContent = 'Connection unstable - high latency';
+  } else {
+    gameState.connectionState.stableConnection = true;
+  }
+  
+  updateConnectionStatus();
+});
+
+socket.on('reconnect_attempt', (attemptNumber) => {
+  console.log(`Reconnection attempt ${attemptNumber}`);
+  gameStatus.textContent = `Reconnecting... (Attempt ${attemptNumber}/${gameState.maxReconnectAttempts})`;
+});
+
+socket.on('reconnect_error', (error) => {
+  console.error('Reconnection error:', error);
+});
+
+socket.on('reconnect_failed', () => {
+  showError('Failed to reconnect. Please refresh the page.');
+});
+
+socket.on('playerReconnected', (data) => {
+  showNotification(`${data.player} has reconnected`);
+  if (data.player !== gameState.playerColor) {
+    gameStatus.textContent = 'Game resumed - your turn!'[Symbol];
+  }
+});
     // Fallback to REST API if Socket.IO isn't connected after 2 seconds
     setTimeout(() => {
       if (!gameState.isConnected) {
@@ -487,6 +570,56 @@ async function initGame() {
   // Call this in initGame()
 setupReconnectionUI();
 }
+
+
+
+// ======================
+// Connection Management
+// ======================
+function updateConnectionStatus() {
+  const statusEl = document.getElementById('connection-status');
+  if (!statusEl) return;
+  
+  if (!gameState.isConnected) {
+    statusEl.textContent = 'Disconnected';
+    statusEl.className = 'offline';
+  } else if (!gameState.connectionState.stableConnection) {
+    statusEl.textContent = 'Unstable Connection';
+    statusEl.className = 'unstable';
+  } else {
+    statusEl.textContent = 'Connected';
+    statusEl.className = 'online';
+  }
+}
+
+function attemptReconnect() {
+  if (gameState.reconnectAttempts < gameState.maxReconnectAttempts) {
+    gameState.reconnectAttempts++;
+    
+    const delay = Math.min(
+      10000, // Maximum 10 second delay
+      gameState.reconnectDelay * Math.pow(2, gameState.reconnectAttempts) // Exponential backoff
+    );
+    
+    setTimeout(() => {
+      if (!gameState.isConnected) {
+        console.log(`Reconnect attempt ${gameState.reconnectAttempts}`);
+        socket.connect();
+        attemptReconnect();
+      }
+    }, delay);
+  } else {
+    showError('Failed to reconnect. Please refresh the page.');
+  }
+}
+
+
+
+
+
+
+
+
 // Add click handler for the copy button
 document.getElementById('copy-code')?.addEventListener('click', () => {
   if (!gameState.gameCode) return;
@@ -1040,54 +1173,34 @@ gameState.maxReconnectAttempts = 5;
 gameState.reconnectDelay = 2000; // 2 seconds
 
 // Add connection listeners
-socket.on('disconnect', () => {
-  gameStatus.textContent = 'Connection lost - attempting to reconnect...';
-  attemptReconnect();
-});
 
-socket.on('reconnect', () => {
-  gameStatus.textContent = 'Reconnected! Game resumed';
-  // Request latest game state if needed
-  socket.emit('requestGameState', { gameCode: gameState.gameCode });
-});
 
-socket.on('playerReconnected', (data) => {
-  showNotification(`${data.player} has reconnected`);
-});
+
 
 // Reconnect logic
-function attemptReconnect() {
-  if (gameState.reconnectAttempts < gameState.maxReconnectAttempts) {
-    gameState.reconnectAttempts++;
-    setTimeout(() => {
-      if (!gameState.isConnected) {
-        socket.connect();
-        gameStatus.textContent = `Reconnecting... (Attempt ${gameState.reconnectAttempts}/${gameState.maxReconnectAttempts})`;
-        attemptReconnect();
-      }
-    }, gameState.reconnectDelay);
-  } else {
-    gameStatus.textContent = 'Failed to reconnect. Please refresh the page.';
-    showError('Connection lost. Please refresh to continue playing.');
-  }
-}
 
-
-// Add to your initialization
 function setupReconnectionUI() {
-  const reconnectBtn = document.createElement('button');
-  reconnectBtn.id = 'reconnect-btn';
-  reconnectBtn.textContent = 'Reconnect Now';
-  reconnectBtn.style.display = 'none';
-  reconnectBtn.addEventListener('click', () => {
-    socket.connect();
-    reconnectBtn.style.display = 'none';
+  // Create button if it doesn't exist
+  if (!document.getElementById('reconnect-btn')) {
+    const reconnectBtn = document.createElement('button');
+    reconnectBtn.id = 'reconnect-btn';
+    reconnectBtn.textContent = '↻ Reconnect';
+    reconnectBtn.className = 'reconnect-btn';
+    reconnectBtn.addEventListener('click', () => {
+      socket.connect();
+      reconnectBtn.style.display = 'none';
+    });
+    document.body.appendChild(reconnectBtn);
+  }
+
+  // Show/hide based on connection
+  socket.on('connect_error', () => {
+    const btn = document.getElementById('reconnect-btn');
+    if (btn) btn.style.display = 'block';
   });
   
-  document.body.appendChild(reconnectBtn);
-
-  socket.on('connect_error', () => {
-    reconnectBtn.style.display = 'block';
+  socket.on('connect', () => {
+    const btn = document.getElementById('reconnect-btn');
+    if (btn) btn.style.display = 'none';
   });
 }
-
