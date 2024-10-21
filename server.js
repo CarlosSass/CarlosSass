@@ -72,26 +72,45 @@ app.get('/ready', async (req, res) => {
 // Initialize Supabase
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
-// Create HTTP server with error handling
+// Replace your current server creation with:
 const server = app.listen(config.port, '0.0.0.0', () => {
-  console.log(`Server running on port ${config.port}`);
-}).on('error', (err) => {
-  console.error('Server failed to start:', err);
-  process.exit(1);
-});
+    console.log(`Server running on port ${config.port}`);
+    // Add this for Railway health checks
+    console.log('WebSocket server running');
+  }).on('error', (err) => {
+    console.error('Server failed to start:', err);
+    process.exit(1);
+  });
 
 // Initialize Socket.IO with enhanced CORS
+// Replace your current Socket.IO initialization with this:
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
-    skipMiddlewares: true
-  }
-});
+    // Connection settings
+    pingInterval: 10000,      // Send ping every 10 seconds
+    pingTimeout: 5000,        // Wait 5 seconds for pong response
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 120000, // 2 minutes recovery window
+      skipMiddlewares: true
+    },
+    
+    // Transport settings
+    transports: ['websocket'], // Force WebSocket only
+    allowUpgrades: false,      // Disable transport upgrades
+    
+    // CORS configuration (keep your existing)
+    cors: {
+      origin: allowedOrigins,
+      methods: ["GET", "POST"],
+      credentials: true
+    }
+  });
+  
+  // Add this right after creating the Express app
+  app.set('trust proxy', 1); // Trust Railway's proxy
+  
+  // Add this right before Socket.IO initialization
+  server.keepAliveTimeout = 60000; // 60 seconds
+  server.headersTimeout = 65000;   // 65 seconds
 
 // Add CORS headers for Socket.IO
 io.engine.on("headers", (headers) => {
@@ -112,14 +131,12 @@ const gameRooms = new Map();
 // Add this to your configuration section
 const ABANDON_TIMEOUT = 60 * 1000; // 1 minute in milliseconds
 const playerConnections = new Map(); // gameCode -> { white: socketId, black: socketId }
-// Add to your server initialization
+// Add this right after your game state management constants
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const HEARTBEAT_TIMEOUT = 60000; // 60 seconds
+const playerHeartbeats = new Map();
 
-// Track last heartbeat times
-const playerHeartbeats = new Map(); // socket.id -> lastHeartbeat
-
-// Heartbeat middleware
+// Heartbeat middleware (add this right before your io.on('connection'))
 io.use((socket, next) => {
   socket.on('heartbeat', () => {
     playerHeartbeats.set(socket.id, Date.now());
@@ -127,7 +144,7 @@ io.use((socket, next) => {
   next();
 });
 
-// Check heartbeats periodically
+// Heartbeat checker
 setInterval(() => {
   const now = Date.now();
   for (const [socketId, lastBeat] of playerHeartbeats) {
@@ -432,8 +449,16 @@ socket.on('resign', async ({ gameCode, player }) => {
 
 // Updated disconnect handler with immediate payout
 // Replace your existing disconnect handler with this more robust version
-socket.on('disconnect', async (reason) => {
-    console.log(`Player disconnected: ${socket.id}, reason: ${reason}`);
+
+  // Add heartbeat tracking for this socket
+  playerHeartbeats.set(socket.id, Date.now());
+  
+  // Add disconnect handler
+  socket.on('disconnect', (reason) => {
+    console.log(`Client ${socket.id} disconnected: ${reason}`);
+    playerHeartbeats.delete(socket.id);
+
+
     
     if (!socket.gameCode) return;
   
