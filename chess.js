@@ -853,15 +853,7 @@ function showError(message) {
   }, 3000);
 }
 
-function updateConnectionStatus() {
-  const statusElement = document.getElementById('connection-status');
-  if (!statusElement) return;
-  
-  statusElement.textContent = gameState.isConnected 
-    ? 'Online (Real-time)' 
-    : 'Offline (Polling every 30s)';
-  statusElement.className = gameState.isConnected ? 'online' : 'offline';
-}
+
 
 // Fallback Functions
 async function fetchInitialGameState() {
