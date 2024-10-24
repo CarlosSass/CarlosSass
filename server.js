@@ -86,25 +86,17 @@ const server = app.listen(config.port, '0.0.0.0', () => {
 // Replace your current Socket.IO initialization with this:
 const io = new Server(server, {
     // Connection settings
-    pingInterval: 10000,      // Send ping every 10 seconds
-    pingTimeout: 5000,        // Wait 5 seconds for pong response
+    pingInterval: 10000,       // Send ping every 10 seconds
+    pingTimeout: 5000,         // Wait 5 seconds for response
     connectionStateRecovery: {
-      maxDisconnectionDuration: 120000, // 2 minutes recovery window
+      maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
       skipMiddlewares: true
     },
-    
-    // Transport settings
-    transports: ['websocket'], // Force WebSocket only
-    allowUpgrades: false,      // Disable transport upgrades
-    
-    // CORS configuration (keep your existing)
-    cors: {
-      origin: allowedOrigins,
-      methods: ["GET", "POST"],
-      credentials: true
-    }
+    // Railway-specific settings
+    serveClient: false,
+    transports: ['websocket'],
+    allowEIO3: true
   });
-  
   // Add this right after creating the Express app
   app.set('trust proxy', 1); // Trust Railway's proxy
   
@@ -454,61 +446,57 @@ socket.on('resign', async ({ gameCode, player }) => {
   playerHeartbeats.set(socket.id, Date.now());
   
   // Add disconnect handler
-  socket.on('disconnect', (reason) => {
-    console.log(`Client ${socket.id} disconnected: ${reason}`);
-    playerHeartbeats.delete(socket.id);
-
-
+  socket.on('disconnect', async (reason) => {
+    console.log(`Player ${socket.id} disconnected (${reason})`);
     
     if (!socket.gameCode) return;
-  
-    // Skip if this is a voluntary disconnect (like page navigation)
-    if (reason === 'client namespace disconnect') {
-      return;
-    }
   
     const room = gameRooms.get(socket.gameCode);
     if (!room) return;
   
-    // Only proceed if this socket was actually in the game
-    let disconnectedRole = null;
+    // Determine which player disconnected
+    let disconnectedPlayer = null;
     if (room.white === socket.id) {
-      disconnectedRole = 'white';
+      disconnectedPlayer = 'white';
+      room.white = null;
     } else if (room.black === socket.id) {
-      disconnectedRole = 'black';
+      disconnectedPlayer = 'black';
+      room.black = null;
     }
   
-    if (!disconnectedRole) return;
+    if (!disconnectedPlayer) return;
   
-    // Mark as disconnected but keep their slot
-    console.log(`Marking ${disconnectedRole} as potentially disconnected`);
+    // Notify the other player immediately
+    const opponentSocketId = disconnectedPlayer === 'white' ? room.black : room.white;
+    if (opponentSocketId) {
+      io.to(opponentSocketId).emit('opponentDisconnected', {
+        player: disconnectedPlayer,
+        message: `Opponent (${disconnectedPlayer}) has disconnected`,
+        timeout: ABANDON_TIMEOUT
+      });
+    }
   
-    // Set a grace period before declaring abandonment
-    const DISCONNECT_GRACE_PERIOD = 45000; // 45 seconds
-    const timerKey = `${socket.gameCode}_${disconnectedRole}`;
-  
+    // Set timeout for final disconnection
+    const timerKey = `${socket.gameCode}_${disconnectedPlayer}`;
     disconnectTimers[timerKey] = setTimeout(async () => {
-      // Verify they haven't reconnected
       const currentRoom = gameRooms.get(socket.gameCode);
-      if ((disconnectedRole === 'white' && currentRoom.white === socket.id) ||
-          (disconnectedRole === 'black' && currentRoom.black === socket.id)) {
-        console.log(`${disconnectedRole} reconnected in time`);
-        return;
-      }
+      if (!currentRoom) return;
   
-      // Only proceed if game is still ongoing
+      // Check if player reconnected
+      const currentSocketId = disconnectedPlayer === 'white' ? currentRoom.white : currentRoom.black;
+      if (currentSocketId) return; // Player reconnected
+  
       const game = activeGames.get(socket.gameCode);
-      if (!game || game.status !== 'ongoing') {
-        console.log('Game already ended');
-        return;
-      }
+      if (!game || game.status !== 'ongoing') return;
   
-      console.log(`Finalizing disconnect for ${disconnectedRole}`);
-      const winner = disconnectedRole === 'white' ? 'black' : 'white';
-      const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
-  
-      if (winnerSocket) {
-        io.to(winnerSocket).emit('gameWon', {
+      // Declare winner
+      const winner = disconnectedPlayer === 'white' ? 'black' : 'white';
+      await endGame(socket.gameCode, winner, 'disconnection');
+      
+      // Notify winner
+      const winnerSocketId = winner === 'white' ? currentRoom.white : currentRoom.black;
+      if (winnerSocketId) {
+        io.to(winnerSocketId).emit('gameWon', {
           type: 'disconnection',
           message: 'Opponent disconnected!',
           amount: game.bet * 1.8,
@@ -516,9 +504,8 @@ socket.on('resign', async ({ gameCode, player }) => {
         });
       }
   
-      await endGame(socket.gameCode, winner, 'disconnection');
       cleanupGameResources(socket.gameCode);
-    }, DISCONNECT_GRACE_PERIOD);
+    }, ABANDON_TIMEOUT);
   });
   // Add reconnection handler
   socket.on('reconnect_attempt', (attemptNumber) => {
