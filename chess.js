@@ -490,27 +490,38 @@ async function initGame() {
       gameStatus.textContent = 'Game in progress';
     });
   // Replace existing connection listeners with these:
-socket.on('connect', () => {
-  gameState.isConnected = true;
-  gameState.connectionState.stableConnection = true;
-  gameState.reconnectAttempts = 0;
-  updateConnectionStatus();
-  
-  // Request fresh game state if reconnecting
-  if (gameState.gameCode) {
-    socket.emit('requestGameState', { gameCode: gameState.gameCode });
-  }
-});
 
+
+// Add these socket listeners in your initGame() function:
+
+// When connection is lost
 socket.on('disconnect', (reason) => {
   gameState.isConnected = false;
-  gameState.connectionState.stableConnection = false;
   updateConnectionStatus();
+  gameStatus.textContent = 'Connection lost - attempting to reconnect...';
+});
+
+// When opponent disconnects
+socket.on('opponentDisconnected', (data) => {
+  showNotification(data.message);
+  gameStatus.textContent = `${data.player.toUpperCase()} disconnected - waiting ${Math.floor(data.timeout/1000)} seconds...`;
+});
+
+// When opponent reconnects
+socket.on('playerReconnected', (data) => {
+  showNotification(data.message);
+  gameStatus.textContent = `${data.player.toUpperCase()} has reconnected!`;
+});
+
+// Connection restored
+socket.on('connect', () => {
+  gameState.isConnected = true;
+  updateConnectionStatus();
+  gameStatus.textContent = 'Connection restored!';
   
-  // Only attempt reconnect for unexpected disconnects
-  if (reason !== 'io client disconnect') {
-    gameStatus.textContent = 'Connection lost - attempting to reconnect...';
-    attemptReconnect();
+  // Request fresh game state
+  if (gameState.gameCode) {
+    socket.emit('requestGameState', { gameCode: gameState.gameCode });
   }
 });
 
