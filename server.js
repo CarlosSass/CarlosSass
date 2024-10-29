@@ -84,18 +84,21 @@ const server = app.listen(config.port, '0.0.0.0', () => {
 
 // Initialize Socket.IO with enhanced CORS
 // Replace your current Socket.IO initialization with this:
+// In your server code, update the Socket.IO initialization:
 const io = new Server(server, {
-    // Connection settings
-    pingInterval: 10000,       // Send ping every 10 seconds
-    pingTimeout: 5000,         // Wait 5 seconds for response
+    cors: {
+      origin: allowedOrigins,
+      methods: ["GET", "POST"],
+      credentials: true
+    },
+    pingInterval: 25000,       // 25 seconds
+    pingTimeout: 20000,        // 20 seconds
     connectionStateRecovery: {
-      maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+      maxDisconnectionDuration: 60000, // 1 minute
       skipMiddlewares: true
     },
-    // Railway-specific settings
-    serveClient: false,
-    transports: ['websocket'],
-    allowEIO3: true
+    allowEIO3: true,
+    transports: ['websocket', 'polling'] // Enable both transports
   });
   // Add this right after creating the Express app
   app.set('trust proxy', 1); // Trust Railway's proxy
