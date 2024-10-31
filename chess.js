@@ -24,22 +24,19 @@ const supabase = createClient(
 
 // Initialize Socket.IO
 // Replace your existing socket initialization with:
+// Update your client-side Socket.IO connection:
 const socket = io('https://chess-game-production-9494.up.railway.app', {
-  // Reconnection settings
   reconnection: true,
-  reconnectionAttempts: Infinity,  // Keep trying forever
-  reconnectionDelay: 1000,        // Start with 1 second delay
-  reconnectionDelayMax: 30000,    // Max 30 second delay
-  randomizationFactor: 0.5,       // Randomize delays
-  
-  // Transport settings
-  transports: ['websocket'],      // Force WebSocket
-  upgrade: false,                 // Disable transport upgrade
-  
-  // Timeout settings
-  timeout: 20000,                 // 20 second connection timeout
-  
-  // Auth settings (if you use authentication)
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
+  timeout: 20000,
+  transports: ['websocket', 'polling'],
+  upgrade: true,
+  withCredentials: true,
+  path: '/socket.io/' ,
+  // Ensure this matches your server
   auth: {
     token: localStorage.getItem('authToken') // Example
   }
@@ -513,17 +510,7 @@ socket.on('playerReconnected', (data) => {
   gameStatus.textContent = `${data.player.toUpperCase()} has reconnected!`;
 });
 
-// Connection restored
-socket.on('connect', () => {
-  gameState.isConnected = true;
-  updateConnectionStatus();
-  gameStatus.textContent = 'Connection restored!';
-  
-  // Request fresh game state
-  if (gameState.gameCode) {
-    socket.emit('requestGameState', { gameCode: gameState.gameCode });
-  }
-});
+
 
 // Add these new listeners:
 socket.on('ping', () => {
@@ -587,21 +574,7 @@ setupReconnectionUI();
 // ======================
 // Connection Management
 // ======================
-function updateConnectionStatus() {
-  const statusEl = document.getElementById('connection-status');
-  if (!statusEl) return;
-  
-  if (!gameState.isConnected) {
-    statusEl.textContent = 'Disconnected';
-    statusEl.className = 'offline';
-  } else if (!gameState.connectionState.stableConnection) {
-    statusEl.textContent = 'Unstable Connection';
-    statusEl.className = 'unstable';
-  } else {
-    statusEl.textContent = 'Connected';
-    statusEl.className = 'online';
-  }
-}
+
 
 function attemptReconnect() {
   if (gameState.reconnectAttempts < gameState.maxReconnectAttempts) {
@@ -1168,8 +1141,6 @@ function showFinalResult(result) {
 
 
 
-
-
 // Add to gameState
 gameState.reconnectAttempts = 0;
 gameState.maxReconnectAttempts = 5;
@@ -1178,7 +1149,21 @@ gameState.reconnectDelay = 2000; // 2 seconds
 // Add connection listeners
 
 
-
+function updateConnectionStatus() {
+  const statusEl = document.getElementById('connection-status');
+  if (!statusEl) return;
+  
+  if (socket.disconnected) {
+    statusEl.textContent = 'Disconnected';
+    statusEl.className = 'offline';
+  } else if (!gameState.isConnected) {
+    statusEl.textContent = 'Connecting...';
+    statusEl.className = 'connecting';
+  } else {
+    statusEl.textContent = 'Connected';
+    statusEl.className = 'online';
+  }
+}
 
 // Reconnect logic
 
