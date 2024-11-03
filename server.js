@@ -24,25 +24,17 @@ const config = {
   corsOrigin: process.env.CORS_ORIGIN || 'https://chessgame-git-main-kb-solutions-projects.vercel.app'
 };
 
-// Enhanced CORS configuration
+// Replace your current CORS middleware with this:
 const allowedOrigins = [
-  config.corsOrigin,
-  'https://chessgame-git-main-kb-solutions-projects.vercel.app',
-  'https://chess-game-production-9494.up.railway.app'
-];
-
-// Middleware
-// Update your CORS middleware to this:
-app.use(cors({
+    'https://chess-game-git-main-kb-solutions-projects.vercel.app',
+    'https://chess-game-production-9494.up.railway.app',
+    'http://localhost:3000' // For local development
+  ];
+  
+  app.use(cors({
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
-      const allowedOrigins = [
-        'https://chessgame-git-main-kb-solutions-projects.vercel.app',
-        'https://chess-game-production-9494.up.railway.app',
-        'http://localhost:3000' // For local development
-      ];
       
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
@@ -59,6 +51,9 @@ app.use(cors({
   
   // Handle preflight requests
   app.options('*', cors());
+  
+  // Handle preflight requests
+
 app.use(bodyParser.json());
 
 // Health check endpoints
@@ -79,6 +74,14 @@ app.get('/ready', async (req, res) => {
     res.status(500).json({ database: 'disconnected' });
   }
 });
+
+
+
+
+
+
+
+
 
 // Initialize Supabase
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
@@ -1141,24 +1144,31 @@ function checkGameEndConditions(gameCode, gameState) {
 }
 
 // REST API Endpoints
+// Update your /api/game-by-code/:code endpoint:
 app.get('/api/game-by-code/:code', async (req, res) => {
-  try {
-    const { data: game, error } = await supabase
-      .from('chess_games')
-      .select('*')
-      .eq('code', req.params.code)
-      .single();
-
-    if (error || !game) {
-      return res.status(404).json({ error: 'Game not found' });
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', 'https://chess-game-git-main-kb-solutions-projects.vercel.app');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    try {
+      const { data: game, error } = await supabase
+        .from('chess_games')
+        .select('*')
+        .eq('code', req.params.code)
+        .single();
+  
+      if (error || !game) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+  
+      res.json(game);
+    } catch (error) {
+      console.error('Game fetch error:', error);
+      res.status(500).json({ error: 'Server error' });
     }
-
-    res.json(game);
-  } catch (error) {
-    console.error('Game fetch error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+  });
 
 app.post('/api/move', async (req, res) => {
   try {
