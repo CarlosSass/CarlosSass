@@ -24,35 +24,29 @@ const config = {
   corsOrigin: process.env.CORS_ORIGIN || 'https://chessgame-git-main-kb-solutions-projects.vercel.app'
 };
 
-// Replace your current CORS middleware with this:
+// Enhanced CORS configuration
 const allowedOrigins = [
-    'https://chess-game-git-main-kb-solutions-projects.vercel.app',
-    'https://chess-game-production-9494.up.railway.app',
-    'http://localhost:3000' // For local development
-  ];
-  
-  app.use(cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-  }));
-  
-  // Handle preflight requests
-  app.options('*', cors());
-  
-  // Handle preflight requests
+  config.corsOrigin,
+  'https://chessgame-git-main-kb-solutions-projects.vercel.app',
+  'https://chess-game-production-9494.up.railway.app'
+];
+
+// Middleware
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
 app.use(bodyParser.json());
 
@@ -75,51 +69,29 @@ app.get('/ready', async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
 // Initialize Supabase
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
-// Replace your current server creation with:
+// Create HTTP server with error handling
 const server = app.listen(config.port, '0.0.0.0', () => {
-    console.log(`Server running on port ${config.port}`);
-    // Add this for Railway health checks
-    console.log('WebSocket server running');
-  }).on('error', (err) => {
-    console.error('Server failed to start:', err);
-    process.exit(1);
-  });
+  console.log(`Server running on port ${config.port}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
+});
 
 // Initialize Socket.IO with enhanced CORS
-// Replace your current Socket.IO initialization with this:
-// In your server code, update the Socket.IO initialization:
 const io = new Server(server, {
-    cors: {
-      origin: allowedOrigins,
-      methods: ["GET", "POST"],
-      credentials: true
-    },
-    pingInterval: 25000,       // 25 seconds
-    pingTimeout: 20000,        // 20 seconds
-    connectionStateRecovery: {
-      maxDisconnectionDuration: 60000, // 1 minute
-      skipMiddlewares: true
-    },
-    allowEIO3: true,
-    transports: ['websocket', 'polling'] // Enable both transports
-  });
-  // Add this right after creating the Express app
-  app.set('trust proxy', 1); // Trust Railway's proxy
-  
-  // Add this right before Socket.IO initialization
-  server.keepAliveTimeout = 60000; // 60 seconds
-  server.headersTimeout = 65000;   // 65 seconds
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true
+  }
+});
 
 // Add CORS headers for Socket.IO
 io.engine.on("headers", (headers) => {
@@ -140,12 +112,14 @@ const gameRooms = new Map();
 // Add this to your configuration section
 const ABANDON_TIMEOUT = 60 * 1000; // 1 minute in milliseconds
 const playerConnections = new Map(); // gameCode -> { white: socketId, black: socketId }
-// Add this right after your game state management constants
+// Add to your server initialization
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const HEARTBEAT_TIMEOUT = 60000; // 60 seconds
-const playerHeartbeats = new Map();
 
-// Heartbeat middleware (add this right before your io.on('connection'))
+// Track last heartbeat times
+const playerHeartbeats = new Map(); // socket.id -> lastHeartbeat
+
+// Heartbeat middleware
 io.use((socket, next) => {
   socket.on('heartbeat', () => {
     playerHeartbeats.set(socket.id, Date.now());
@@ -153,7 +127,7 @@ io.use((socket, next) => {
   next();
 });
 
-// Heartbeat checker
+// Check heartbeats periodically
 setInterval(() => {
   const now = Date.now();
   for (const [socketId, lastBeat] of playerHeartbeats) {
@@ -458,62 +432,58 @@ socket.on('resign', async ({ gameCode, player }) => {
 
 // Updated disconnect handler with immediate payout
 // Replace your existing disconnect handler with this more robust version
-
-  // Add heartbeat tracking for this socket
-  playerHeartbeats.set(socket.id, Date.now());
-  
-  // Add disconnect handler
-  socket.on('disconnect', async (reason) => {
-    console.log(`Player ${socket.id} disconnected (${reason})`);
+socket.on('disconnect', async (reason) => {
+    console.log(`Player disconnected: ${socket.id}, reason: ${reason}`);
     
     if (!socket.gameCode) return;
+  
+    // Skip if this is a voluntary disconnect (like page navigation)
+    if (reason === 'client namespace disconnect') {
+      return;
+    }
   
     const room = gameRooms.get(socket.gameCode);
     if (!room) return;
   
-    // Determine which player disconnected
-    let disconnectedPlayer = null;
+    // Only proceed if this socket was actually in the game
+    let disconnectedRole = null;
     if (room.white === socket.id) {
-      disconnectedPlayer = 'white';
-      room.white = null;
+      disconnectedRole = 'white';
     } else if (room.black === socket.id) {
-      disconnectedPlayer = 'black';
-      room.black = null;
+      disconnectedRole = 'black';
     }
   
-    if (!disconnectedPlayer) return;
+    if (!disconnectedRole) return;
   
-    // Notify the other player immediately
-    const opponentSocketId = disconnectedPlayer === 'white' ? room.black : room.white;
-    if (opponentSocketId) {
-      io.to(opponentSocketId).emit('opponentDisconnected', {
-        player: disconnectedPlayer,
-        message: `Opponent (${disconnectedPlayer}) has disconnected`,
-        timeout: ABANDON_TIMEOUT
-      });
-    }
+    // Mark as disconnected but keep their slot
+    console.log(`Marking ${disconnectedRole} as potentially disconnected`);
   
-    // Set timeout for final disconnection
-    const timerKey = `${socket.gameCode}_${disconnectedPlayer}`;
+    // Set a grace period before declaring abandonment
+    const DISCONNECT_GRACE_PERIOD = 45000; // 45 seconds
+    const timerKey = `${socket.gameCode}_${disconnectedRole}`;
+  
     disconnectTimers[timerKey] = setTimeout(async () => {
+      // Verify they haven't reconnected
       const currentRoom = gameRooms.get(socket.gameCode);
-      if (!currentRoom) return;
+      if ((disconnectedRole === 'white' && currentRoom.white === socket.id) ||
+          (disconnectedRole === 'black' && currentRoom.black === socket.id)) {
+        console.log(`${disconnectedRole} reconnected in time`);
+        return;
+      }
   
-      // Check if player reconnected
-      const currentSocketId = disconnectedPlayer === 'white' ? currentRoom.white : currentRoom.black;
-      if (currentSocketId) return; // Player reconnected
-  
+      // Only proceed if game is still ongoing
       const game = activeGames.get(socket.gameCode);
-      if (!game || game.status !== 'ongoing') return;
+      if (!game || game.status !== 'ongoing') {
+        console.log('Game already ended');
+        return;
+      }
   
-      // Declare winner
-      const winner = disconnectedPlayer === 'white' ? 'black' : 'white';
-      await endGame(socket.gameCode, winner, 'disconnection');
-      
-      // Notify winner
-      const winnerSocketId = winner === 'white' ? currentRoom.white : currentRoom.black;
-      if (winnerSocketId) {
-        io.to(winnerSocketId).emit('gameWon', {
+      console.log(`Finalizing disconnect for ${disconnectedRole}`);
+      const winner = disconnectedRole === 'white' ? 'black' : 'white';
+      const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
+  
+      if (winnerSocket) {
+        io.to(winnerSocket).emit('gameWon', {
           type: 'disconnection',
           message: 'Opponent disconnected!',
           amount: game.bet * 1.8,
@@ -521,8 +491,9 @@ socket.on('resign', async ({ gameCode, player }) => {
         });
       }
   
+      await endGame(socket.gameCode, winner, 'disconnection');
       cleanupGameResources(socket.gameCode);
-    }, ABANDON_TIMEOUT);
+    }, DISCONNECT_GRACE_PERIOD);
   });
   // Add reconnection handler
   socket.on('reconnect_attempt', (attemptNumber) => {
@@ -1144,31 +1115,24 @@ function checkGameEndConditions(gameCode, gameState) {
 }
 
 // REST API Endpoints
-// Update your /api/game-by-code/:code endpoint:
 app.get('/api/game-by-code/:code', async (req, res) => {
-    // Set CORS headers
-    res.header('Access-Control-Allow-Origin', 'https://chess-game-git-main-kb-solutions-projects.vercel.app');
-    res.header('Access-Control-Allow-Methods', 'GET');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
-    try {
-      const { data: game, error } = await supabase
-        .from('chess_games')
-        .select('*')
-        .eq('code', req.params.code)
-        .single();
-  
-      if (error || !game) {
-        return res.status(404).json({ error: 'Game not found' });
-      }
-  
-      res.json(game);
-    } catch (error) {
-      console.error('Game fetch error:', error);
-      res.status(500).json({ error: 'Server error' });
+  try {
+    const { data: game, error } = await supabase
+      .from('chess_games')
+      .select('*')
+      .eq('code', req.params.code)
+      .single();
+
+    if (error || !game) {
+      return res.status(404).json({ error: 'Game not found' });
     }
-  });
+
+    res.json(game);
+  } catch (error) {
+    console.error('Game fetch error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 app.post('/api/move', async (req, res) => {
   try {
