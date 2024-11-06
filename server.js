@@ -358,80 +358,71 @@ socket.on('acceptDraw', async ({ gameCode, player }) => {
 // Updated resignation handler
 
 // Updated resignation handler with immediate payout display
+// Updated resignation handler
 socket.on('resign', async ({ gameCode, player }) => {
-  try {
-    // Validate input
-    if (!gameCode || !player) throw new Error('Missing game code or player');
-
-    const game = activeGames.get(gameCode);
-    if (!game) throw new Error('Game not found');
-    if (game.status !== 'ongoing') throw new Error('Game not in progress');
-
-    const room = gameRooms.get(gameCode);
-    if (!room) throw new Error('Room not found');
-
-    // Stop the game timer immediately
-    if (gameTimers[gameCode]) {
-      clearInterval(gameTimers[gameCode].interval);
-      delete gameTimers[gameCode];
-    }
-
-    // Determine winner and loser
-    const winner = player === 'white' ? 'black' : 'white';
-    const winnerSocket = winner === 'white' ? room.white : room.black;
-    const loserSocket = player === 'white' ? room.white : room.black;
-
-    // Process game end and payments
-    const endedGame = await endGame(gameCode, winner, 'resignation');
-
-    // Prepare detailed result data
-    const resultData = {
-      winner,
-      reason: 'resignation',
-      betAmount: game.bet,
-      winningAmount: endedGame.winningAmount,
-      winnerNewBalance: endedGame.winnerNewBalance,
-      loserNewBalance: endedGame.loserNewBalance,
-      endedAt: new Date().toISOString()
-    };
-
-    // Notify winner immediately with payout details
-    if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
-      io.to(winnerSocket).emit('gameWon', {
-        type: 'resignation',
-        message: 'Opponent resigned!',
-        amount: endedGame.winningAmount,
-        bet: game.bet,
-        newBalance: endedGame.winnerNewBalance,
-        animation: 'moneyIncrease'
+    try {
+      // Validate input
+      if (!gameCode || !player) throw new Error('Missing game code or player');
+  
+      const game = activeGames.get(gameCode);
+      if (!game) throw new Error('Game not found');
+      if (game.status !== 'ongoing') throw new Error('Game not in progress');
+  
+      const room = gameRooms.get(gameCode);
+      if (!room) throw new Error('Room not found');
+  
+      // Stop the game timer immediately
+      if (gameTimers[gameCode]) {
+        clearInterval(gameTimers[gameCode].interval);
+        delete gameTimers[gameCode];
+      }
+  
+      // Determine winner and loser
+      const winner = player === 'white' ? 'black' : 'white';
+      const winnerSocket = winner === 'white' ? room.white : room.black;
+      const loserSocket = player === 'white' ? room.white : room.black;
+  
+      // Process game end and payments
+      const endedGame = await endGame(gameCode, winner, 'resignation');
+  
+      // Notify winner immediately
+      if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
+        io.to(winnerSocket).emit('gameWon', {
+          type: 'resignation',
+          message: 'Opponent resigned!',
+          amount: endedGame.winningAmount,
+          bet: game.bet,
+          newBalance: endedGame.winnerNewBalance,
+          animation: 'moneyIncrease'
+        });
+      }
+  
+      // Notify loser immediately
+      if (loserSocket && io.sockets.sockets.has(loserSocket)) {
+        io.to(loserSocket).emit('gameLost', {
+          type: 'resignation',
+          message: 'You resigned the game',
+          amount: -game.bet,
+          newBalance: endedGame.loserNewBalance,
+          animation: 'moneyDecrease'
+        });
+      }
+  
+      // Clean up game state
+      cleanupGameResources(gameCode);
+  
+    } catch (error) {
+      console.error('Resignation failed:', error);
+      socket.emit('error', {
+        type: 'resignation_error',
+        message: error.message
       });
     }
-
-    // Notify loser immediately
-    if (loserSocket && io.sockets.sockets.has(loserSocket)) {
-      io.to(loserSocket).emit('gameLost', {
-        type: 'resignation',
-        message: 'You resigned the game',
-        amount: -game.bet,
-        newBalance: endedGame.loserNewBalance,
-        animation: 'moneyDecrease'
-      });
-    }
-
-    // Clean up game state
-    cleanupGameResources(gameCode);
-
-  } catch (error) {
-    console.error('Resignation failed:', error);
-    socket.emit('error', {
-      type: 'resignation_error',
-      message: error.message
-    });
-  }
-});
+  });
 
 // Updated disconnect handler with immediate payout
 // Replace your existing disconnect handler with this more robust version
+// Update the disconnect handler in server.js
 socket.on('disconnect', async (reason) => {
     console.log(`Player disconnected: ${socket.id}, reason: ${reason}`);
     
@@ -449,24 +440,25 @@ socket.on('disconnect', async (reason) => {
     let disconnectedRole = null;
     if (room.white === socket.id) {
       disconnectedRole = 'white';
+      room.white = null; // Mark as disconnected
     } else if (room.black === socket.id) {
       disconnectedRole = 'black';
+      room.black = null; // Mark as disconnected
     }
   
     if (!disconnectedRole) return;
   
-    // Mark as disconnected but keep their slot
-    console.log(`Marking ${disconnectedRole} as potentially disconnected`);
+    console.log(`Player ${disconnectedRole} disconnected from game ${socket.gameCode}`);
   
     // Set a grace period before declaring abandonment
-    const DISCONNECT_GRACE_PERIOD = 45000; // 45 seconds
+    const DISCONNECT_GRACE_PERIOD = 30000; // 30 seconds
     const timerKey = `${socket.gameCode}_${disconnectedRole}`;
   
     disconnectTimers[timerKey] = setTimeout(async () => {
       // Verify they haven't reconnected
       const currentRoom = gameRooms.get(socket.gameCode);
-      if ((disconnectedRole === 'white' && currentRoom.white === socket.id) ||
-          (disconnectedRole === 'black' && currentRoom.black === socket.id)) {
+      if ((disconnectedRole === 'white' && currentRoom.white) ||
+          (disconnectedRole === 'black' && currentRoom.black)) {
         console.log(`${disconnectedRole} reconnected in time`);
         return;
       }
@@ -482,16 +474,21 @@ socket.on('disconnect', async (reason) => {
       const winner = disconnectedRole === 'white' ? 'black' : 'white';
       const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
   
-      if (winnerSocket) {
+      // End the game due to disconnection
+      const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
+      
+      // Notify winner if still connected
+      if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
         io.to(winnerSocket).emit('gameWon', {
           type: 'disconnection',
           message: 'Opponent disconnected!',
           amount: game.bet * 1.8,
-          bet: game.bet
+          bet: game.bet,
+          newBalance: endedGame.winnerNewBalance,
+          animation: 'moneyIncrease'
         });
       }
   
-      await endGame(socket.gameCode, winner, 'disconnection');
       cleanupGameResources(socket.gameCode);
     }, DISCONNECT_GRACE_PERIOD);
   });
