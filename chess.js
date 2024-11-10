@@ -879,26 +879,10 @@ function showNotification(message) {
 // CSS for notifications
 // Handle winning the game
 // Handle winning the game
-socket.on('gameWon', (data) => {
-  // Only show positive animation for winner
-  if (data.animation) {
-   // showAnimation(data.animation);
-  }
-  //showNotification(`${data.reason} +$${data.amount}`);
-});
+
 
 // Handle losing the game
-socket.on('gameLost', (data) => {
-  // No animation or balance update for loser
-  //showNotification(data.reason);
-  
-  // Optional: You could show a different message style
-  const notification = document.createElement('div');
-  notification.className = 'game-notification lost';
-  notification.textContent = data.reason;
-  document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 5000);
-});
+
 // Handle balance updates (for real-time updates)
 socket.on('balanceUpdate', (data) => {
   
@@ -989,47 +973,60 @@ function formatBalance(amount) {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
-async function showFinalResult(gameData) {
-  // Ensure gameData exists and has required properties
-  if (!gameData) {
-    console.error('showFinalResult: gameData is undefined');
-    return;
-  }
+// Add these handlers in your initGame() function
+socket.on('gameWon', (data) => {
+  // Show win modal with appropriate message
+  showFinalResult({
+    winner: gameState.playerColor,
+    reason: data.message || 'Opponent disconnected',
+    bet: data.bet
+  });
+  
+  // Play win sound
+  playSound('check');
+});
 
+socket.on('gameLost', (data) => {
+  // Show loss modal with appropriate message
+  showFinalResult({
+    winner: gameState.playerColor === 'white' ? 'black' : 'white',
+    reason: data.message || 'You disconnected',
+    bet: data.bet
+  });
+  
+  // Play loss sound
+  playSound('capture');
+});
+
+// Update the showFinalResult function to handle these cases
+function showFinalResult(gameData) {
   const isWinner = gameData.winner === gameState.playerColor;
-  const betAmount = Number(gameData.bet) || 0; // Ensure bet is a number
   
   gameResultModal.classList.add('active');
-  isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
   resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
 
-  // Handle cases where reason might be missing
-  const reason = gameData.reason || 'game completion';
-  
-  resultMessage.textContent = isWinner
-    ? `You won the game by ${reason}! :)`
-    : `You lost the game by ${reason} :(`;
-
-  // Safely calculate and display amounts
-  if (isWinner) {
-    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-    resultAmount.textContent = `+${formatBalance(winnings)}`;
+  // Handle different win/loss reasons
+  let reasonMessage = '';
+  if (gameData.reason.includes('disconnect')) {
+    reasonMessage = isWinner 
+      ? 'Opponent disconnected!' 
+      : 'You disconnected!';
+  } else if (gameData.reason.includes('resign')) {
+    reasonMessage = isWinner 
+      ? 'Opponent resigned!' 
+      : 'You resigned!';
   } else {
-    resultAmount.textContent = `-${formatBalance(betam)}`;
+    reasonMessage = gameData.reason;
   }
 
-  resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+  resultMessage.textContent = reasonMessage;
 
-  // Reset game state if needed
-  if (!isWinner && gameState.didwelose) {
-    gameState.didwelose = false;
+  // Update amounts if there was a bet
+  if (gameData.bet) {
+    const amount = isWinner ? gameData.bet * 1.8 : -gameData.bet;
+    resultAmount.textContent = `${amount >= 0 ? '+' : ''}${formatBalance(amount)}`;
+    resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+  } else {
+    resultAmount.textContent = '';
   }
-
-  // Debug logging
-  console.log('Final result displayed:', {
-    isWinner,
-    betAmount,
-    calculatedAmount: isWinner ? betAmount * 1.8 : betAmount,
-    gameData
-  });
 }
