@@ -974,59 +974,36 @@ function formatBalance(amount) {
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
 // Add these handlers in your initGame() function
+// Add these in your initGame() function
 socket.on('gameWon', (data) => {
-  // Show win modal with appropriate message
   showFinalResult({
     winner: gameState.playerColor,
-    reason: data.message || 'Opponent disconnected',
+    reason: data.reason,
     bet: data.bet
   });
-  
-  // Play win sound
   playSound('check');
 });
 
 socket.on('gameLost', (data) => {
-  // Show loss modal with appropriate message
   showFinalResult({
-    winner: gameState.playerColor === 'white' ? 'black' : 'white',
-    reason: data.message || 'You disconnected',
+    winner: gameState.playerColor === 'white' ? 'black' : 'white', 
+    reason: data.reason,
     bet: data.bet
   });
-  
-  // Play loss sound
   playSound('capture');
 });
 
-// Update the showFinalResult function to handle these cases
-function showFinalResult(gameData) {
-  const isWinner = gameData.winner === gameState.playerColor;
+// Update showFinalResult to handle these cases
+function showFinalResult(result) {
+  const isWinner = result.winner === gameState.playerColor;
   
   gameResultModal.classList.add('active');
   resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+  resultMessage.textContent = result.reason;
 
-  // Handle different win/loss reasons
-  let reasonMessage = '';
-  if (gameData.reason.includes('disconnect')) {
-    reasonMessage = isWinner 
-      ? 'Opponent disconnected!' 
-      : 'You disconnected!';
-  } else if (gameData.reason.includes('resign')) {
-    reasonMessage = isWinner 
-      ? 'Opponent resigned!' 
-      : 'You resigned!';
-  } else {
-    reasonMessage = gameData.reason;
-  }
-
-  resultMessage.textContent = reasonMessage;
-
-  // Update amounts if there was a bet
-  if (gameData.bet) {
-    const amount = isWinner ? gameData.bet * 1.8 : -gameData.bet;
-    resultAmount.textContent = `${amount >= 0 ? '+' : ''}${formatBalance(amount)}`;
-    resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-  } else {
-    resultAmount.textContent = '';
+  if (result.bet) {
+    const amount = isWinner ? result.bet * 1.8 : -result.bet;
+    resultAmount.textContent = `${amount >= 0 ? '+' : ''}${amount} ETB`;
+    resultAmount.className = isWinner ? 'win' : 'lose';
   }
 }
