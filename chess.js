@@ -994,16 +994,49 @@ socket.on('gameLost', (data) => {
 });
 
 // Update showFinalResult to handle these cases
-function showFinalResult(result) {
+// Add this in your initGame() function
+socket.on('gameOver', (result) => {
   const isWinner = result.winner === gameState.playerColor;
   
-  gameResultModal.classList.add('active');
-  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-  resultMessage.textContent = result.reason;
+  // Show appropriate result
+  showFinalResult({
+    isWinner,
+    reason: result.reason,
+    amount: isWinner ? result.amount : -gameState.betam,
+    newBalance: result.newBalance
+  });
 
-  if (result.bet) {
-    const amount = isWinner ? result.bet * 1.8 : -result.bet;
-    resultAmount.textContent = `${amount >= 0 ? '+' : ''}${amount} ETB`;
-    resultAmount.className = isWinner ? 'win' : 'lose';
+  // Update UI immediately
+  if (isWinner) {
+    gameStatus.textContent = `You won by ${result.reason}!`;
+    playSound('check');
+  } else {
+    gameStatus.textContent = `You lost by ${result.reason}`;
+    playSound('capture');
+  }
+});
+
+// Enhanced showFinalResult function
+function showFinalResult(result) {
+  gameResultModal.classList.add('active');
+  
+  if (result.isWinner) {
+    resultTitle.textContent = 'You Won!';
+    resultTitle.style.color = 'green';
+    resultMessage.textContent = `You won by ${result.reason}`;
+    resultAmount.textContent = `+${result.amount} ETB`;
+    resultAmount.style.color = 'green';
+  } else {
+    resultTitle.textContent = 'You Lost';
+    resultTitle.style.color = 'red';
+    resultMessage.textContent = `You lost by ${result.reason}`;
+    resultAmount.textContent = `-${gameState.betam} ETB`;
+    resultAmount.style.color = 'red';
+  }
+
+  // Update balance display if available
+  if (result.newBalance !== undefined) {
+    document.getElementById('balance-display').textContent = 
+      `Balance: ${result.newBalance} ETB`;
   }
 }
