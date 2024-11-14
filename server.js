@@ -72,26 +72,45 @@ app.get('/ready', async (req, res) => {
 // Initialize Supabase
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
-// Create HTTP server with error handling
+// Replace your current server creation with:
 const server = app.listen(config.port, '0.0.0.0', () => {
-  console.log(`Server running on port ${config.port}`);
-}).on('error', (err) => {
-  console.error('Server failed to start:', err);
-  process.exit(1);
-});
+    console.log(`Server running on port ${config.port}`);
+    // Add this for Railway health checks
+    console.log('WebSocket server running');
+  }).on('error', (err) => {
+    console.error('Server failed to start:', err);
+    process.exit(1);
+  });
 
 // Initialize Socket.IO with enhanced CORS
+// Replace your current Socket.IO initialization with this:
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
-    skipMiddlewares: true
-  }
-});
+    // Connection settings
+    pingInterval: 10000,      // Send ping every 10 seconds
+    pingTimeout: 5000,        // Wait 5 seconds for pong response
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 120000, // 2 minutes recovery window
+      skipMiddlewares: true
+    },
+    
+    // Transport settings
+    transports: ['websocket'], // Force WebSocket only
+    allowUpgrades: false,      // Disable transport upgrades
+    
+    // CORS configuration (keep your existing)
+    cors: {
+      origin: allowedOrigins,
+      methods: ["GET", "POST"],
+      credentials: true
+    }
+  });
+  
+  // Add this right after creating the Express app
+  app.set('trust proxy', 1); // Trust Railway's proxy
+  
+  // Add this right before Socket.IO initialization
+  server.keepAliveTimeout = 60000; // 60 seconds
+  server.headersTimeout = 65000;   // 65 seconds
 
 // Add CORS headers for Socket.IO
 io.engine.on("headers", (headers) => {
@@ -112,14 +131,12 @@ const gameRooms = new Map();
 // Add this to your configuration section
 const ABANDON_TIMEOUT = 60 * 1000; // 1 minute in milliseconds
 const playerConnections = new Map(); // gameCode -> { white: socketId, black: socketId }
-// Add to your server initialization
+// Add this right after your game state management constants
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const HEARTBEAT_TIMEOUT = 60000; // 60 seconds
+const playerHeartbeats = new Map();
 
-// Track last heartbeat times
-const playerHeartbeats = new Map(); // socket.id -> lastHeartbeat
-
-// Heartbeat middleware
+// Heartbeat middleware (add this right before your io.on('connection'))
 io.use((socket, next) => {
   socket.on('heartbeat', () => {
     playerHeartbeats.set(socket.id, Date.now());
@@ -127,7 +144,7 @@ io.use((socket, next) => {
   next();
 });
 
-// Check heartbeats periodically
+// Heartbeat checker
 setInterval(() => {
   const now = Date.now();
   for (const [socketId, lastBeat] of playerHeartbeats) {
@@ -358,80 +375,150 @@ socket.on('acceptDraw', async ({ gameCode, player }) => {
 // Updated resignation handler
 
 // Updated resignation handler with immediate payout display
-// Updated resignation handler
-// Handle resignations
 socket.on('resign', async ({ gameCode, player }) => {
-    const winner = player === 'white' ? 'black' : 'white';
-    const endedGame = await endGame(gameCode, winner, 'resignation');
-    
-    // Notify winner
+  try {
+    // Validate input
+    if (!gameCode || !player) throw new Error('Missing game code or player');
+
+    const game = activeGames.get(gameCode);
+    if (!game) throw new Error('Game not found');
+    if (game.status !== 'ongoing') throw new Error('Game not in progress');
+
     const room = gameRooms.get(gameCode);
+    if (!room) throw new Error('Room not found');
+
+    // Stop the game timer immediately
+    if (gameTimers[gameCode]) {
+      clearInterval(gameTimers[gameCode].interval);
+      delete gameTimers[gameCode];
+    }
+
+    // Determine winner and loser
+    const winner = player === 'white' ? 'black' : 'white';
     const winnerSocket = winner === 'white' ? room.white : room.black;
-    
-    if (winnerSocket) {
-      io.to(winnerSocket).emit('gameOver', {
-        winner,
-        reason: 'Opponent resigned',
+    const loserSocket = player === 'white' ? room.white : room.black;
+
+    // Process game end and payments
+    const endedGame = await endGame(gameCode, winner, 'resignation');
+
+    // Prepare detailed result data
+    const resultData = {
+      winner,
+      reason: 'resignation',
+      betAmount: game.bet,
+      winningAmount: endedGame.winningAmount,
+      winnerNewBalance: endedGame.winnerNewBalance,
+      loserNewBalance: endedGame.loserNewBalance,
+      endedAt: new Date().toISOString()
+    };
+
+    // Notify winner immediately with payout details
+    if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
+      io.to(winnerSocket).emit('gameWon', {
+        type: 'resignation',
+        message: 'Opponent resigned!',
         amount: endedGame.winningAmount,
-        newBalance: endedGame.winnerNewBalance
+        bet: game.bet,
+        newBalance: endedGame.winnerNewBalance,
+        animation: 'moneyIncrease'
       });
     }
-  });
+
+    // Notify loser immediately
+    if (loserSocket && io.sockets.sockets.has(loserSocket)) {
+      io.to(loserSocket).emit('gameLost', {
+        type: 'resignation',
+        message: 'You resigned the game',
+        amount: -game.bet,
+        newBalance: endedGame.loserNewBalance,
+        animation: 'moneyDecrease'
+      });
+    }
+
+    // Clean up game state
+    cleanupGameResources(gameCode);
+
+  } catch (error) {
+    console.error('Resignation failed:', error);
+    socket.emit('error', {
+      type: 'resignation_error',
+      message: error.message
+    });
+  }
+});
+
 // Updated disconnect handler with immediate payout
 // Replace your existing disconnect handler with this more robust version
-// Update the disconnect handler in server.js
-socket.on('disconnect', async (reason) => {
-    console.log(`Player disconnected: ${socket.id}, reason: ${reason}`);
+
+  // Add heartbeat tracking for this socket
+  playerHeartbeats.set(socket.id, Date.now());
+  
+  // Add disconnect handler
+  socket.on('disconnect', (reason) => {
+    console.log(`Client ${socket.id} disconnected: ${reason}`);
+    playerHeartbeats.delete(socket.id);
+
+
     
     if (!socket.gameCode) return;
   
-    // Skip if this is a voluntary disconnect
-    if (reason === 'client namespace disconnect') return;
+    // Skip if this is a voluntary disconnect (like page navigation)
+    if (reason === 'client namespace disconnect') {
+      return;
+    }
   
     const room = gameRooms.get(socket.gameCode);
     if (!room) return;
   
-    // Determine which player disconnected
-    let disconnectedPlayer = null;
+    // Only proceed if this socket was actually in the game
+    let disconnectedRole = null;
     if (room.white === socket.id) {
-      disconnectedPlayer = 'white';
-      room.white = null;
+      disconnectedRole = 'white';
     } else if (room.black === socket.id) {
-      disconnectedPlayer = 'black';
-      room.black = null;
+      disconnectedRole = 'black';
     }
   
-    if (!disconnectedPlayer) return;
+    if (!disconnectedRole) return;
   
-    console.log(`${disconnectedPlayer} player disconnected from ${socket.gameCode}`);
+    // Mark as disconnected but keep their slot
+    console.log(`Marking ${disconnectedRole} as potentially disconnected`);
   
-    // Set 30-second timeout before declaring winner
-    const disconnectTimer = setTimeout(async () => {
+    // Set a grace period before declaring abandonment
+    const DISCONNECT_GRACE_PERIOD = 45000; // 45 seconds
+    const timerKey = `${socket.gameCode}_${disconnectedRole}`;
+  
+    disconnectTimers[timerKey] = setTimeout(async () => {
+      // Verify they haven't reconnected
+      const currentRoom = gameRooms.get(socket.gameCode);
+      if ((disconnectedRole === 'white' && currentRoom.white === socket.id) ||
+          (disconnectedRole === 'black' && currentRoom.black === socket.id)) {
+        console.log(`${disconnectedRole} reconnected in time`);
+        return;
+      }
+  
+      // Only proceed if game is still ongoing
       const game = activeGames.get(socket.gameCode);
-      if (!game || game.status !== 'ongoing') return;
+      if (!game || game.status !== 'ongoing') {
+        console.log('Game already ended');
+        return;
+      }
   
-      const winner = disconnectedPlayer === 'white' ? 'black' : 'white';
-      const winnerSocket = winner === 'white' ? room.white : room.black;
+      console.log(`Finalizing disconnect for ${disconnectedRole}`);
+      const winner = disconnectedRole === 'white' ? 'black' : 'white';
+      const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
   
-      // End the game
-      const endedGame = await endGame(socket.gameCode, winner, 'disconnection');
-  
-      // Notify winner
       if (winnerSocket) {
-        io.to(winnerSocket).emit('gameOver', {
-          winner,
-          reason: 'Opponent disconnected',
-          amount: endedGame.winningAmount,
-          newBalance: endedGame.winnerNewBalance
+        io.to(winnerSocket).emit('gameWon', {
+          type: 'disconnection',
+          message: 'Opponent disconnected!',
+          amount: game.bet * 1.8,
+          bet: game.bet
         });
       }
-    
   
+      await endGame(socket.gameCode, winner, 'disconnection');
       cleanupGameResources(socket.gameCode);
-    }, 30000); // 30 second grace period
-  
-    // Store timer so we can clear it if player reconnects
-    disconnectTimers[socket.id] = disconnectTimer;
+    }, DISCONNECT_GRACE_PERIOD);
   });
   // Add reconnection handler
   socket.on('reconnect_attempt', (attemptNumber) => {
@@ -838,74 +925,142 @@ function startGameTimer(gameCode, initialTime = 600) {
     });
   }
   // Enhance the endGame function to handle resignations
-// Enhanced endGame function
-async function endGame(gameCode, winner, reason) {
+  async function endGame(gameCode, winner, result) {
     try {
-      const game = activeGames.get(gameCode);
-      if (!game) throw new Error('Game not found');
+      // 1. Get game data
+      const { data: game, error: gameError } = await supabase
+        .from('chess_games')
+        .select('*')
+        .eq('code', gameCode)
+        .single();
   
-      // Update game status
+      if (gameError) throw gameError;
+  
+      // 2. Prepare game result data
       const updateData = {
         status: 'finished',
         winner,
-        result: reason,
+        result: result.slice(0, 50),
         updated_at: new Date().toISOString(),
         ended_at: new Date().toISOString()
       };
   
-      // Process winnings if there was a bet
-      let winnerNewBalance = null;
-      let loserNewBalance = null;
-      
-      if (game.bet && winner) {
+      // 3. Initialize transaction variables
+      let winnerTransaction = null;
+      let loserTransaction = null;
+      let commissionTransaction = null;
+      const room = gameRooms.get(gameCode);
+  
+      // 4. Process financial transactions if there was a bet
+      if (game.bet && game.bet > 0 && winner) {
+        const totalPrizePool = game.bet * 2;
+        const commissionAmount = Math.round(totalPrizePool * 0.1 * 100) / 100; // 10% commission
+        const winnerPayout = totalPrizePool - commissionAmount;
+  
+        // Get winner's current balance
         const winnerPhone = winner === 'white' ? game.white_phone : game.black_phone;
-        const loserPhone = winner === 'white' ? game.black_phone : game.white_phone;
-        
-        // Award winner (1.8x payout)
-        const winnings = Math.floor(game.bet * 1.8);
-        winnerNewBalance = await updatePlayerBalance(
-          winnerPhone,
-          winnings,
-          'win',
-          gameCode,
-          `Won game by ${reason}`
-        );
+        const winnerSocket = winner === 'white' ? room?.white : room?.black;
   
-        // Record loss for other player
-        const { data: loser } = await supabase
-          .from('users')
-          .select('balance')
-          .eq('phone', loserPhone)
-          .single();
+        if (winnerPhone) {
+          const winnerNewBalance = await updatePlayerBalance(
+            winnerPhone,
+            winnerPayout,
+            'win',
+            gameCode,
+            `Won game by ${result}`
+          );
   
-        loserNewBalance = loser?.balance || 0;
-        await recordTransaction({
-          player_phone: loserPhone,
-          transaction_type: 'loss',
-          amount: -game.bet,
-          balance_before: loserNewBalance,
-          balance_after: loserNewBalance,
-          game_id: gameCode,
-          description: `Lost game by ${reason}`
-        });
+          winnerTransaction = {
+            player: winnerPhone,
+            amount: winnerPayout,
+            newBalance: winnerNewBalance
+          };
+  
+          // Notify winner if still connected
+          if (winnerSocket && io.sockets.sockets.has(winnerSocket)) {
+            io.to(winnerSocket).emit('balanceUpdate', {
+              amount: winnerPayout,
+              newBalance: winnerNewBalance,
+              message: `$${winnerPayout} awarded for winning`
+            });
+          }
+        }
+  
+        // Get loser's current balance (for record keeping)
+        const loser = winner === 'white' ? 'black' : 'white';
+        const loserPhone = loser === 'white' ? game.white_phone : game.black_phone;
+        const loserSocket = loser === 'white' ? room?.white : room?.black;
+  
+        if (loserPhone) {
+          // Record the loss (no balance change, just for history)
+          const { data: loserData } = await supabase
+            .from('users')
+            .select('balance')
+            .eq('phone', loserPhone)
+            .single();
+  
+          const loserBalance = loserData?.balance || 0;
+  
+          await recordTransaction({
+            player_phone: loserPhone,
+            transaction_type: 'loss',
+            amount: -game.bet,
+            balance_before: loserBalance,
+            balance_after: loserBalance,
+            game_id: gameCode,
+            description: `Lost game by ${result}`,
+            status: 'completed'
+          });
+  
+          loserTransaction = {
+            player: loserPhone,
+            amount: -game.bet,
+            newBalance: loserBalance
+          };
+  
+          // Notify loser if still connected
+          if (loserSocket && io.sockets.sockets.has(loserSocket)) {
+            io.to(loserSocket).emit('balanceUpdate', {
+              amount: -game.bet,
+              newBalance: loserBalance,
+              message: `$${game.bet} lost`
+            });
+          }
+        }
+  
+        // Update house balance with commission
+        const newHouseBalance = await updateHouseBalance(commissionAmount);
+        commissionTransaction = {
+          amount: commissionAmount,
+          newBalance: newHouseBalance
+        };
       }
   
-      // Save to database
-      const { data: updatedGame, error } = await supabase
+      // 5. Update game status in database
+      const { error: updateError } = await supabase
         .from('chess_games')
         .update(updateData)
-        .eq('code', gameCode)
-        .select()
-        .single();
+        .eq('code', gameCode);
   
-      if (error) throw error;
+      if (updateError) throw updateError;
   
-      // Return complete result including financials
+      // 6. Return comprehensive result
       return {
-        ...updatedGame,
-        winnerNewBalance,
-        loserNewBalance,
-        winningAmount: game.bet ? Math.floor(game.bet * 1.8) : 0
+        ...game,
+        ...updateData,
+        transactions: {
+          winner: winnerTransaction,
+          loser: loserTransaction,
+          commission: commissionTransaction
+        },
+        financials: {
+          betAmount: game.bet || 0,
+          prizePool: game.bet ? game.bet * 2 : 0,
+          commission: game.bet ? Math.round(game.bet * 0.1 * 100) / 100 : 0,
+          winningAmount: game.bet ? Math.round(game.bet * 1.8 * 100) / 100 : 0,
+          winnerNewBalance: winnerTransaction?.newBalance,
+          loserNewBalance: loserTransaction?.newBalance
+        }
       };
   
     } catch (error) {
