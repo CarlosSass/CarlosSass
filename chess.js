@@ -71,29 +71,29 @@ const PIECE_SYMBOLS = {
   // Modify the renderBoard function to use SVG pieces
 // Update the renderBoard function to properly display SVG pieces
 function renderBoard() {
-    // Clear existing pieces
     document.querySelectorAll('.piece').forEach(p => p.remove());
     
     for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            const algebraic = rowColToAlgebraic(row, col);
-            const piece = gameState.chess.get(algebraic);
-            if (!piece) continue;
-            
-            const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            const pieceElement = document.createElement('div');
-            pieceElement.className = 'piece';
-            
-            // Get the correct SVG based on piece color and type
-            const pieceKey = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
-            pieceElement.innerHTML = PIECE_SYMBOLS[pieceKey] || '';
-            
-            // Add color class for styling
-            pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
-            square.appendChild(pieceElement);
-        }
+      for (let col = 0; col < 8; col++) {
+        const algebraic = rowColToAlgebraic(row, col);
+        const piece = gameState.chess.get(algebraic);
+        if (!piece) continue;
+        
+        const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        
+        const pieceElement = document.createElement('div');
+        pieceElement.className = 'piece';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.type] || '';
+        pieceElement.dataset.piece = `${piece.color}${piece.type}`;
+        
+        // Add color class for easier styling
+        pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
+        
+        square.appendChild(pieceElement);
+      }
     }
-}
+  }
+  
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
     const dialog = document.getElementById('promotion-dialog');
@@ -879,10 +879,26 @@ function showNotification(message) {
 // CSS for notifications
 // Handle winning the game
 // Handle winning the game
-
+socket.on('gameWon', (data) => {
+  // Only show positive animation for winner
+  if (data.animation) {
+   // showAnimation(data.animation);
+  }
+  //showNotification(`${data.reason} +$${data.amount}`);
+});
 
 // Handle losing the game
-
+socket.on('gameLost', (data) => {
+  // No animation or balance update for loser
+  //showNotification(data.reason);
+  
+  // Optional: You could show a different message style
+  const notification = document.createElement('div');
+  notification.className = 'game-notification lost';
+  notification.textContent = data.reason;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 5000);
+});
 // Handle balance updates (for real-time updates)
 socket.on('balanceUpdate', (data) => {
   
@@ -973,70 +989,47 @@ function formatBalance(amount) {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
-// Add these handlers in your initGame() function
-// Add these in your initGame() function
-socket.on('gameWon', (data) => {
-  showFinalResult({
-    winner: gameState.playerColor,
-    reason: data.reason,
-    bet: data.bet
-  });
-  playSound('check');
-});
-
-socket.on('gameLost', (data) => {
-  showFinalResult({
-    winner: gameState.playerColor === 'white' ? 'black' : 'white', 
-    reason: data.reason,
-    bet: data.bet
-  });
-  playSound('capture');
-});
-
-// Update showFinalResult to handle these cases
-// Add this in your initGame() function
-socket.on('gameOver', (result) => {
-  const isWinner = result.winner === gameState.playerColor;
-  
-  // Show appropriate result
-  showFinalResult({
-    isWinner,
-    reason: result.reason,
-    amount: isWinner ? result.amount : -gameState.betam,
-    newBalance: result.newBalance
-  });
-
-  // Update UI immediately
-  if (isWinner) {
-    gameStatus.textContent = `You won by ${result.reason}!`;
-    playSound('check');
-  } else {
-    gameStatus.textContent = `You lost by ${result.reason}`;
-    playSound('capture');
+async function showFinalResult(gameData) {
+  // Ensure gameData exists and has required properties
+  if (!gameData) {
+    console.error('showFinalResult: gameData is undefined');
+    return;
   }
-});
 
-// Enhanced showFinalResult function
-function showFinalResult(result) {
+  const isWinner = gameData.winner === gameState.playerColor;
+  const betAmount = Number(gameData.bet) || 0; // Ensure bet is a number
+  
   gameResultModal.classList.add('active');
+  isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
+  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+
+  // Handle cases where reason might be missing
+  const reason = gameData.reason || 'game completion';
   
-  if (result.isWinner) {
-    resultTitle.textContent = 'You Won!';
-    resultTitle.style.color = 'green';
-    resultMessage.textContent = `You won by ${result.reason}`;
-    resultAmount.textContent = `+${result.amount} ETB`;
-    resultAmount.style.color = 'green';
+  resultMessage.textContent = isWinner
+    ? `You won the game by ${reason}! :)`
+    : `You lost the game by ${reason} :(`;
+
+  // Safely calculate and display amounts
+  if (isWinner) {
+    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
+    resultAmount.textContent = `+${formatBalance(winnings)}`;
   } else {
-    resultTitle.textContent = 'You Lost';
-    resultTitle.style.color = 'red';
-    resultMessage.textContent = `You lost by ${result.reason}`;
-    resultAmount.textContent = `-${gameState.betam} ETB`;
-    resultAmount.style.color = 'red';
+    resultAmount.textContent = `-${formatBalance(betam)}`;
   }
 
-  // Update balance display if available
-  if (result.newBalance !== undefined) {
-    document.getElementById('balance-display').textContent = 
-      `Balance: ${result.newBalance} ETB`;
+  resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+
+  // Reset game state if needed
+  if (!isWinner && gameState.didwelose) {
+    gameState.didwelose = false;
   }
+
+  // Debug logging
+  console.log('Final result displayed:', {
+    isWinner,
+    betAmount,
+    calculatedAmount: isWinner ? betAmount * 1.8 : betAmount,
+    gameData
+  });
 }
