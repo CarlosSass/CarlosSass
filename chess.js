@@ -23,16 +23,27 @@ const supabase = createClient(
   );
 
 // Initialize Socket.IO
+// Replace your existing socket initialization with:
 const socket = io('https://chess-game-production-9494.up.railway.app', {
+  // Reconnection settings
   reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  timeout: 20000,
-  transports: ['websocket'], // Force WebSocket protocol
-  secure: true,
-  withCredentials: true
+  reconnectionAttempts: Infinity,  // Keep trying forever
+  reconnectionDelay: 1000,        // Start with 1 second delay
+  reconnectionDelayMax: 30000,    // Max 30 second delay
+  randomizationFactor: 0.5,       // Randomize delays
+  
+  // Transport settings
+  transports: ['websocket'],      // Force WebSocket
+  upgrade: false,                 // Disable transport upgrade
+  
+  // Timeout settings
+  timeout: 20000,                 // 20 second connection timeout
+  
+  // Auth settings (if you use authentication)
+  auth: {
+    token: localStorage.getItem('authToken') // Example
+  }
 });
-
 // Game State
 const gameState = {
   playerColor: 'white', // This will be set from URL params
@@ -45,9 +56,18 @@ const gameState = {
   apiBaseUrl: 'https://chess-game-production-9494.up.railway.app', // Updated
   isConnected: false,
   betam:0,
-  onetime:false
-  
+  onetime:false,
+  reconnectAttempts: 0,
+  maxReconnectAttempts: 5,
+  reconnectDelay: 2000, // Start with 2 seconds
+  connectionState: {
+    lastPacketReceived: Date.now(),
+    stableConnection: true,
+    latency: 0
+  }
 };
+
+
 
 // Piece Symbols
 // Replace the PIECE_SYMBOLS with SVG icons or image references
@@ -71,29 +91,77 @@ const PIECE_SYMBOLS = {
   // Modify the renderBoard function to use SVG pieces
 // Update the renderBoard function to properly display SVG pieces
 function renderBoard() {
+    // Clear existing pieces
     document.querySelectorAll('.piece').forEach(p => p.remove());
     
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const algebraic = rowColToAlgebraic(row, col);
-        const piece = gameState.chess.get(algebraic);
-        if (!piece) continue;
-        
-        const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-        
-        const pieceElement = document.createElement('div');
-        pieceElement.className = 'piece';
-        pieceElement.innerHTML = PIECE_SYMBOLS[piece.type] || '';
-        pieceElement.dataset.piece = `${piece.color}${piece.type}`;
-        
-        // Add color class for easier styling
-        pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
-        
-        square.appendChild(pieceElement);
-      }
+    // Play move sound when the board updates (unless it's the initial render)
+    if (gameState.chess.history().length > 0) {
+        const lastMove = gameState.chess.history({ verbose: true })[gameState.chess.history().length - 1];
+        if (lastMove.captured) {
+            playSound('capture');
+        } else if (gameState.chess.in_check()) {
+            playSound('check');
+        } else {
+            playSound('move');
+        }
     }
+    
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const algebraic = rowColToAlgebraic(row, col);
+            const piece = gameState.chess.get(algebraic);
+            if (!piece) continue;
+            
+            const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            const pieceElement = document.createElement('div');
+            pieceElement.className = 'piece';
+            
+            // Get the correct SVG based on piece color and type
+            const pieceKey = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
+            pieceElement.innerHTML = PIECE_SYMBOLS[pieceKey] || '';
+            
+            // Add color class for styling
+            pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
+            square.appendChild(pieceElement);
+        }
+    }
+}
+
+function handleGameUpdate(update) {
+    if (!update || !update.gameState) return;
+    
+    // Always clear previous move highlights first
+    document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
+        el.classList.remove('last-move-from', 'last-move-to');
+    });
+    
+    gameState.currentGame = update.gameState;
+    gameState.chess.load(update.gameState.fen);
+    gameState.turn = update.gameState.turn;
+    
+    // Update player info
+    updatePlayerInfo(update.gameState);
+    
+    if (update.move) {
+        // Highlight the previous move regardless of whose turn it is
+        if (update.move.from) {
+            const { row: fromRow, col: fromCol } = algebraicToRowCol(update.move.from);
+            const fromSquare = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
+            if (fromSquare) fromSquare.classList.add('last-move-from');
+        }
+        
+        if (update.move.to) {
+            const { row: toRow, col: toCol } = algebraicToRowCol(update.move.to);
+            const toSquare = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
+            if (toSquare) toSquare.classList.add('last-move-to');
+        }
+        
+        // Sound is now handled in renderBoard()
+        addMoveToHistory(update.move);
+    }
+    
+    updateGameState(update.gameState);
   }
-  
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
     const dialog = document.getElementById('promotion-dialog');
@@ -208,7 +276,7 @@ const sounds = {
   move: new Audio('move-self.mp3'),
   capture: new Audio('capture.mp3'),
   check: new Audio('notify.mp3'),
-  join: new Audio('mixkit-positive-notification-951.mp3')
+  join: new Audio('join.mp3')
 };
 
 // Initialize the game when DOM is loaded
@@ -365,6 +433,7 @@ function removeWaitingOverlay() {
   const overlay = document.getElementById('waiting-overlay');
   if (overlay) {
       overlay.classList.add('hidden');
+      playSound("join");
   }
 }
 // Initialize Game
@@ -420,7 +489,70 @@ async function initGame() {
       
       gameStatus.textContent = 'Game in progress';
     });
+  // Replace existing connection listeners with these:
+socket.on('connect', () => {
+  gameState.isConnected = true;
+  gameState.connectionState.stableConnection = true;
+  gameState.reconnectAttempts = 0;
+  updateConnectionStatus();
   
+  // Request fresh game state if reconnecting
+  if (gameState.gameCode) {
+    socket.emit('requestGameState', { gameCode: gameState.gameCode });
+  }
+});
+
+socket.on('disconnect', (reason) => {
+  gameState.isConnected = false;
+  gameState.connectionState.stableConnection = false;
+  updateConnectionStatus();
+  
+  // Only attempt reconnect for unexpected disconnects
+  if (reason !== 'io client disconnect') {
+    gameStatus.textContent = 'Connection lost - attempting to reconnect...';
+    attemptReconnect();
+  }
+});
+
+// Add these new listeners:
+socket.on('ping', () => {
+  gameState.connectionState.lastPingTime = Date.now();
+});
+
+socket.on('pong', (latency) => {
+  const now = Date.now();
+  gameState.connectionState.lastPacketReceived = now;
+  gameState.connectionState.latency = now - gameState.connectionState.lastPingTime;
+  
+  if (gameState.connectionState.latency > 1000) {
+    gameState.connectionState.stableConnection = false;
+    gameStatus.textContent = 'Connection unstable - high latency';
+  } else {
+    gameState.connectionState.stableConnection = true;
+  }
+  
+  updateConnectionStatus();
+});
+
+socket.on('reconnect_attempt', (attemptNumber) => {
+  console.log(`Reconnection attempt ${attemptNumber}`);
+  gameStatus.textContent = `Reconnecting... (Attempt ${attemptNumber}/${gameState.maxReconnectAttempts})`;
+});
+
+socket.on('reconnect_error', (error) => {
+  console.error('Reconnection error:', error);
+});
+
+socket.on('reconnect_failed', () => {
+  showError('Failed to reconnect. Please refresh the page.');
+});
+
+socket.on('playerReconnected', (data) => {
+  showNotification(`${data.player} has reconnected`);
+  if (data.player !== gameState.playerColor) {
+    gameStatus.textContent = 'Game resumed - your turn!'[Symbol];
+  }
+});
     // Fallback to REST API if Socket.IO isn't connected after 2 seconds
     setTimeout(() => {
       if (!gameState.isConnected) {
@@ -435,7 +567,59 @@ async function initGame() {
     console.error('Init error:', error);
     showError('Error loading game');
   }
+  // Call this in initGame()
+setupReconnectionUI();
 }
+
+
+
+// ======================
+// Connection Management
+// ======================
+function updateConnectionStatus() {
+  const statusEl = document.getElementById('connection-status');
+  if (!statusEl) return;
+  
+  if (!gameState.isConnected) {
+    statusEl.textContent = 'Disconnected';
+    statusEl.className = 'offline';
+  } else if (!gameState.connectionState.stableConnection) {
+    statusEl.textContent = 'Unstable Connection';
+    statusEl.className = 'unstable';
+  } else {
+    statusEl.textContent = 'Connected';
+    statusEl.className = 'online';
+  }
+}
+
+function attemptReconnect() {
+  if (gameState.reconnectAttempts < gameState.maxReconnectAttempts) {
+    gameState.reconnectAttempts++;
+    
+    const delay = Math.min(
+      10000, // Maximum 10 second delay
+      gameState.reconnectDelay * Math.pow(2, gameState.reconnectAttempts) // Exponential backoff
+    );
+    
+    setTimeout(() => {
+      if (!gameState.isConnected) {
+        console.log(`Reconnect attempt ${gameState.reconnectAttempts}`);
+        socket.connect();
+        attemptReconnect();
+      }
+    }, delay);
+  } else {
+    showError('Failed to reconnect. Please refresh the page.');
+  }
+}
+
+
+
+
+
+
+
+
 // Add click handler for the copy button
 document.getElementById('copy-code')?.addEventListener('click', () => {
   if (!gameState.gameCode) return;
@@ -518,48 +702,7 @@ function updatePlayerInfo(gameData) {
   }
 }
 // Handle game updates from server
-function handleGameUpdate(update) {
-  if (!update || !update.gameState) return;
-  
-  // Always clear previous move highlights first
-  document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
-      el.classList.remove('last-move-from', 'last-move-to');
-  });
-  
-  gameState.currentGame = update.gameState;
-  gameState.chess.load(update.gameState.fen);
-  gameState.turn = update.gameState.turn;
-  
-  // Update player info
-  updatePlayerInfo(update.gameState);
-  
-  if (update.move) {
-      // Highlight the previous move regardless of whose turn it is
-      if (update.move.from) {
-          const { row: fromRow, col: fromCol } = algebraicToRowCol(update.move.from);
-          const fromSquare = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
-          if (fromSquare) fromSquare.classList.add('last-move-from');
-      }
-      
-      if (update.move.to) {
-          const { row: toRow, col: toCol } = algebraicToRowCol(update.move.to);
-          const toSquare = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
-          if (toSquare) toSquare.classList.add('last-move-to');
-      }
-      
-      if (update.move.captured) {
-          playSound('capture');
-      } else if (gameState.chess.in_check()) {
-          playSound('check');
-      } else {
-          playSound('move');
-      }
-      
-      addMoveToHistory(update.move);
-  }
-  
-  updateGameState(update.gameState);
-}
+
 // Create Chess Board
 function createBoard() {
   board.innerHTML = '';
@@ -710,15 +853,7 @@ function showError(message) {
   }, 3000);
 }
 
-function updateConnectionStatus() {
-  const statusElement = document.getElementById('connection-status');
-  if (!statusElement) return;
-  
-  statusElement.textContent = gameState.isConnected 
-    ? 'Online (Real-time)' 
-    : 'Offline (Polling every 30s)';
-  statusElement.className = gameState.isConnected ? 'online' : 'offline';
-}
+
 
 // Fallback Functions
 async function fetchInitialGameState() {
@@ -880,24 +1015,25 @@ function showNotification(message) {
 // Handle winning the game
 // Handle winning the game
 socket.on('gameWon', (data) => {
-  // Only show positive animation for winner
-  if (data.animation) {
-   // showAnimation(data.animation);
-  }
-  //showNotification(`${data.reason} +$${data.amount}`);
+  showFinalResult({
+    winner: gameState.playerColor,
+    reason: data.message,
+    bet: data.bet
+  });
+  
+  // Update UI
+  gameStatus.textContent = `You won! ${data.message}`;
 });
 
-// Handle losing the game
 socket.on('gameLost', (data) => {
-  // No animation or balance update for loser
-  //showNotification(data.reason);
+  showFinalResult({
+    winner: gameState.playerColor === 'white' ? 'black' : 'white',
+    reason: data.message,
+    bet: data.bet
+  });
   
-  // Optional: You could show a different message style
-  const notification = document.createElement('div');
-  notification.className = 'game-notification lost';
-  notification.textContent = data.reason;
-  document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 5000);
+  // Update UI
+  gameStatus.textContent = `You lost! ${data.message}`;
 });
 // Handle balance updates (for real-time updates)
 socket.on('balanceUpdate', (data) => {
@@ -989,47 +1125,74 @@ function formatBalance(amount) {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
-async function showFinalResult(gameData) {
-  // Ensure gameData exists and has required properties
-  if (!gameData) {
-    console.error('showFinalResult: gameData is undefined');
-    return;
-  }
+function showFinalResult(result) {
+  if (!result) return;
 
-  const isWinner = gameData.winner === gameState.playerColor;
-  const betAmount = Number(gameData.bet) || 0; // Ensure bet is a number
+  const isWinner = result.winner === gameState.playerColor;
+  const betAmount = Number(result.bet) || 0;
   
   gameResultModal.classList.add('active');
-  isWinner ? showAnimation("moneyIncrease") : showAnimation("moneyDecrease");
-  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-
-  // Handle cases where reason might be missing
-  const reason = gameData.reason || 'game completion';
   
-  resultMessage.textContent = isWinner
-    ? `You won the game by ${reason}! :)`
-    : `You lost the game by ${reason} :(`;
+  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+  resultMessage.textContent = result.reason || 
+    (isWinner ? 'You won the game!' : 'You lost the game');
 
-  // Safely calculate and display amounts
-  if (isWinner) {
-    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-    resultAmount.textContent = `+${formatBalance(winnings)}`;
+  if (betAmount > 0) {
+    if (isWinner) {
+      const winnings = gameState.betam * 1.8; // 1.8x payout for winner
+      resultAmount.textContent = `+${formatBalance(winnings)}`;
+    } else {
+      resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
+    }
   } else {
-    resultAmount.textContent = `-${formatBalance(betam)}`;
+    resultAmount.textContent = '';
   }
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+}
 
-  // Reset game state if needed
-  if (!isWinner && gameState.didwelose) {
-    gameState.didwelose = false;
+
+
+
+
+
+
+
+
+// Add to gameState
+gameState.reconnectAttempts = 0;
+gameState.maxReconnectAttempts = 5;
+gameState.reconnectDelay = 2000; // 2 seconds
+
+// Add connection listeners
+
+
+
+
+// Reconnect logic
+
+function setupReconnectionUI() {
+  // Create button if it doesn't exist
+  if (!document.getElementById('reconnect-btn')) {
+    const reconnectBtn = document.createElement('button');
+    reconnectBtn.id = 'reconnect-btn';
+    reconnectBtn.textContent = '↻ Reconnect';
+    reconnectBtn.className = 'reconnect-btn';
+    reconnectBtn.addEventListener('click', () => {
+      socket.connect();
+      reconnectBtn.style.display = 'none';
+    });
+    document.body.appendChild(reconnectBtn);
   }
 
-  // Debug logging
-  console.log('Final result displayed:', {
-    isWinner,
-    betAmount,
-    calculatedAmount: isWinner ? betAmount * 1.8 : betAmount,
-    gameData
+  // Show/hide based on connection
+  socket.on('connect_error', () => {
+    const btn = document.getElementById('reconnect-btn');
+    if (btn) btn.style.display = 'block';
+  });
+  
+  socket.on('connect', () => {
+    const btn = document.getElementById('reconnect-btn');
+    if (btn) btn.style.display = 'none';
   });
 }
