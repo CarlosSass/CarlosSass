@@ -858,6 +858,11 @@ function startGameTimer(gameCode, initialTime = 600) {
   }
   // Enhance the endGame function to handle resignations
   async function endGame(gameCode, winner, result) {
+
+    if (game.status === 'finished') {
+        console.log('Game already ended, skipping duplicate endGame call');
+        return game;
+    }
     try {
       // 1. Get game data
       const { data: game, error: gameError } = await supabase
