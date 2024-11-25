@@ -730,7 +730,7 @@ async function updatePlayerBalance(phone, amount, transactionType, gameCode = nu
     throw error;
   }
 }
-function startGameTimer(gameCode, initialTime = 600) {
+function startGameTimer(gameCode, initialTime = 100) {
     if (gameTimers[gameCode]) {
       clearInterval(gameTimers[gameCode].interval);
       delete gameTimers[gameCode];
@@ -740,9 +740,13 @@ function startGameTimer(gameCode, initialTime = 600) {
       whiteTime: initialTime,
       blackTime: initialTime,
       lastUpdate: Date.now(),
-      currentTurn: 'black', // Start with white's turn
+      currentTurn: 'black',
+      isEnding: false, // Add this flag to prevent multiple endings
       interval: setInterval(async () => {
         try {
+          // Skip if game is already ending
+          if (gameTimers[gameCode].isEnding) return;
+  
           const now = Date.now();
           const elapsed = Math.floor((now - gameTimers[gameCode].lastUpdate) / 1000);
           gameTimers[gameCode].lastUpdate = now;
@@ -761,6 +765,12 @@ function startGameTimer(gameCode, initialTime = 600) {
             gameTimers[gameCode].whiteTime = Math.max(0, gameTimers[gameCode].whiteTime - elapsed);
             
             if (gameTimers[gameCode].whiteTime <= 0) {
+              // Set flag to prevent multiple endings
+              gameTimers[gameCode].isEnding = true;
+              
+              // Immediately clear the interval
+              clearInterval(gameTimers[gameCode].interval);
+              
               // End game due to white's timeout
               const endedGame = await endGame(gameCode, 'black', 'timeout');
               
@@ -787,9 +797,7 @@ function startGameTimer(gameCode, initialTime = 600) {
                 });
               }
   
-              // Clean up timer
-              clearInterval(gameTimers[gameCode].interval);
-              delete gameTimers[gameCode];
+              // Clean up resources
               cleanupGameResources(gameCode);
               return;
             }
@@ -797,6 +805,12 @@ function startGameTimer(gameCode, initialTime = 600) {
             gameTimers[gameCode].blackTime = Math.max(0, gameTimers[gameCode].blackTime - elapsed);
             
             if (gameTimers[gameCode].blackTime <= 0) {
+              // Set flag to prevent multiple endings
+              gameTimers[gameCode].isEnding = true;
+              
+              // Immediately clear the interval
+              clearInterval(gameTimers[gameCode].interval);
+              
               // End game due to black's timeout
               const endedGame = await endGame(gameCode, 'white', 'timeout');
               
@@ -823,15 +837,13 @@ function startGameTimer(gameCode, initialTime = 600) {
                 });
               }
   
-              // Clean up timer
-              clearInterval(gameTimers[gameCode].interval);
-              delete gameTimers[gameCode];
+              // Clean up resources
               cleanupGameResources(gameCode);
               return;
             }
           }
   
-          // Send timer updates to all clients in the room
+          // Send timer updates
           io.to(gameCode).emit('timerUpdate', {
             whiteTime: gameTimers[gameCode].whiteTime,
             blackTime: gameTimers[gameCode].blackTime,
@@ -840,7 +852,6 @@ function startGameTimer(gameCode, initialTime = 600) {
   
         } catch (error) {
           console.error('Timer error:', error);
-          // Clean up timer on error
           if (gameTimers[gameCode]) {
             clearInterval(gameTimers[gameCode].interval);
             delete gameTimers[gameCode];
@@ -859,12 +870,12 @@ function startGameTimer(gameCode, initialTime = 600) {
   // Enhance the endGame function to handle resignations
   async function endGame(gameCode, winner, result) {
 
-
+    const game = activeGames.get(gameCode);
+    if (game && game.status === 'finished') {
+      return game;
+    }
     try {
-        if (game.status === 'finished') {
-            console.log('Game already ended, skipping duplicate endGame call');
-            return game;
-        }
+        
       // 1. Get game data
       const { data: game, error: gameError } = await supabase
         .from('chess_games')
