@@ -424,8 +424,36 @@ socket.on('disconnect', async () => {
   
     if (!disconnectedRole) return;
   
+    console.log(`Player ${disconnectedRole} disconnected from game ${socket.gameCode}`);
     const game = activeGames.get(socket.gameCode);
     if (game?.status !== 'ongoing') return;
+  
+    // Check if the game is completely abandoned (both players disconnected)
+    const isGameAbandoned = !room.white && !room.black;
+    if (isGameAbandoned) {
+      console.log(`Game ${socket.gameCode} abandoned - both players disconnected`);
+      // Stop timer immediately for abandoned games
+      if (gameTimers[socket.gameCode]) {
+        console.log(`Stopping timer for abandoned game ${socket.gameCode}`);
+        clearInterval(gameTimers[socket.gameCode].interval);
+        delete gameTimers[socket.gameCode];
+      }
+      
+      // Mark game as abandoned in database
+      await supabase
+        .from('chess_games')
+        .update({
+          status: 'finished',
+          result: 'abandoned',
+          updated_at: new Date().toISOString(),
+          ended_at: new Date().toISOString()
+        })
+        .eq('code', socket.gameCode);
+        
+      // Clean up resources
+      cleanupGameResources(socket.gameCode);
+      return;
+    }
   
     // Set abandonment timer (increased to 2 minutes for reconnection)
     const RECONNECT_TIMEOUT = 120000; // 2 minutes
@@ -434,15 +462,16 @@ socket.on('disconnect', async () => {
     disconnectTimers[timerKey] = setTimeout(async () => {
       // Only proceed if player hasn't reconnected
       const currentConnections = playerConnections.get(socket.gameCode);
-      if ((disconnectedRole === 'white' && !currentConnections.white) || 
-          (disconnectedRole === 'black' && !currentConnections.black)) {
+      if ((disconnectedRole === 'white' && !currentConnections?.white) || 
+          (disconnectedRole === 'black' && !currentConnections?.black)) {
         // Original disconnect logic
         const currentRoom = gameRooms.get(socket.gameCode);
         const currentGame = activeGames.get(socket.gameCode);
         
         if (currentGame?.status === 'ongoing') {
+          console.log(`Player ${disconnectedRole} didn't reconnect - ending game`);
           const winner = disconnectedRole === 'white' ? 'black' : 'white';
-          const winnerSocket = winner === 'white' ? currentRoom.white : currentRoom.black;
+          const winnerSocket = winner === 'white' ? currentRoom?.white : currentRoom?.black;
           
           if (winnerSocket) {
             io.to(winnerSocket).emit('gameWon', {
@@ -454,8 +483,6 @@ socket.on('disconnect', async () => {
   
             await endGame(socket.gameCode, winner, 'disconnection');
           }
-          
-          cleanupGameResources(socket.gameCode);
         }
       }
       delete disconnectTimers[timerKey];
@@ -869,13 +896,19 @@ function startGameTimer(gameCode, initialTime = 100) {
   }
   // Enhance the endGame function to handle resignations
   async function endGame(gameCode, winner, result) {
-
+    // Immediately stop the timer when game ends
+    if (gameTimers[gameCode]) {
+      console.log(`Game ${gameCode} ended - stopping timer`);
+      clearInterval(gameTimers[gameCode].interval);
+      delete gameTimers[gameCode];
+    }
+  
     const game = activeGames.get(gameCode);
     if (game && game.status === 'finished') {
       return game;
     }
+    
     try {
-        
       // 1. Get game data
       const { data: game, error: gameError } = await supabase
         .from('chess_games')
@@ -993,7 +1026,8 @@ function startGameTimer(gameCode, initialTime = 100) {
   
       if (updateError) throw updateError;
   
-      // 6. Return comprehensive result
+     cleanupGameResources(gameCode);
+      
       return {
         ...game,
         ...updateData,
@@ -1014,22 +1048,76 @@ function startGameTimer(gameCode, initialTime = 100) {
   
     } catch (error) {
       console.error('Error ending game:', error);
+      cleanupGameResources(gameCode);
       throw error;
     }
   }
-function cleanupGameResources(gameCode) {
-  // Clear timer if exists
-  if (gameTimers[gameCode]) {
-    clearInterval(gameTimers[gameCode].interval);
-    delete gameTimers[gameCode];
+  function cleanupGameResources(gameCode) {
+    console.log(`Cleaning up resources for game: ${gameCode}`);
+    
+    // Clear timer if exists
+    if (gameTimers[gameCode]) {
+      console.log(`Stopping timer for game: ${gameCode}`);
+      clearInterval(gameTimers[gameCode].interval);
+      delete gameTimers[gameCode];
+    }
+    
+    // Remove from active games
+    activeGames.delete(gameCode);
+    
+    // Clean up room
+    gameRooms.delete(gameCode);
+    
+    // Clean up player connections
+    playerConnections.delete(gameCode);
+    
+    console.log(`Resources for game ${gameCode} cleaned up successfully`);
   }
   
-  // Remove from active games
-  activeGames.delete(gameCode);
+
+
+
+function checkGameEndConditions(gameCode, gameState) {
+    const chess = new Chess(gameState.fen);
+    
+    if (chess.isGameOver()) {
+      let result, winner;
+      
+      if (chess.isCheckmate()) {
+        winner = chess.turn() === 'w' ? 'black' : 'white';
+        result = 'checkmate';
+      } else if (chess.isDraw()) {
+        winner = null;
+        result = 'draw';
+      } else if (chess.isStalemate()) {
+        winner = null;
+        result = 'stalemate';
+      } else if (chess.isThreefoldRepetition()) {
+        winner = null;
+        result = 'repetition';
+      } else if (chess.isInsufficientMaterial()) {
+        winner = null;
+        result = 'insufficient material';
+      }
   
-  // Clean up room
-  gameRooms.delete(gameCode);
-}
+      if (result) {
+        console.log(`Game ${gameCode} over by ${result} - stopping timer`);
+        // Immediately stop timer
+        if (gameTimers[gameCode]) {
+          clearInterval(gameTimers[gameCode].interval);
+          delete gameTimers[gameCode];
+        }
+        
+        endGame(gameCode, winner, result);
+        io.to(gameCode).emit('gameOver', { winner, reason: result });
+      }
+    }
+  }
+  
+
+
+
+
 async function updateHouseBalance(amount) {
   try {
     // Get current house balance
@@ -1056,35 +1144,6 @@ async function updateHouseBalance(amount) {
   } catch (error) {
     console.error('House balance update error:', error);
     throw error;
-  }
-}
-function checkGameEndConditions(gameCode, gameState) {
-  const chess = new Chess(gameState.fen);
-  
-  if (chess.isGameOver()) {
-    let result, winner;
-    
-    if (chess.isCheckmate()) {
-      winner = chess.turn() === 'w' ? 'black' : 'white';
-      result = 'checkmate';
-    } else if (chess.isDraw()) {
-      winner = null;
-      result = 'draw';
-    } else if (chess.isStalemate()) {
-      winner = null;
-      result = 'stalemate';
-    } else if (chess.isThreefoldRepetition()) {
-      winner = null;
-      result = 'repetition';
-    } else if (chess.isInsufficientMaterial()) {
-      winner = null;
-      result = 'insufficient material';
-    }
-
-    if (result) {
-      endGame(gameCode, winner, result);
-      io.to(gameCode).emit('gameOver', { winner, reason: result });
-    }
   }
 }
 
