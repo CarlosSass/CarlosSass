@@ -758,132 +758,110 @@ async function updatePlayerBalance(phone, amount, transactionType, gameCode = nu
   }
 }
 function startGameTimer(gameCode, initialTime = 100) {
+    // Clear existing timer to prevent duplicate timers
     if (gameTimers[gameCode]) {
       clearInterval(gameTimers[gameCode].interval);
       delete gameTimers[gameCode];
     }
   
+    // Add mutex locking mechanism
+    const timerLock = {
+      locked: false,
+      queue: [],
+      
+      acquire: function(callback) {
+        if (this.locked) {
+          this.queue.push(callback);
+        } else {
+          this.locked = true;
+          callback();
+        }
+      },
+      
+      release: function() {
+        if (this.queue.length > 0) {
+          const nextCallback = this.queue.shift();
+          nextCallback();
+        } else {
+          this.locked = false;
+        }
+      }
+    };
+  
     gameTimers[gameCode] = {
       whiteTime: initialTime,
       blackTime: initialTime,
       lastUpdate: Date.now(),
-      currentTurn: 'black',
-      isEnding: false, // Add this flag to prevent multiple endings
+      currentTurn: 'white', // Start with white as first player
+      isEnding: false,
+      timerLock: timerLock,
       interval: setInterval(async () => {
-        try {
-          // Skip if game is already ending
-          if (gameTimers[gameCode].isEnding) return;
-  
-          const now = Date.now();
-          const elapsed = Math.floor((now - gameTimers[gameCode].lastUpdate) / 1000);
-          gameTimers[gameCode].lastUpdate = now;
-  
-          const room = gameRooms.get(gameCode);
-          const game = activeGames.get(gameCode);
-  
-          if (!game || game.status !== 'ongoing') {
-            clearInterval(gameTimers[gameCode].interval);
-            delete gameTimers[gameCode];
-            return;
-          }
-  
-          // Update current player's time
-          if (gameTimers[gameCode].currentTurn === 'white') {
-            gameTimers[gameCode].whiteTime = Math.max(0, gameTimers[gameCode].whiteTime - elapsed);
-            
-            if (gameTimers[gameCode].whiteTime <= 0) {
-              // Set flag to prevent multiple endings
-              gameTimers[gameCode].isEnding = true;
-              
-              // Immediately clear the interval
-              clearInterval(gameTimers[gameCode].interval);
-              
-              // End game due to white's timeout
-              const endedGame = await endGame(gameCode, 'black', 'timeout');
-              
-              // Notify players if still connected
-              if (room?.black && io.sockets.sockets.has(room.black)) {
-                io.to(room.black).emit('gameOver', {
-                  winner: 'black',
-                  reason: 'Opponent ran out of time',
-                  ...(game.bet && {
-                    amount: endedGame.winningAmount,
-                    newBalance: endedGame.winnerNewBalance
-                  })
-                });
-              }
-              
-              if (room?.white && io.sockets.sockets.has(room.white)) {
-                io.to(room.white).emit('gameOver', {
-                  winner: 'black',
-                  reason: 'You ran out of time',
-                  ...(game.bet && {
-                    amount: -game.bet,
-                    newBalance: endedGame.loserNewBalance
-                  })
-                });
-              }
-  
-              // Clean up resources
-              cleanupGameResources(gameCode);
+        // Use mutex to prevent concurrent timer updates
+        timerLock.acquire(async () => {
+          try {
+            // Skip if game is already ending
+            if (gameTimers[gameCode]?.isEnding) {
+              timerLock.release();
               return;
             }
-          } else {
-            gameTimers[gameCode].blackTime = Math.max(0, gameTimers[gameCode].blackTime - elapsed);
-            
-            if (gameTimers[gameCode].blackTime <= 0) {
-              // Set flag to prevent multiple endings
-              gameTimers[gameCode].isEnding = true;
-              
-              // Immediately clear the interval
-              clearInterval(gameTimers[gameCode].interval);
-              
-              // End game due to black's timeout
-              const endedGame = await endGame(gameCode, 'white', 'timeout');
-              
-              // Notify players if still connected
-              if (room?.white && io.sockets.sockets.has(room.white)) {
-                io.to(room.white).emit('gameOver', {
-                  winner: 'white',
-                  reason: 'Opponent ran out of time',
-                  ...(game.bet && {
-                    amount: endedGame.winningAmount,
-                    newBalance: endedGame.winnerNewBalance
-                  })
-                });
-              }
-              
-              if (room?.black && io.sockets.sockets.has(room.black)) {
-                io.to(room.black).emit('gameOver', {
-                  winner: 'white',
-                  reason: 'You ran out of time',
-                  ...(game.bet && {
-                    amount: -game.bet,
-                    newBalance: endedGame.loserNewBalance
-                  })
-                });
-              }
   
-              // Clean up resources
-              cleanupGameResources(gameCode);
+            const now = Date.now();
+            const elapsed = Math.floor((now - gameTimers[gameCode].lastUpdate) / 1000);
+            gameTimers[gameCode].lastUpdate = now;
+  
+            // Validate game exists before proceeding
+            const game = activeGames.get(gameCode);
+            if (!game || game.status !== 'ongoing') {
+              clearInterval(gameTimers[gameCode].interval);
+              delete gameTimers[gameCode];
+              timerLock.release();
               return;
             }
-          }
   
-          // Send timer updates
-          io.to(gameCode).emit('timerUpdate', {
-            whiteTime: gameTimers[gameCode].whiteTime,
-            blackTime: gameTimers[gameCode].blackTime,
-            currentTurn: gameTimers[gameCode].currentTurn
-          });
+            // Update current player's time
+            if (gameTimers[gameCode].currentTurn === 'white') {
+              gameTimers[gameCode].whiteTime = Math.max(0, gameTimers[gameCode].whiteTime - elapsed);
+              
+              if (gameTimers[gameCode].whiteTime <= 0) {
+                // Immediately set flag to prevent race conditions
+                gameTimers[gameCode].isEnding = true;
+                
+                // Process timeout in protected section
+                await handleTimeout(gameCode, 'black');
+                timerLock.release();
+                return;
+              }
+            } else {
+              gameTimers[gameCode].blackTime = Math.max(0, gameTimers[gameCode].blackTime - elapsed);
+              
+              if (gameTimers[gameCode].blackTime <= 0) {
+                // Immediately set flag to prevent race conditions
+                gameTimers[gameCode].isEnding = true;
+                
+                // Process timeout in protected section
+                await handleTimeout(gameCode, 'white');
+                timerLock.release();
+                return;
+              }
+            }
   
-        } catch (error) {
-          console.error('Timer error:', error);
-          if (gameTimers[gameCode]) {
-            clearInterval(gameTimers[gameCode].interval);
-            delete gameTimers[gameCode];
+            // Send timer updates to clients
+            io.to(gameCode).emit('timerUpdate', {
+              whiteTime: gameTimers[gameCode].whiteTime,
+              blackTime: gameTimers[gameCode].blackTime,
+              currentTurn: gameTimers[gameCode].currentTurn
+            });
+            
+            timerLock.release();
+          } catch (error) {
+            console.error('Timer error:', error);
+            if (gameTimers[gameCode]) {
+              clearInterval(gameTimers[gameCode].interval);
+              delete gameTimers[gameCode];
+            }
+            timerLock.release();
           }
-        }
+        });
       }, 1000)
     };
   
@@ -893,6 +871,55 @@ function startGameTimer(gameCode, initialTime = 100) {
       blackTime: gameTimers[gameCode].blackTime,
       currentTurn: gameTimers[gameCode].currentTurn
     });
+  }
+  
+  // Extract timeout handling to separate function
+  async function handleTimeout(gameCode, winner) {
+    try {
+      // Immediately clear interval
+      if (gameTimers[gameCode]) {
+        clearInterval(gameTimers[gameCode].interval);
+      }
+      
+      // End game with timeout reason
+      const endedGame = await endGame(gameCode, winner, 'timeout');
+      
+      // Get room to notify players
+      const room = gameRooms.get(gameCode);
+      const game = activeGames.get(gameCode);
+      const loser = winner === 'white' ? 'black' : 'white';
+      
+      // Notify winner if connected
+      if (room?.[winner] && io.sockets.sockets.has(room[winner])) {
+        io.to(room[winner]).emit('gameOver', {
+          winner,
+          reason: 'Opponent ran out of time',
+          ...(game.bet && {
+            amount: endedGame.winningAmount,
+            newBalance: endedGame.winnerNewBalance
+          })
+        });
+      }
+      
+      // Notify loser if connected
+      if (room?.[loser] && io.sockets.sockets.has(room[loser])) {
+        io.to(room[loser]).emit('gameOver', {
+          winner,
+          reason: 'You ran out of time',
+          ...(game.bet && {
+            amount: -game.bet,
+            newBalance: endedGame.loserNewBalance
+          })
+        });
+      }
+  
+      // Clean up resources
+      cleanupGameResources(gameCode);
+      
+    } catch (error) {
+      console.error('Timeout handling error:', error);
+      cleanupGameResources(gameCode);
+    }
   }
   // Enhance the endGame function to handle resignations
   async function endGame(gameCode, winner, result) {
@@ -1055,27 +1082,42 @@ function startGameTimer(gameCode, initialTime = 100) {
   function cleanupGameResources(gameCode) {
     console.log(`Cleaning up resources for game: ${gameCode}`);
     
-    // Clear timer if exists
-    if (gameTimers[gameCode]) {
-      console.log(`Stopping timer for game: ${gameCode}`);
-      clearInterval(gameTimers[gameCode].interval);
+    // Use a try/catch to ensure complete cleanup even if some parts fail
+    try {
+      // Clear timer if exists
+      if (gameTimers[gameCode]) {
+        console.log(`Stopping timer for game: ${gameCode}`);
+        clearInterval(gameTimers[gameCode].interval);
+        delete gameTimers[gameCode];
+      }
+      
+      // Remove disconnect timers
+      Object.keys(disconnectTimers).forEach(key => {
+        if (key.startsWith(`${gameCode}_`)) {
+          clearTimeout(disconnectTimers[key]);
+          delete disconnectTimers[key];
+        }
+      });
+      
+      // Remove from active games
+      activeGames.delete(gameCode);
+      
+      // Clean up room
+      gameRooms.delete(gameCode);
+      
+      // Clean up player connections
+      playerConnections.delete(gameCode);
+      
+      console.log(`Resources for game ${gameCode} cleaned up successfully`);
+    } catch (error) {
+      console.error(`Error during cleanup for game ${gameCode}:`, error);
+      // Force cleanup anyway
       delete gameTimers[gameCode];
+      activeGames.delete(gameCode);
+      gameRooms.delete(gameCode);
+      playerConnections.delete(gameCode);
     }
-    
-    // Remove from active games
-    activeGames.delete(gameCode);
-    
-    // Clean up room
-    gameRooms.delete(gameCode);
-    
-    // Clean up player connections
-    playerConnections.delete(gameCode);
-    
-    console.log(`Resources for game ${gameCode} cleaned up successfully`);
   }
-  
-
-
 
 function checkGameEndConditions(gameCode, gameState) {
     const chess = new Chess(gameState.fen);
