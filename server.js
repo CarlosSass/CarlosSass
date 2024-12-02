@@ -792,7 +792,7 @@ function startGameTimer(gameCode, initialTime = 100) {
       whiteTime: initialTime,
       blackTime: initialTime,
       lastUpdate: Date.now(),
-      currentTurn: 'white', // Start with white as first player
+      currentTurn: 'black', // Start with white as first player
       isEnding: false,
       timerLock: timerLock,
       interval: setInterval(async () => {
