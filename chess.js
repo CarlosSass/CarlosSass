@@ -1012,16 +1012,14 @@ function showFinalResult(result) {
   resultMessage.textContent = result.reason || 
     (isWinner ? 'You won the game!' : 'You lost the game');
 
-  if (betAmount > 0) {
+  
     if (isWinner) {
       const winnings = gameState.betam * 1.8; // 1.8x payout for winner
       resultAmount.textContent = `+${formatBalance(winnings)}`;
     } else {
       resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
     }
-  } else {
-    resultAmount.textContent = '';
-  }
+  
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
 }
