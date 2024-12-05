@@ -117,7 +117,7 @@ const playerConnections = new Map(); // gameCode -> { white: socketId, black: so
 io.on('connection', (socket) => {
   console.log(`New connection: ${socket.id}`);
   // Handle joining a game room
-   socket.on('joinGame', async (gameCode) => {
+  socket.on('joinGame', async (gameCode) => {
     try {
       socket.join(gameCode);
       socket.gameCode = gameCode;
@@ -129,62 +129,58 @@ io.on('connection', (socket) => {
   
       if (!room.white) {
         room.white = socket.id;
-        // Notify white player
+        // Store connection
+        if (!playerConnections.has(gameCode)) {
+          playerConnections.set(gameCode, { white: socket.id, black: null });
+        } else {
+          playerConnections.get(gameCode).white = socket.id;
+        }
+        
+        // Notify player
         socket.emit('notification', {
           type: 'role-assignment',
           role: 'white',
           message: 'You are WHITE. Waiting for BLACK player...'
         });
+        
+        // If rejoining, send game state
+        const game = activeGames.get(gameCode);
+        if (game) {
+          socket.emit('gameState', game);
+        }
       } 
       else if (!room.black) {
         room.black = socket.id;
+        // Store connection
+        playerConnections.get(gameCode).black = socket.id;
         
-        // Notify both players
+        // Notify players
         io.to(gameCode).emit('notification', {
           type: 'game-start',
-          message: 'Game started! WHITE moves first.',
-          timeControl: 600 // or your default time
-        });
-      
-
-            
-        // Notify white player specifically
-        io.to(room.white).emit('notification', {
-          type: 'opponent-connected',
-          message: 'BLACK has joined. Make your move!'
+          message: 'Game started! WHITE moves first.'
         });
         
-        // Start game logic
+        // Start/resume game
         const game = await getOrCreateGame(gameCode);
-        if (game.status === 'ongoing' && !gameTimers[gameCode]) {
-          startGameTimer(gameCode, game.time_control || 600);
-        }
+        activeGames.set(gameCode, game);
         
+        if (game.status === 'ongoing') {
+          if (!gameTimers[gameCode]) {
+            startGameTimer(gameCode, game.time_control || 600);
+          } else {
+            resumeGameTimer(gameCode);
+          }
+        }
       } else {
-        throw new Error('Room is full');
+        // Spectator joining
+        const game = activeGames.get(gameCode);
+        if (game) {
+          socket.emit('gameState', game);
+        }
       }
-  
-      const game = await getOrCreateGame(gameCode);
-      activeGames.set(gameCode, game);
-      socket.emit('gameState', game);
-  
     } catch (error) {
-      socket.emit('notification', {
-        type: 'error',
-        message: error.message
-      });
+      socket.emit('error', error.message);
     }
-    if (!playerConnections.has(gameCode)) {
-        playerConnections.set(gameCode, { white: null, black: null });
-      }
-      const connections = playerConnections.get(gameCode);
-      
-      if (role === 'white') {
-        connections.white = socket.id;
-      } else {
-        connections.black = socket.id;
-      }
-
   });
   // Handle move events
   socket.on('move', async (moveData) => {
@@ -406,10 +402,13 @@ socket.on('resign', async ({ gameCode, player }) => {
 });
 
 // Updated disconnect handler with immediate payout
+// Modify the disconnect handler
+// Modify the disconnect handler
 socket.on('disconnect', async () => {
     if (!socket.gameCode) return;
   
-    const room = gameRooms.get(socket.gameCode);
+    const gameCode = socket.gameCode;
+    const room = gameRooms.get(gameCode);
     if (!room) return;
   
     // Determine disconnected player
@@ -424,80 +423,58 @@ socket.on('disconnect', async () => {
   
     if (!disconnectedRole) return;
   
-    console.log(`Player ${disconnectedRole} disconnected from game ${socket.gameCode}`);
-    const game = activeGames.get(socket.gameCode);
-    if (game?.status !== 'ongoing') return;
+    console.log(`Player ${disconnectedRole} disconnected from game ${gameCode}`);
+    
+    // Pause the game timer immediately
+    pauseGameTimer(gameCode);
   
-    // Check if the game is completely abandoned (both players disconnected)
-    const isGameAbandoned = !room.white && !room.black;
-    if (isGameAbandoned) {
-      console.log(`Game ${socket.gameCode} abandoned - both players disconnected`);
-      // Stop timer immediately for abandoned games
-      if (gameTimers[socket.gameCode]) {
-        console.log(`Stopping timer for abandoned game ${socket.gameCode}`);
-        clearInterval(gameTimers[socket.gameCode].interval);
-        delete gameTimers[socket.gameCode];
-      }
-      
-      // Mark game as abandoned in database
-      await supabase
-        .from('chess_games')
-        .update({
-          status: 'finished',
-          result: 'abandoned',
-          updated_at: new Date().toISOString(),
-          ended_at: new Date().toISOString()
-        })
-        .eq('code', socket.gameCode);
-        
-      // Clean up resources
-      cleanupGameResources(socket.gameCode);
-      return;
+    // Notify remaining player
+    const remainingPlayerSocket = disconnectedRole === 'white' ? room.black : room.white;
+    if (remainingPlayerSocket) {
+      io.to(remainingPlayerSocket).emit('playerDisconnected', {
+        player: disconnectedRole,
+        message: `Opponent disconnected. Waiting for reconnection...`,
+        timeout: 120 // 2 minutes
+      });
     }
   
-    // Set abandonment timer (increased to 2 minutes for reconnection)
-    const RECONNECT_TIMEOUT = 120000; // 2 minutes
-    const timerKey = `${socket.gameCode}_${disconnectedRole}`;
-    
+    // Set reconnection timeout (increased to 2 minutes)
+    const timerKey = `${gameCode}_${disconnectedRole}`;
     disconnectTimers[timerKey] = setTimeout(async () => {
-      // Only proceed if player hasn't reconnected
-      const currentConnections = playerConnections.get(socket.gameCode);
-      if ((disconnectedRole === 'white' && !currentConnections?.white) || 
-          (disconnectedRole === 'black' && !currentConnections?.black)) {
-        // Original disconnect logic
-        const currentRoom = gameRooms.get(socket.gameCode);
-        const currentGame = activeGames.get(socket.gameCode);
+      const currentRoom = gameRooms.get(gameCode);
+      const currentGame = activeGames.get(gameCode);
+      
+      // Check if player hasn't reconnected
+      if ((disconnectedRole === 'white' && !currentRoom?.white) || 
+          (disconnectedRole === 'black' && !currentRoom?.black)) {
         
         if (currentGame?.status === 'ongoing') {
-          console.log(`Player ${disconnectedRole} didn't reconnect - ending game`);
           const winner = disconnectedRole === 'white' ? 'black' : 'white';
-          const winnerSocket = winner === 'white' ? currentRoom?.white : currentRoom?.black;
+          await endGame(gameCode, winner, 'disconnection');
           
+          // Notify winner if still connected
+          const winnerSocket = winner === 'white' ? currentRoom?.white : currentRoom?.black;
           if (winnerSocket) {
             io.to(winnerSocket).emit('gameWon', {
               type: 'disconnection',
-              message: 'Opponent disconnected!',
-              amount: currentGame.bet * 1.8,
-              bet: currentGame.bet
+              message: 'Opponent disconnected!'
             });
-  
-            await endGame(socket.gameCode, winner, 'disconnection');
           }
         }
       }
       delete disconnectTimers[timerKey];
-    }, RECONNECT_TIMEOUT);
+    }, 120000); // 2 minutes
   });
-  
   // Add reconnection handler
   socket.on('reconnect', async () => {
     if (!socket.gameCode) return;
   
-    const room = gameRooms.get(socket.gameCode);
+    const gameCode = socket.gameCode;
+    const room = gameRooms.get(gameCode);
     if (!room) return;
   
     // Check if this was a previously connected player
-    const connections = playerConnections.get(socket.gameCode);
+    const connections = playerConnections.get(gameCode);
     if (!connections) return;
   
     let reconnectedRole = null;
@@ -511,22 +488,32 @@ socket.on('disconnect', async () => {
   
     if (reconnectedRole) {
       // Cancel disconnect timer
-      const timerKey = `${socket.gameCode}_${reconnectedRole}`;
+      const timerKey = `${gameCode}_${reconnectedRole}`;
       if (disconnectTimers[timerKey]) {
         clearTimeout(disconnectTimers[timerKey]);
         delete disconnectTimers[timerKey];
       }
   
+      // Resume game timer if it's their turn
+      const game = activeGames.get(gameCode);
+      if (game && game.turn === reconnectedRole) {
+        resumeGameTimer(gameCode);
+      }
+  
       // Notify players
-      io.to(socket.gameCode).emit('playerReconnected', {
+      io.to(gameCode).emit('playerReconnected', {
         player: reconnectedRole,
         message: `${reconnectedRole} has reconnected!`
       });
   
       // Send full game state
-      const game = activeGames.get(socket.gameCode);
       if (game) {
-        socket.emit('gameState', game);
+        socket.emit('gameState', {
+          ...game,
+          // Include timer information
+          whiteTime: gameTimers[gameCode]?.whiteTime,
+          blackTime: gameTimers[gameCode]?.blackTime
+        });
       }
     }
   });
@@ -762,6 +749,7 @@ function startGameTimer(gameCode, initialTime = 100) {
     if (gameTimers[gameCode]) {
       clearInterval(gameTimers[gameCode].interval);
       delete gameTimers[gameCode];
+
     }
   
     // Add mutex locking mechanism
@@ -794,8 +782,12 @@ function startGameTimer(gameCode, initialTime = 100) {
       lastUpdate: Date.now(),
       currentTurn: 'black', // Start with white as first player
       isEnding: false,
+      isActive: true, // Add this flag
+
       timerLock: timerLock,
       interval: setInterval(async () => {
+        if (!gameTimers[gameCode]?.isActive) return; // Only run if game is active
+
         // Use mutex to prevent concurrent timer updates
         timerLock.acquire(async () => {
           try {
@@ -872,7 +864,18 @@ function startGameTimer(gameCode, initialTime = 100) {
       currentTurn: gameTimers[gameCode].currentTurn
     });
   }
+  function pauseGameTimer(gameCode) {
+    if (gameTimers[gameCode]) {
+      gameTimers[gameCode].isActive = false;
+    }
+  }
   
+  function resumeGameTimer(gameCode) {
+    if (gameTimers[gameCode]) {
+      gameTimers[gameCode].isActive = true;
+      gameTimers[gameCode].lastUpdate = Date.now(); // Reset last update time
+    }
+  }
   // Extract timeout handling to separate function
   async function handleTimeout(gameCode, winner) {
     try {
