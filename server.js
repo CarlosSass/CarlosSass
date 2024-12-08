@@ -129,58 +129,66 @@ io.on('connection', (socket) => {
   
       if (!room.white) {
         room.white = socket.id;
-        // Store connection
-        if (!playerConnections.has(gameCode)) {
-          playerConnections.set(gameCode, { white: socket.id, black: null });
-        } else {
-          playerConnections.get(gameCode).white = socket.id;
-        }
-        
-        // Notify player
+        // Notify white player
         socket.emit('notification', {
           type: 'role-assignment',
           role: 'white',
           message: 'You are WHITE. Waiting for BLACK player...'
         });
-        
-        // If rejoining, send game state
-        const game = activeGames.get(gameCode);
-        if (game) {
-          socket.emit('gameState', game);
-        }
       } 
       else if (!room.black) {
         room.black = socket.id;
-        // Store connection
-        playerConnections.get(gameCode).black = socket.id;
         
-        // Notify players
+        // Notify both players
         io.to(gameCode).emit('notification', {
           type: 'game-start',
-          message: 'Game started! WHITE moves first.'
+          message: 'Game started! WHITE moves first.',
+          timeControl: 600 // or your default time
+        });
+      
+
+            
+        // Notify white player specifically
+        io.to(room.white).emit('notification', {
+          type: 'opponent-connected',
+          message: 'BLACK has joined. Make your move!'
         });
         
-        // Start/resume game
+        // Start game logic
         const game = await getOrCreateGame(gameCode);
-        activeGames.set(gameCode, game);
-        
         if (game.status === 'ongoing') {
-          if (!gameTimers[gameCode]) {
-            startGameTimer(gameCode, game.time_control || 600);
-          } else {
-            resumeGameTimer(gameCode);
+            if (!gameTimers[gameCode]) {
+              startGameTimer(gameCode, game.time_control || 600);
+            } else {
+              resumeGameTimer(gameCode);
+            }
           }
-        }
+        
       } else {
-        // Spectator joining
-        const game = activeGames.get(gameCode);
-        if (game) {
-          socket.emit('gameState', game);
-        }
+        throw new Error('Room is full');
       }
+  
+      const game = await getOrCreateGame(gameCode);
+      activeGames.set(gameCode, game);
+      socket.emit('gameState', game);
+  
     } catch (error) {
-      socket.emit('error', error.message);
+      socket.emit('notification', {
+        type: 'error',
+        message: error.message
+      });
     }
+    if (!playerConnections.has(gameCode)) {
+        playerConnections.set(gameCode, { white: null, black: null });
+      }
+      const connections = playerConnections.get(gameCode);
+      
+      if (role === 'white') {
+        connections.white = socket.id;
+      } else {
+        connections.black = socket.id;
+      }
+
   });
   // Handle move events
   socket.on('move', async (moveData) => {
