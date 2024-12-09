@@ -4,7 +4,11 @@ const { Server } = require('socket.io');
 const { Chess } = require('chess.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-
+// Add these with your other state variables at the top
+const moveTimePatterns = new Map(); // gameCode -> {player: {times: [], avg: null}}
+const moveAccuracy = new Map(); // gameCode -> {player: {accuracy: 0}}
+const deviceFingerprints = new Map(); // gameCode -> {white: null, black: null}
+const behaviorFlags = new Map(); // gameCode -> {player: {flags: [], lastFlag: null}}
 // Error handling
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -197,7 +201,13 @@ io.on('connection', (socket) => {
       if (!gameCode || !from || !to || !player) {
         throw new Error('Invalid move data');
       }
-  
+   // Calculate move time (client should send when they started thinking)
+   const moveTime = Date.now() - timestamp;
+    
+   // Run anti-cheat checks
+   analyzeMoveTime(gameCode, player, moveTime);
+   calculateMoveAccuracy(gameCode, player, {from, to});
+   checkDeviceConsistency(socket, gameCode, player);
       const room = gameRooms.get(gameCode);
       if (!room?.white || !room?.black) {
         throw new Error('Wait for the other player to join!');
@@ -1109,7 +1119,13 @@ function startGameTimer(gameCode, initialTime = 100) {
           delete disconnectTimers[key];
         }
       });
+     
       
+      // Clean up anti-cheat tracking
+      moveTimePatterns.delete(gameCode);
+      moveAccuracy.delete(gameCode);
+      deviceFingerprints.delete(gameCode);
+      behaviorFlags.delete(gameCode);
       // Remove from active games
       activeGames.delete(gameCode);
       
@@ -1127,6 +1143,11 @@ function startGameTimer(gameCode, initialTime = 100) {
       activeGames.delete(gameCode);
       gameRooms.delete(gameCode);
       playerConnections.delete(gameCode);
+       // Clean up anti-cheat tracking
+       moveTimePatterns.delete(gameCode);
+       moveAccuracy.delete(gameCode);
+       deviceFingerprints.delete(gameCode);
+       behaviorFlags.delete(gameCode);
     }
   }
 
@@ -1587,3 +1608,173 @@ app.post('/api/accept-draw', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+// Add these helper functions somewhere in your server code
+function getPieceValue(piece) {
+    const values = {p: 1, n: 3, b: 3, r: 5, q: 9, k: 0};
+    return values[piece.toLowerCase()] || 0;
+  }
+  
+  function getBestMove(chess) {
+    const moves = chess.moves({verbose: true});
+    if (moves.length === 0) return null;
+    
+    // Look for captures
+    const capturingMoves = moves.filter(m => m.captured);
+    if (capturingMoves.length > 0) {
+      return capturingMoves.reduce((best, move) => 
+        getPieceValue(move.captured) > getPieceValue(best?.captured || '') ? move : best
+      );
+    }
+    
+    // Otherwise random move (simple implementation)
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+  
+  function getDeviceFingerprint(socket) {
+    const headers = socket.handshake.headers;
+    return [
+      headers['user-agent'],
+      headers['accept-language'],
+      socket.handshake.address // IP address
+    ].join('|');
+  }
+
+
+  // Add these functions to analyze player behavior
+function analyzeMoveTime(gameCode, player, moveTime) {
+    if (!moveTimePatterns.has(gameCode)) {
+      moveTimePatterns.set(gameCode, {
+        white: { times: [], avg: null },
+        black: { times: [], avg: null }
+      });
+    }
+    
+    const playerData = moveTimePatterns.get(gameCode)[player];
+    playerData.times.push(moveTime);
+    
+    // Calculate average move time (excluding first few moves)
+    if (playerData.times.length > 5) {
+      const recentTimes = playerData.times.slice(-10);
+      playerData.avg = recentTimes.reduce((a,b) => a + b, 0) / recentTimes.length;
+    }
+    
+    // Check for suspicious patterns
+    if (playerData.avg) {
+      // Bot-like behavior: consistently fast moves with little variation
+      if (playerData.avg < 2000 && Math.max(...playerData.times) < 5000) {
+        flagSuspiciousBehavior(gameCode, player, 'consistent-fast-moves');
+      }
+      
+      // Alternating between very fast and human-like times
+      const variance = Math.max(...playerData.times) - Math.min(...playerData.times);
+      if (variance > 10000 && playerData.times.some(t => t < 2000)) {
+        flagSuspiciousBehavior(gameCode, player, 'irregular-timing');
+      }
+    }
+  }
+  
+  function calculateMoveAccuracy(gameCode, player, move) {
+    const game = activeGames.get(gameCode);
+    if (!game) return;
+    
+    const chess = new Chess(game.fen);
+    const bestMove = getBestMove(chess);
+    
+    if (bestMove && move.from === bestMove.from && move.to === bestMove.to) {
+      if (!moveAccuracy.has(gameCode)) {
+        moveAccuracy.set(gameCode, {white: 0, black: 0});
+      }
+      
+      moveAccuracy.get(gameCode)[player] += 1;
+      
+      // If player makes too many "best moves" in a row
+      if (moveAccuracy.get(gameCode)[player] > 5) {
+        flagSuspiciousBehavior(gameCode, player, 'high-accuracy');
+      }
+    } else {
+      if (moveAccuracy.has(gameCode)) {
+        moveAccuracy.get(gameCode)[player] = Math.max(0, moveAccuracy.get(gameCode)[player] - 0.5);
+      }
+    }
+  }
+  
+  function checkDeviceConsistency(socket, gameCode, player) {
+    const fingerprint = getDeviceFingerprint(socket);
+    
+    if (!deviceFingerprints.has(gameCode)) {
+      deviceFingerprints.set(gameCode, {white: null, black: null});
+    }
+    
+    const gameFingerprints = deviceFingerprints.get(gameCode);
+    
+    if (gameFingerprints[player] && gameFingerprints[player] !== fingerprint) {
+      flagSuspiciousBehavior(gameCode, player, 'device-change');
+    } else {
+      gameFingerprints[player] = fingerprint;
+    }
+  }
+  
+  function flagSuspiciousBehavior(gameCode, player, flagType) {
+    if (!behaviorFlags.has(gameCode)) {
+      behaviorFlags.set(gameCode, {white: {flags: []}, black: {flags: []}});
+    }
+    
+    const playerFlags = behaviorFlags.get(gameCode)[player];
+    playerFlags.flags.push({
+      type: flagType,
+      timestamp: Date.now()
+    });
+    
+    // Only keep flags from last 10 minutes
+    playerFlags.flags = playerFlags.flags.filter(
+      f => Date.now() - f.timestamp < 600000
+    );
+    
+    // If multiple flags in short time
+    if (playerFlags.flags.length > 3) {
+      handlePotentialCheater(gameCode, player);
+    }
+  }
+  
+  async function handlePotentialCheater(gameCode, player) {
+    const room = gameRooms.get(gameCode);
+    if (!room) return;
+    
+    const opponent = player === 'white' ? 'black' : 'white';
+    const opponentSocket = room[opponent];
+    
+    // Notify opponent
+    if (opponentSocket) {
+      io.to(opponentSocket).emit('cheatWarning', {
+        player,
+        message: 'Suspicious behavior detected from your opponent'
+      });
+    }
+    
+    // Record in database
+    await recordCheatAttempt(gameCode, player);
+  }
+  
+  async function recordCheatAttempt(gameCode, player) {
+    const game = activeGames.get(gameCode);
+    if (!game) return;
+    
+    const flags = behaviorFlags.get(gameCode)?.[player]?.flags || [];
+    
+    try {
+      const { error } = await supabase
+        .from('cheat_attempts')
+        .insert({
+          game_code: gameCode,
+          player: player,
+          flags: flags,
+          player_phone: player === 'white' ? game.white_phone : game.black_phone
+        });
+      
+      if (error) throw error;
+      
+      console.log(`Recorded cheat attempt for ${player} in game ${gameCode}`);
+    } catch (error) {
+      console.error('Failed to record cheat attempt:', error);
+    }
+  }
