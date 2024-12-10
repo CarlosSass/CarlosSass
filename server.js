@@ -197,23 +197,31 @@ io.on('connection', (socket) => {
   // Handle move events
   socket.on('move', async (moveData) => {
     try {
-      const { gameCode, from, to, player, promotion } = moveData; // ADD PROMOTION HERE
-      if (!gameCode || !from || !to || !player) {
-        throw new Error('Invalid move data');
+      const { gameCode, from, to, player, promotion, timestamp } = moveData;
+      
+      // Validate all required fields including timestamp
+      if (!gameCode || !from || !to || !player || timestamp === undefined) {
+        throw new Error('Invalid move data - missing required fields');
       }
-   // Calculate move time (client should send when they started thinking)
-   const moveTime = Date.now() - timestamp;
-    
-   // Run anti-cheat checks
-   analyzeMoveTime(gameCode, player, moveTime);
-   calculateMoveAccuracy(gameCode, player, {from, to});
-   checkDeviceConsistency(socket, gameCode, player);
-      const room = gameRooms.get(gameCode);
-      if (!room?.white || !room?.black) {
-        throw new Error('Wait for the other player to join!');
+      
+      // Validate timestamp is reasonable (not in future, not too old)
+      const currentTime = Date.now();
+      if (timestamp > currentTime) {
+        throw new Error('Invalid timestamp - cannot be in the future');
       }
-  
-      // PASS PROMOTION TO processMove
+      if (currentTime - timestamp > 300000) { // 5 minutes in milliseconds
+        throw new Error('Move submission too late');
+      }
+      
+      // Calculate move time in milliseconds
+      const moveTime = currentTime - timestamp;
+      
+      // Run anti-cheat checks
+      analyzeMoveTime(gameCode, player, moveTime);
+      calculateMoveAccuracy(gameCode, player, {from, to});
+      checkDeviceConsistency(socket, gameCode, player);
+      
+      // Process the move
       const result = await processMove(gameCode, from, to, player, promotion);
       
       io.to(gameCode).emit('gameUpdate', result);
@@ -1641,7 +1649,7 @@ function getPieceValue(piece) {
 
 
   // Add these functions to analyze player behavior
-function analyzeMoveTime(gameCode, player, moveTime) {
+  function analyzeMoveTime(gameCode, player, moveTime) {
     if (!moveTimePatterns.has(gameCode)) {
       moveTimePatterns.set(gameCode, {
         white: { times: [], avg: null },
@@ -1650,29 +1658,35 @@ function analyzeMoveTime(gameCode, player, moveTime) {
     }
     
     const playerData = moveTimePatterns.get(gameCode)[player];
-    playerData.times.push(moveTime);
     
-    // Calculate average move time (excluding first few moves)
-    if (playerData.times.length > 5) {
-      const recentTimes = playerData.times.slice(-10);
-      playerData.avg = recentTimes.reduce((a,b) => a + b, 0) / recentTimes.length;
-    }
-    
-    // Check for suspicious patterns
-    if (playerData.avg) {
-      // Bot-like behavior: consistently fast moves with little variation
-      if (playerData.avg < 2000 && Math.max(...playerData.times) < 5000) {
-        flagSuspiciousBehavior(gameCode, player, 'consistent-fast-moves');
+    // Only track reasonable move times (0.1s to 2 minutes)
+    if (moveTime > 100 && moveTime < 120000) {
+      playerData.times.push(moveTime);
+      
+      // Keep only the last 20 moves for analysis
+      if (playerData.times.length > 20) {
+        playerData.times.shift();
       }
       
-      // Alternating between very fast and human-like times
-      const variance = Math.max(...playerData.times) - Math.min(...playerData.times);
-      if (variance > 10000 && playerData.times.some(t => t < 2000)) {
-        flagSuspiciousBehavior(gameCode, player, 'irregular-timing');
+      // Calculate average after 5 moves
+      if (playerData.times.length >= 5) {
+        playerData.avg = playerData.times.reduce((a, b) => a + b, 0) / playerData.times.length;
+        
+        // Standard deviation calculation
+        const squareDiffs = playerData.times.map(time => Math.pow(time - playerData.avg, 2));
+        const stdDev = Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / playerData.times.length);
+        
+        // Check for suspicious patterns
+        if (playerData.avg < 2000 && stdDev < 1000) {
+          flagSuspiciousBehavior(gameCode, player, 'consistent-fast-moves');
+        }
+        
+        if (stdDev > 10000 && playerData.times.some(t => t < 2000)) {
+          flagSuspiciousBehavior(gameCode, player, 'irregular-timing');
+        }
       }
     }
   }
-  
   function calculateMoveAccuracy(gameCode, player, move) {
     const game = activeGames.get(gameCode);
     if (!game) return;
@@ -1778,3 +1792,36 @@ function analyzeMoveTime(gameCode, player, moveTime) {
       console.error('Failed to record cheat attempt:', error);
     }
   }
+  // Add this middleware before your socket.io handlers
+const validateMoveData = (moveData) => {
+    const requiredFields = ['gameCode', 'from', 'to', 'player', 'timestamp'];
+    const missingFields = requiredFields.filter(field => !moveData[field]);
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+    
+    if (typeof moveData.timestamp !== 'number' || moveData.timestamp <= 0) {
+      throw new Error('Invalid timestamp format');
+    }
+    
+    const currentTime = Date.now();
+    if (moveData.timestamp > currentTime) {
+      throw new Error('Timestamp cannot be in the future');
+    }
+    
+    if (currentTime - moveData.timestamp > 300000) { // 5 minutes
+      throw new Error('Move submission too late');
+    }
+  };
+  
+  // Update your socket handler to use the middleware
+  socket.on('move', async (moveData) => {
+    try {
+      validateMoveData(moveData);
+      // ... rest of your move handling code ...
+    } catch (error) {
+      console.error('Move validation error:', error);
+      socket.emit('moveError', error.message);
+    }
+  });
