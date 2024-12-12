@@ -47,8 +47,12 @@ const gameState = {
   betam:0,
   onetime:false
   
+  
 };
-
+// Add to gameState
+let moveStartTime = null;
+let pendingFrom = null;
+let pendingTo = null;
 // Piece Symbols
 // Replace the PIECE_SYMBOLS with SVG icons or image references
 const PIECE_SYMBOLS = {
@@ -106,7 +110,11 @@ function renderBoard() {
         }
     }
 }
-
+function onPieceSelect(piecePosition) {
+  // Record when player starts thinking about a move
+  moveStartTime = Date.now();
+  // ... rest of your existing piece selection logic ...
+}
 function handleGameUpdate(update) {
     if (!update || !update.gameState) return;
     
@@ -278,10 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
-
-// Update the handleBoardClick function
 function handleBoardClick(event) {
   if (!gameState.currentGame || gameState.currentGame.status === 'finished') return;
   
@@ -299,26 +303,28 @@ function handleBoardClick(event) {
                        (piece.color === 'b' && algebraic[1] === '1'));
     
     if (isPromotion) {
-      // Store the move and show promotion dialog
       pendingFrom = gameState.selectedSquare;
       pendingTo = algebraic;
       showPromotionDialog(piece.color);
     } else {
-      // Normal move
       tryMakeMove(gameState.selectedSquare, algebraic);
     }
     gameState.selectedSquare = null;
     clearHighlights();
   } else {
-    // Select a piece
+    // Select a piece - record start time
     const piece = gameState.chess.get(algebraic);
     if (piece && piece.color[0] === gameState.playerColor[0]) {
+      moveStartTime = Date.now();
       gameState.selectedSquare = algebraic;
       highlightSquare(row, col);
       highlightLegalMoves(algebraic);
     }
   }
 }
+
+
+
 
 // Add this new function to show the promotion dialog
 
@@ -340,59 +346,79 @@ document.querySelectorAll('.promotion-option').forEach(button => {
 // Update tryMakeMove to handle promotion properly
 async function tryMakeMove(from, to, promotion) {
   try {
-      // Get the moving piece
-      const piece = gameState.chess.get(from);
-      const isPromotion = piece?.type === 'p' && 
-                         ((piece.color === 'w' && to[1] === '8') || 
-                          (piece.color === 'b' && to[1] === '1'));
+    const piece = gameState.chess.get(from);
+    const isPromotion = piece?.type === 'p' && 
+                       ((piece.color === 'w' && to[1] === '8') || 
+                        (piece.color === 'b' && to[1] === '1'));
 
-      // Only validate locally for non-promotion moves
-      if (!isPromotion) {
-          const move = gameState.chess.move({ from, to });
-          if (!move) return;
-      }
+    // Only validate locally for non-promotion moves
+    if (!isPromotion) {
+      const move = gameState.chess.move({ from, to });
+      if (!move) return;
+    }
 
-      // Optimistic UI update
-      renderBoard();
+    // Optimistic UI update
+    renderBoard();
+    
+    // Prepare move data with timestamp
+    const moveData = {
+      gameCode: gameState.gameCode,
+      from,
+      to,
+      player: gameState.playerColor,
+      timestamp: moveStartTime // When they started thinking
+    };
+
+    if (isPromotion && promotion) {
+      moveData.promotion = promotion;
+    }
+
+    // Reset move timer
+    moveStartTime = null;
+
+    if (gameState.isConnected) {
+      socket.emit('move', moveData);
+    } else {
+      const response = await fetch(`${gameState.apiBaseUrl}/api/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(moveData)
+      });
       
-      // Send move to server
-      const moveData = {
-          gameCode: gameState.gameCode,
-          from,
-          to,
-          player: gameState.playerColor
-      };
-
-      if (isPromotion && promotion) {
-          moveData.promotion = promotion;
-      }
-
-      if (gameState.isConnected) {
-          socket.emit('move', moveData);
-      } else {
-          const response = await fetch(`${gameState.apiBaseUrl}/api/move`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(moveData)
-          });
-          
-          if (!response.ok) {
-              throw new Error('Move failed');
-          }
-      }
-      
+      if (!response.ok) throw new Error('Move failed');
+    }
+    
   } catch (error) {
-      console.error('Move error:', error);
-      if (gameState.currentGame?.fen) {
-          gameState.chess.load(gameState.currentGame.fen);
-          renderBoard();
-      }
-      showError(error.message);
+    console.error('Move error:', error);
+    if (gameState.currentGame?.fen) {
+      gameState.chess.load(gameState.currentGame.fen);
+      renderBoard();
+    }
+    showError(error.message);
   }
 }
 
 
+socket.on('moveError', (errorMessage) => {
+  if (errorMessage.includes('timestamp') || errorMessage.includes('Invalid move data')) {
+    // Reset the move and prompt user to try again
+    resetCurrentMove();
+    showError('Please try your move again');
+  } else {
+    // Handle other types of errors
+    showError(errorMessage);
+  }
+});
 
+function resetCurrentMove() {
+  gameState.selectedSquare = null;
+  moveStartTime = null;
+  clearHighlights();
+  if (gameState.currentGame?.fen) {
+    gameState.chess.load(gameState.currentGame.fen);
+    renderBoard();
+  }
+}
 function displayAlert(message, type = 'info') {
   const alertBox = document.createElement('div');
   alertBox.className = `alert ${type}`;
@@ -459,7 +485,17 @@ async function initGame() {
         updatePlayerInfo(gameState.currentGame);
       }
     });
-
+    socket.on('cheatWarning', (data) => {
+      showNotification(`Warning: ${data.message}`);
+      
+      // You could add additional UI indicators here
+      const opponentColor = gameState.playerColor === 'white' ? 'black' : 'white';
+      const opponentElement = document.getElementById(`${opponentColor}-username`);
+      if (opponentElement) {
+        opponentElement.classList.add('suspicious-player');
+        setTimeout(() => opponentElement.classList.remove('suspicious-player'), 5000);
+      }
+    });
     socket.on('gameReady', (data) => {
       const notification = 'Both players connected! Game is starting...';
       showNotification(notification, 5000);
@@ -628,8 +664,7 @@ function createBoard() {
 }
 
 // Handle Board Clicks// Add these variables at the top with your other game state variables
-let pendingFrom = null;
-let pendingTo = null;
+
 
 // Modify your handleBoardClick function to detect promotions
 
