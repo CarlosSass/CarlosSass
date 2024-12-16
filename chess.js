@@ -316,7 +316,11 @@ function handleBoardClick(event) {
     const piece = gameState.chess.get(algebraic);
     if (piece && piece.color[0] === gameState.playerColor[0]) {
       moveStartTime = Date.now();
-      gameState.selectedSquare = algebraic;
+    
+      // Add small random delay (100-300ms) to prevent exact millisecond timing
+      const randomDelay = 100 + Math.random() * 200;
+      moveStartTime -= randomDelay;
+            gameState.selectedSquare = algebraic;
       highlightSquare(row, col);
       highlightLegalMoves(algebraic);
     }
@@ -324,7 +328,28 @@ function handleBoardClick(event) {
 }
 
 
+function validateMoveTimestamp(timestamp) {
+  const now = Date.now() + lastServerTimeOffset;
+  const MAX_ALLOWED_DELAY = 300000; // 5 minutes in ms
+  
+  if (timestamp > now + 1000) { // Allow 1s buffer for network latency
+    console.error('Timestamp too far in future');
+    return false;
+  }
+  
+  if (now - timestamp > MAX_ALLOWED_DELAY) {
+    console.error('Timestamp too old');
+    return false;
+  }
+  
+  return true;
+}
 
+// Use in tryMakeMove
+if (!validateMoveTimestamp(adjustedTimestamp)) {
+  showError('Invalid move timing. Please try again.');
+  return;
+}
 
 // Add this new function to show the promotion dialog
 
@@ -359,15 +384,15 @@ async function tryMakeMove(from, to, promotion) {
 
     // Optimistic UI update
     renderBoard();
-    
-    // Prepare move data with timestamp
-    const moveData = {
-      gameCode: gameState.gameCode,
-      from,
-      to,
-      player: gameState.playerColor,
-      timestamp: moveStartTime // When they started thinking
-    };
+    const adjustedTimestamp = moveStartTime + lastServerTimeOffset;
+  
+  const moveData = {
+    gameCode: gameState.gameCode,
+    from,
+    to,
+    player: gameState.playerColor,
+    timestamp: adjustedTimestamp
+  };
 
     if (isPromotion && promotion) {
       moveData.promotion = promotion;
@@ -485,6 +510,11 @@ async function initGame() {
         updatePlayerInfo(gameState.currentGame);
       }
     });
+    socket.on('connect', () => {
+      // Sync client and server time when connecting
+      syncServerTime();
+    });
+    
     socket.on('cheatWarning', (data) => {
       showNotification(`Warning: ${data.message}`);
       
@@ -1065,6 +1095,25 @@ function showFinalResult(result) {
 
 
 
+
+// In your game state variables
+let lastServerTimeOffset = 0; // To track clock differences
+
+// Add this to initGame() or socket connection handler
+
+// Function to synchronize client and server time
+async function syncServerTime() {
+  try {
+    const start = Date.now();
+    const response = await fetch(`${gameState.apiBaseUrl}/api/server-time`);
+    const data = await response.json();
+    const end = Date.now();
+    const roundTrip = end - start;
+    lastServerTimeOffset = data.time - (start + roundTrip/2);
+  } catch (error) {
+    console.error('Time sync failed, using client time:', error);
+  }
+}
 
 
 // Add to gameState
