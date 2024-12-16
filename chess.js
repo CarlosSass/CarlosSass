@@ -345,11 +345,7 @@ function validateMoveTimestamp(timestamp) {
   return true;
 }
 
-// Use in tryMakeMove
-if (!validateMoveTimestamp(adjustedTimestamp)) {
-  showError('Invalid move timing. Please try again.');
-  return;
-}
+
 
 // Add this new function to show the promotion dialog
 
