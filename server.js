@@ -4,11 +4,7 @@ const { Server } = require('socket.io');
 const { Chess } = require('chess.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-// Add these with your other state variables at the top
-const moveTimePatterns = new Map(); // gameCode -> {player: {times: [], avg: null}}
-const moveAccuracy = new Map(); // gameCode -> {player: {accuracy: 0}}
-const deviceFingerprints = new Map(); // gameCode -> {white: null, black: null}
-const behaviorFlags = new Map(); // gameCode -> {player: {flags: [], lastFlag: null}}
+
 // Error handling
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -121,7 +117,7 @@ const playerConnections = new Map(); // gameCode -> { white: socketId, black: so
 io.on('connection', (socket) => {
   console.log(`New connection: ${socket.id}`);
   // Handle joining a game room
-  socket.on('joinGame', async (gameCode) => {
+   socket.on('joinGame', async (gameCode) => {
     try {
       socket.join(gameCode);
       socket.gameCode = gameCode;
@@ -160,13 +156,9 @@ io.on('connection', (socket) => {
         
         // Start game logic
         const game = await getOrCreateGame(gameCode);
-        if (game.status === 'ongoing') {
-            if (!gameTimers[gameCode]) {
-              startGameTimer(gameCode, game.time_control || 600);
-            } else {
-              resumeGameTimer(gameCode);
-            }
-          }
+        if (game.status === 'ongoing' && !gameTimers[gameCode]) {
+          startGameTimer(gameCode, game.time_control || 600);
+        }
         
       } else {
         throw new Error('Room is full');
@@ -197,31 +189,17 @@ io.on('connection', (socket) => {
   // Handle move events
   socket.on('move', async (moveData) => {
     try {
-      const { gameCode, from, to, player, promotion, timestamp } = moveData;
-      
-      // Validate all required fields including timestamp
-      if (!gameCode || !from || !to || !player || timestamp === undefined) {
-        throw new Error('Invalid move data - missing required fields');
+      const { gameCode, from, to, player, promotion } = moveData; // ADD PROMOTION HERE
+      if (!gameCode || !from || !to || !player) {
+        throw new Error('Invalid move data');
       }
-      
-      // Validate timestamp is reasonable (not in future, not too old)
-      const currentTime = Date.now();
-      if (timestamp > currentTime) {
-        throw new Error('Invalid timestamp - cannot be in the future');
+  
+      const room = gameRooms.get(gameCode);
+      if (!room?.white || !room?.black) {
+        throw new Error('Wait for the other player to join!');
       }
-      if (currentTime - timestamp > 300000) { // 5 minutes in milliseconds
-        throw new Error('Move submission too late');
-      }
-      
-      // Calculate move time in milliseconds
-      const moveTime = currentTime - timestamp;
-      
-      // Run anti-cheat checks
-      analyzeMoveTime(gameCode, player, moveTime);
-      calculateMoveAccuracy(gameCode, player, {from, to});
-      checkDeviceConsistency(socket, gameCode, player);
-      
-      // Process the move
+  
+      // PASS PROMOTION TO processMove
       const result = await processMove(gameCode, from, to, player, promotion);
       
       io.to(gameCode).emit('gameUpdate', result);
@@ -428,13 +406,10 @@ socket.on('resign', async ({ gameCode, player }) => {
 });
 
 // Updated disconnect handler with immediate payout
-// Modify the disconnect handler
-// Modify the disconnect handler
 socket.on('disconnect', async () => {
     if (!socket.gameCode) return;
   
-    const gameCode = socket.gameCode;
-    const room = gameRooms.get(gameCode);
+    const room = gameRooms.get(socket.gameCode);
     if (!room) return;
   
     // Determine disconnected player
@@ -449,58 +424,80 @@ socket.on('disconnect', async () => {
   
     if (!disconnectedRole) return;
   
-    console.log(`Player ${disconnectedRole} disconnected from game ${gameCode}`);
-    
-    // Pause the game timer immediately
-    pauseGameTimer(gameCode);
+    console.log(`Player ${disconnectedRole} disconnected from game ${socket.gameCode}`);
+    const game = activeGames.get(socket.gameCode);
+    if (game?.status !== 'ongoing') return;
   
-    // Notify remaining player
-    const remainingPlayerSocket = disconnectedRole === 'white' ? room.black : room.white;
-    if (remainingPlayerSocket) {
-      io.to(remainingPlayerSocket).emit('playerDisconnected', {
-        player: disconnectedRole,
-        message: `Opponent disconnected. Waiting for reconnection...`,
-        timeout: 120 // 2 minutes
-      });
+    // Check if the game is completely abandoned (both players disconnected)
+    const isGameAbandoned = !room.white && !room.black;
+    if (isGameAbandoned) {
+      console.log(`Game ${socket.gameCode} abandoned - both players disconnected`);
+      // Stop timer immediately for abandoned games
+      if (gameTimers[socket.gameCode]) {
+        console.log(`Stopping timer for abandoned game ${socket.gameCode}`);
+        clearInterval(gameTimers[socket.gameCode].interval);
+        delete gameTimers[socket.gameCode];
+      }
+      
+      // Mark game as abandoned in database
+      await supabase
+        .from('chess_games')
+        .update({
+          status: 'finished',
+          result: 'abandoned',
+          updated_at: new Date().toISOString(),
+          ended_at: new Date().toISOString()
+        })
+        .eq('code', socket.gameCode);
+        
+      // Clean up resources
+      cleanupGameResources(socket.gameCode);
+      return;
     }
   
-    // Set reconnection timeout (increased to 2 minutes)
-    const timerKey = `${gameCode}_${disconnectedRole}`;
+    // Set abandonment timer (increased to 2 minutes for reconnection)
+    const RECONNECT_TIMEOUT = 120000; // 2 minutes
+    const timerKey = `${socket.gameCode}_${disconnectedRole}`;
+    
     disconnectTimers[timerKey] = setTimeout(async () => {
-      const currentRoom = gameRooms.get(gameCode);
-      const currentGame = activeGames.get(gameCode);
-      
-      // Check if player hasn't reconnected
-      if ((disconnectedRole === 'white' && !currentRoom?.white) || 
-          (disconnectedRole === 'black' && !currentRoom?.black)) {
+      // Only proceed if player hasn't reconnected
+      const currentConnections = playerConnections.get(socket.gameCode);
+      if ((disconnectedRole === 'white' && !currentConnections?.white) || 
+          (disconnectedRole === 'black' && !currentConnections?.black)) {
+        // Original disconnect logic
+        const currentRoom = gameRooms.get(socket.gameCode);
+        const currentGame = activeGames.get(socket.gameCode);
         
         if (currentGame?.status === 'ongoing') {
+          console.log(`Player ${disconnectedRole} didn't reconnect - ending game`);
           const winner = disconnectedRole === 'white' ? 'black' : 'white';
-          await endGame(gameCode, winner, 'disconnection');
-          
-          // Notify winner if still connected
           const winnerSocket = winner === 'white' ? currentRoom?.white : currentRoom?.black;
+          
           if (winnerSocket) {
             io.to(winnerSocket).emit('gameWon', {
               type: 'disconnection',
-              message: 'Opponent disconnected!'
+              message: 'Opponent disconnected!',
+              amount: currentGame.bet * 1.8,
+              bet: currentGame.bet
             });
+  
+            await endGame(socket.gameCode, winner, 'disconnection');
           }
         }
       }
       delete disconnectTimers[timerKey];
-    }, 120000); // 2 minutes
+    }, RECONNECT_TIMEOUT);
   });
+  
   // Add reconnection handler
   socket.on('reconnect', async () => {
     if (!socket.gameCode) return;
   
-    const gameCode = socket.gameCode;
-    const room = gameRooms.get(gameCode);
+    const room = gameRooms.get(socket.gameCode);
     if (!room) return;
   
     // Check if this was a previously connected player
-    const connections = playerConnections.get(gameCode);
+    const connections = playerConnections.get(socket.gameCode);
     if (!connections) return;
   
     let reconnectedRole = null;
@@ -514,32 +511,22 @@ socket.on('disconnect', async () => {
   
     if (reconnectedRole) {
       // Cancel disconnect timer
-      const timerKey = `${gameCode}_${reconnectedRole}`;
+      const timerKey = `${socket.gameCode}_${reconnectedRole}`;
       if (disconnectTimers[timerKey]) {
         clearTimeout(disconnectTimers[timerKey]);
         delete disconnectTimers[timerKey];
       }
   
-      // Resume game timer if it's their turn
-      const game = activeGames.get(gameCode);
-      if (game && game.turn === reconnectedRole) {
-        resumeGameTimer(gameCode);
-      }
-  
       // Notify players
-      io.to(gameCode).emit('playerReconnected', {
+      io.to(socket.gameCode).emit('playerReconnected', {
         player: reconnectedRole,
         message: `${reconnectedRole} has reconnected!`
       });
   
       // Send full game state
+      const game = activeGames.get(socket.gameCode);
       if (game) {
-        socket.emit('gameState', {
-          ...game,
-          // Include timer information
-          whiteTime: gameTimers[gameCode]?.whiteTime,
-          blackTime: gameTimers[gameCode]?.blackTime
-        });
+        socket.emit('gameState', game);
       }
     }
   });
@@ -775,7 +762,6 @@ function startGameTimer(gameCode, initialTime = 100) {
     if (gameTimers[gameCode]) {
       clearInterval(gameTimers[gameCode].interval);
       delete gameTimers[gameCode];
-
     }
   
     // Add mutex locking mechanism
@@ -808,12 +794,8 @@ function startGameTimer(gameCode, initialTime = 100) {
       lastUpdate: Date.now(),
       currentTurn: 'black', // Start with white as first player
       isEnding: false,
-      isActive: true, // Add this flag
-
       timerLock: timerLock,
       interval: setInterval(async () => {
-        if (!gameTimers[gameCode]?.isActive) return; // Only run if game is active
-
         // Use mutex to prevent concurrent timer updates
         timerLock.acquire(async () => {
           try {
@@ -890,18 +872,7 @@ function startGameTimer(gameCode, initialTime = 100) {
       currentTurn: gameTimers[gameCode].currentTurn
     });
   }
-  function pauseGameTimer(gameCode) {
-    if (gameTimers[gameCode]) {
-      gameTimers[gameCode].isActive = false;
-    }
-  }
   
-  function resumeGameTimer(gameCode) {
-    if (gameTimers[gameCode]) {
-      gameTimers[gameCode].isActive = true;
-      gameTimers[gameCode].lastUpdate = Date.now(); // Reset last update time
-    }
-  }
   // Extract timeout handling to separate function
   async function handleTimeout(gameCode, winner) {
     try {
@@ -1127,13 +1098,7 @@ function startGameTimer(gameCode, initialTime = 100) {
           delete disconnectTimers[key];
         }
       });
-     
       
-      // Clean up anti-cheat tracking
-      moveTimePatterns.delete(gameCode);
-      moveAccuracy.delete(gameCode);
-      deviceFingerprints.delete(gameCode);
-      behaviorFlags.delete(gameCode);
       // Remove from active games
       activeGames.delete(gameCode);
       
@@ -1151,11 +1116,6 @@ function startGameTimer(gameCode, initialTime = 100) {
       activeGames.delete(gameCode);
       gameRooms.delete(gameCode);
       playerConnections.delete(gameCode);
-       // Clean up anti-cheat tracking
-       moveTimePatterns.delete(gameCode);
-       moveAccuracy.delete(gameCode);
-       deviceFingerprints.delete(gameCode);
-       behaviorFlags.delete(gameCode);
     }
   }
 
@@ -1616,212 +1576,3 @@ app.post('/api/accept-draw', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-// Add these helper functions somewhere in your server code
-function getPieceValue(piece) {
-    const values = {p: 1, n: 3, b: 3, r: 5, q: 9, k: 0};
-    return values[piece.toLowerCase()] || 0;
-  }
-  
-  function getBestMove(chess) {
-    const moves = chess.moves({verbose: true});
-    if (moves.length === 0) return null;
-    
-    // Look for captures
-    const capturingMoves = moves.filter(m => m.captured);
-    if (capturingMoves.length > 0) {
-      return capturingMoves.reduce((best, move) => 
-        getPieceValue(move.captured) > getPieceValue(best?.captured || '') ? move : best
-      );
-    }
-    
-    // Otherwise random move (simple implementation)
-    return moves[Math.floor(Math.random() * moves.length)];
-  }
-  
-  function getDeviceFingerprint(socket) {
-    const headers = socket.handshake.headers;
-    return [
-      headers['user-agent'],
-      headers['accept-language'],
-      socket.handshake.address // IP address
-    ].join('|');
-  }
-
-
-  // Add these functions to analyze player behavior
-  function analyzeMoveTime(gameCode, player, moveTime) {
-    if (!moveTimePatterns.has(gameCode)) {
-      moveTimePatterns.set(gameCode, {
-        white: { times: [], avg: null },
-        black: { times: [], avg: null }
-      });
-    }
-    
-    const playerData = moveTimePatterns.get(gameCode)[player];
-    
-    // Only track reasonable move times (0.1s to 2 minutes)
-    if (moveTime > 100 && moveTime < 120000) {
-      playerData.times.push(moveTime);
-      
-      // Keep only the last 20 moves for analysis
-      if (playerData.times.length > 20) {
-        playerData.times.shift();
-      }
-      
-      // Calculate average after 5 moves
-      if (playerData.times.length >= 5) {
-        playerData.avg = playerData.times.reduce((a, b) => a + b, 0) / playerData.times.length;
-        
-        // Standard deviation calculation
-        const squareDiffs = playerData.times.map(time => Math.pow(time - playerData.avg, 2));
-        const stdDev = Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / playerData.times.length);
-        
-        // Check for suspicious patterns
-        if (playerData.avg < 2000 && stdDev < 1000) {
-          flagSuspiciousBehavior(gameCode, player, 'consistent-fast-moves');
-        }
-        
-        if (stdDev > 10000 && playerData.times.some(t => t < 2000)) {
-          flagSuspiciousBehavior(gameCode, player, 'irregular-timing');
-        }
-      }
-    }
-  }
-  function calculateMoveAccuracy(gameCode, player, move) {
-    const game = activeGames.get(gameCode);
-    if (!game) return;
-    
-    const chess = new Chess(game.fen);
-    const bestMove = getBestMove(chess);
-    
-    if (bestMove && move.from === bestMove.from && move.to === bestMove.to) {
-      if (!moveAccuracy.has(gameCode)) {
-        moveAccuracy.set(gameCode, {white: 0, black: 0});
-      }
-      
-      moveAccuracy.get(gameCode)[player] += 1;
-      
-      // If player makes too many "best moves" in a row
-      if (moveAccuracy.get(gameCode)[player] > 5) {
-        flagSuspiciousBehavior(gameCode, player, 'high-accuracy');
-      }
-    } else {
-      if (moveAccuracy.has(gameCode)) {
-        moveAccuracy.get(gameCode)[player] = Math.max(0, moveAccuracy.get(gameCode)[player] - 0.5);
-      }
-    }
-  }
-  
-  function checkDeviceConsistency(socket, gameCode, player) {
-    const fingerprint = getDeviceFingerprint(socket);
-    
-    if (!deviceFingerprints.has(gameCode)) {
-      deviceFingerprints.set(gameCode, {white: null, black: null});
-    }
-    
-    const gameFingerprints = deviceFingerprints.get(gameCode);
-    
-    if (gameFingerprints[player] && gameFingerprints[player] !== fingerprint) {
-      flagSuspiciousBehavior(gameCode, player, 'device-change');
-    } else {
-      gameFingerprints[player] = fingerprint;
-    }
-  }
-  
-  function flagSuspiciousBehavior(gameCode, player, flagType) {
-    if (!behaviorFlags.has(gameCode)) {
-      behaviorFlags.set(gameCode, {white: {flags: []}, black: {flags: []}});
-    }
-    
-    const playerFlags = behaviorFlags.get(gameCode)[player];
-    playerFlags.flags.push({
-      type: flagType,
-      timestamp: Date.now()
-    });
-    
-    // Only keep flags from last 10 minutes
-    playerFlags.flags = playerFlags.flags.filter(
-      f => Date.now() - f.timestamp < 600000
-    );
-    
-    // If multiple flags in short time
-    if (playerFlags.flags.length > 3) {
-      handlePotentialCheater(gameCode, player);
-    }
-  }
-  
-  async function handlePotentialCheater(gameCode, player) {
-    const room = gameRooms.get(gameCode);
-    if (!room) return;
-    
-    const opponent = player === 'white' ? 'black' : 'white';
-    const opponentSocket = room[opponent];
-    
-    // Notify opponent
-    if (opponentSocket) {
-      io.to(opponentSocket).emit('cheatWarning', {
-        player,
-        message: 'Suspicious behavior detected from your opponent'
-      });
-    }
-    
-    // Record in database
-    await recordCheatAttempt(gameCode, player);
-  }
-  
-  async function recordCheatAttempt(gameCode, player) {
-    const game = activeGames.get(gameCode);
-    if (!game) return;
-    
-    const flags = behaviorFlags.get(gameCode)?.[player]?.flags || [];
-    
-    try {
-      const { error } = await supabase
-        .from('cheat_attempts')
-        .insert({
-          game_code: gameCode,
-          player: player,
-          flags: flags,
-          player_phone: player === 'white' ? game.white_phone : game.black_phone
-        });
-      
-      if (error) throw error;
-      
-      console.log(`Recorded cheat attempt for ${player} in game ${gameCode}`);
-    } catch (error) {
-      console.error('Failed to record cheat attempt:', error);
-    }
-  }
-  // Add this middleware before your socket.io handlers
-const validateMoveData = (moveData) => {
-    const requiredFields = ['gameCode', 'from', 'to', 'player', 'timestamp'];
-    const missingFields = requiredFields.filter(field => !moveData[field]);
-    
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-    }
-    
-    if (typeof moveData.timestamp !== 'number' || moveData.timestamp <= 0) {
-      throw new Error('Invalid timestamp format');
-    }
-    
-    const currentTime = Date.now();
-    if (moveData.timestamp > currentTime) {
-      throw new Error('Timestamp cannot be in the future');
-    }
-    
-    if (currentTime - moveData.timestamp > 300000) { // 5 minutes
-      throw new Error('Move submission too late');
-    }
-  };
-  
-  // Update your socket handler to use the middleware
-  socket.on('move', async (moveData) => {
-    try {
-      validateMoveData(moveData);
-      // ... rest of your move handling code ...
-    } catch (error) {
-      console.error('Move validation error:', error);
-      socket.emit('moveError', error.message);
-    }
-  });
