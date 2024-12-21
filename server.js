@@ -121,105 +121,74 @@ io.on('connection', (socket) => {
     socket.fingerprint = fingerprint;
     
     socket.on('joinGame', async (gameCode) => {
-      try {
-        // Store fingerprint for this player
-        if (!deviceFingerprints.has(gameCode)) {
-          deviceFingerprints.set(gameCode, { white: null, black: null });
-        }
-        
-        const fingerprints = deviceFingerprints.get(gameCode);
-        const room = gameRooms.get(gameCode);
-        
-        if (!room.white) {
-          fingerprints.white = fingerprint;
-        } else if (!room.black) {
-          fingerprints.black = fingerprint;
-          
-          // Check if both players have the same fingerprint
-          if (fingerprints.white === fingerprints.black) {
-            console.warn(`Possible multi-accounting detected in game ${gameCode}`);
-            socket.emit('cheatWarning', {
-              type: 'multi-account',
-              message: 'Multiple devices detected from same player'
-            });
+        try {
+          socket.join(gameCode);
+          socket.gameCode = gameCode;
+      
+          if (!gameRooms.has(gameCode)) {
+            gameRooms.set(gameCode, { white: null, black: null });
           }
-        }
-        
-        // Initialize behavior tracking
-        if (!playerBehavior.has(socket.id)) {
-          playerBehavior.set(socket.id, {
-            moveTimes: [],
-            movePatterns: [],
-            lastMoveTime: null,
-            impossibleMoves: 0
+          const room = gameRooms.get(gameCode);
+      
+          if (!room.white) {
+            room.white = socket.id;
+            // Notify white player
+            socket.emit('notification', {
+              type: 'role-assignment',
+              role: 'white',
+              message: 'You are WHITE. Waiting for BLACK player...'
+            });
+          } 
+          else if (!room.black) {
+            room.black = socket.id;
+            
+            // Notify both players
+            io.to(gameCode).emit('notification', {
+              type: 'game-start',
+              message: 'Game started! WHITE moves first.',
+              timeControl: 600 // or your default time
+            });
+          
+    
+                
+            // Notify white player specifically
+            io.to(room.white).emit('notification', {
+              type: 'opponent-connected',
+              message: 'BLACK has joined. Make your move!'
+            });
+            
+            // Start game logic
+            const game = await getOrCreateGame(gameCode);
+            if (game.status === 'ongoing' && !gameTimers[gameCode]) {
+              startGameTimer(gameCode, game.time_control || 600);
+            }
+            
+          } else {
+            throw new Error('Room is full');
+          }
+      
+          const game = await getOrCreateGame(gameCode);
+          activeGames.set(gameCode, game);
+          socket.emit('gameState', game);
+      
+        } catch (error) {
+          socket.emit('notification', {
+            type: 'error',
+            message: error.message
           });
         }
-      socket.join(gameCode);
-      socket.gameCode = gameCode;
-  
-      if (!gameRooms.has(gameCode)) {
-        gameRooms.set(gameCode, { white: null, black: null });
-      }
-  
-      if (!room.white) {
-        room.white = socket.id;
-        // Notify white player
-        socket.emit('notification', {
-          type: 'role-assignment',
-          role: 'white',
-          message: 'You are WHITE. Waiting for BLACK player...'
-        });
-      } 
-      else if (!room.black) {
-        room.black = socket.id;
-        
-        // Notify both players
-        io.to(gameCode).emit('notification', {
-          type: 'game-start',
-          message: 'Game started! WHITE moves first.',
-          timeControl: 600 // or your default time
-        });
-      
-
-            
-        // Notify white player specifically
-        io.to(room.white).emit('notification', {
-          type: 'opponent-connected',
-          message: 'BLACK has joined. Make your move!'
-        });
-        
-        // Start game logic
-        const game = await getOrCreateGame(gameCode);
-        if (game.status === 'ongoing' && !gameTimers[gameCode]) {
-          startGameTimer(gameCode, game.time_control || 600);
-        }
-        
-      } else {
-        throw new Error('Room is full');
-      }
-  
-      const game = await getOrCreateGame(gameCode);
-      activeGames.set(gameCode, game);
-      socket.emit('gameState', game);
-  
-    } catch (error) {
-      socket.emit('notification', {
-        type: 'error',
-        message: error.message
+        if (!playerConnections.has(gameCode)) {
+            playerConnections.set(gameCode, { white: null, black: null });
+          }
+          const connections = playerConnections.get(gameCode);
+          
+          if (role === 'white') {
+            connections.white = socket.id;
+          } else {
+            connections.black = socket.id;
+          }
+    
       });
-    }
-    if (!playerConnections.has(gameCode)) {
-        playerConnections.set(gameCode, { white: null, black: null });
-      }
-      const connections = playerConnections.get(gameCode);
-      
-      if (role === 'white') {
-        connections.white = socket.id;
-      } else {
-        connections.black = socket.id;
-      }
-
-  });
   // Handle move events
   socket.on('move', async (moveData) => {
     try {
