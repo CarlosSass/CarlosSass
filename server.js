@@ -4,7 +4,24 @@ const { Server } = require('socket.io');
 const { Chess } = require('chess.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+// Anti-cheat tracking
+const playerBehavior = new Map(); // socketId -> behavior data
+const deviceFingerprints = new Map(); // gameCode -> fingerprints
+const cheatFlags = new Map(); // gameCode -> cheat counts
+// Add these at the top with other requires
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 
+
+// Anti-cheat configuration
+const ANTI_CHEAT_CONFIG = {
+  MOVE_TIME_THRESHOLD: 2000,
+  IMPOSSIBLE_MOVE_PENALTY: 3,
+  ENGINE_MOVE_PATTERN_WINDOW: 5,
+  MOVE_RATE_LIMIT: 15,
+  FINGERPRINT_HEADERS: ['user-agent', 'accept-language', 'connection', 'sec-ch-ua'],
+  MIN_HUMAN_MOVE_TIME: 300
+};
 // Error handling
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -121,74 +138,105 @@ io.on('connection', (socket) => {
     socket.fingerprint = fingerprint;
     
     socket.on('joinGame', async (gameCode) => {
-        try {
-          socket.join(gameCode);
-          socket.gameCode = gameCode;
-      
-          if (!gameRooms.has(gameCode)) {
-            gameRooms.set(gameCode, { white: null, black: null });
-          }
-          const room = gameRooms.get(gameCode);
-      
-          if (!room.white) {
-            room.white = socket.id;
-            // Notify white player
-            socket.emit('notification', {
-              type: 'role-assignment',
-              role: 'white',
-              message: 'You are WHITE. Waiting for BLACK player...'
-            });
-          } 
-          else if (!room.black) {
-            room.black = socket.id;
-            
-            // Notify both players
-            io.to(gameCode).emit('notification', {
-              type: 'game-start',
-              message: 'Game started! WHITE moves first.',
-              timeControl: 600 // or your default time
-            });
+      try {
+        // Store fingerprint for this player
+        if (!deviceFingerprints.has(gameCode)) {
+          deviceFingerprints.set(gameCode, { white: null, black: null });
+        }
+        
+        const fingerprints = deviceFingerprints.get(gameCode);
+        const room = gameRooms.get(gameCode);
+        
+        if (!room.white) {
+          fingerprints.white = fingerprint;
+        } else if (!room.black) {
+          fingerprints.black = fingerprint;
           
-    
-                
-            // Notify white player specifically
-            io.to(room.white).emit('notification', {
-              type: 'opponent-connected',
-              message: 'BLACK has joined. Make your move!'
+          // Check if both players have the same fingerprint
+          if (fingerprints.white === fingerprints.black) {
+            console.warn(`Possible multi-accounting detected in game ${gameCode}`);
+            socket.emit('cheatWarning', {
+              type: 'multi-account',
+              message: 'Multiple devices detected from same player'
             });
-            
-            // Start game logic
-            const game = await getOrCreateGame(gameCode);
-            if (game.status === 'ongoing' && !gameTimers[gameCode]) {
-              startGameTimer(gameCode, game.time_control || 600);
-            }
-            
-          } else {
-            throw new Error('Room is full');
           }
-      
-          const game = await getOrCreateGame(gameCode);
-          activeGames.set(gameCode, game);
-          socket.emit('gameState', game);
-      
-        } catch (error) {
-          socket.emit('notification', {
-            type: 'error',
-            message: error.message
+        }
+        
+        // Initialize behavior tracking
+        if (!playerBehavior.has(socket.id)) {
+          playerBehavior.set(socket.id, {
+            moveTimes: [],
+            movePatterns: [],
+            lastMoveTime: null,
+            impossibleMoves: 0
           });
         }
-        if (!playerConnections.has(gameCode)) {
-            playerConnections.set(gameCode, { white: null, black: null });
-          }
-          const connections = playerConnections.get(gameCode);
-          
-          if (role === 'white') {
-            connections.white = socket.id;
-          } else {
-            connections.black = socket.id;
-          }
-    
+      socket.join(gameCode);
+      socket.gameCode = gameCode;
+  
+      if (!gameRooms.has(gameCode)) {
+        gameRooms.set(gameCode, { white: null, black: null });
+      }
+  
+      if (!room.white) {
+        room.white = socket.id;
+        // Notify white player
+        socket.emit('notification', {
+          type: 'role-assignment',
+          role: 'white',
+          message: 'You are WHITE. Waiting for BLACK player...'
+        });
+      } 
+      else if (!room.black) {
+        room.black = socket.id;
+        
+        // Notify both players
+        io.to(gameCode).emit('notification', {
+          type: 'game-start',
+          message: 'Game started! WHITE moves first.',
+          timeControl: 600 // or your default time
+        });
+      
+
+            
+        // Notify white player specifically
+        io.to(room.white).emit('notification', {
+          type: 'opponent-connected',
+          message: 'BLACK has joined. Make your move!'
+        });
+        
+        // Start game logic
+        const game = await getOrCreateGame(gameCode);
+        if (game.status === 'ongoing' && !gameTimers[gameCode]) {
+          startGameTimer(gameCode, game.time_control || 600);
+        }
+        
+      } else {
+        throw new Error('Room is full');
+      }
+  
+      const game = await getOrCreateGame(gameCode);
+      activeGames.set(gameCode, game);
+      socket.emit('gameState', game);
+  
+    } catch (error) {
+      socket.emit('notification', {
+        type: 'error',
+        message: error.message
       });
+    }
+    if (!playerConnections.has(gameCode)) {
+        playerConnections.set(gameCode, { white: null, black: null });
+      }
+      const connections = playerConnections.get(gameCode);
+      
+      if (role === 'white') {
+        connections.white = socket.id;
+      } else {
+        connections.black = socket.id;
+      }
+
+  });
   // Handle move events
   socket.on('move', async (moveData) => {
     try {
@@ -1628,19 +1676,6 @@ app.post('/api/accept-draw', async (req, res) => {
 
 
 
-// Add these at the top with other requires
-const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
-
-// Anti-Cheat Configuration
-const ANTI_CHEAT_CONFIG = {
-  MOVE_TIME_THRESHOLD: 2000, // 2 seconds (human moves usually take longer)
-  IMPOSSIBLE_MOVE_PENALTY: 3, // After 3 impossible moves, flag as cheater
-  ENGINE_MOVE_PATTERN_WINDOW: 5, // Check last 5 moves for engine patterns
-  MOVE_RATE_LIMIT: 15, // Max moves per minute
-  FINGERPRINT_HEADERS: ['user-agent', 'accept-language', 'connection', 'sec-ch-ua'],
-  MIN_HUMAN_MOVE_TIME: 300 // Minimum expected human move time (ms)
-};
 
 // Add rate limiting middleware
 const moveLimiter = rateLimit({
@@ -1655,14 +1690,6 @@ const moveLimiter = rateLimit({
 
 app.use('/api/move', moveLimiter);
 
-// Add to your existing configuration
-const CHEAT_DETECTION_DB = 'cheat_detection';
-const PLAYER_PROFILES_DB = 'player_profiles';
-
-// Add these maps to track player behavior
-const playerBehavior = new Map(); // socketId -> { moveTimes: [], movePatterns: [] }
-const deviceFingerprints = new Map(); // gameCode -> { white: fingerprint, black: fingerprint }
-const cheatFlags = new Map(); // gameCode -> { white: {count: number, lastWarning: timestamp}, black: {...} }
 
 // Enhanced socket connection handler with fingerprinting
 
