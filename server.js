@@ -644,21 +644,27 @@ async function getOrCreateGame(gameCode) {
   return createdGame;
 }
 
-async function processMove(gameCode, from, to, player, promotion ) {
+async function processMove(gameCode, from, to, player, promotion) {
   try {
-
     const game = activeGames.get(gameCode);
     if (!game) throw new Error('Game not found');
 
     const chess = new Chess(game.fen);
+    
+     // Validate promotion piece if this is a promotion move
+     const movingPiece = chess.get(from);
+     const isPromotion = movingPiece?.type === 'p' && 
+                        ((player === 'white' && to[1] === '8') || 
+                         (player === 'black' && to[1] === '1'));
+ 
 
-    // Enhanced move validation
+    // Then use it in the move
     const move = chess.move({ 
-        from, 
-        to, 
-        promotion: isPromotion ? promotion : undefined
-      });
-  
+      from, 
+      to, 
+      promotion: isPromotion ? promotion : undefined
+    });
+    // ... rest of the function
 
     if (!move) {
       // Track failed move attempts
@@ -726,11 +732,6 @@ async function processMove(gameCode, from, to, player, promotion ) {
         throw new Error("It's not your turn");
     }
 
-    // Validate promotion piece if this is a promotion move
-    const movingPiece = chess.get(from);
-    const isPromotion = movingPiece?.type === 'p' && 
-                       ((player === 'white' && to[1] === '8') || 
-                        (player === 'black' && to[1] === '1'));
 
     const validPromotions = ['q', 'r', 'b', 'n'];
     if (isPromotion && (!promotion || !validPromotions.includes(promotion))) {
