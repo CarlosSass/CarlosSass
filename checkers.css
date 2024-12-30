@@ -1,0 +1,693 @@
+/* Chess Game CSS for Telegram Mini App - FULLY FIXED VERSION */
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #212121;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+  
+  .chess-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 100%;
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  
+  .game-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .white-player {
+    background-color: #f0d9b5;
+    color: #000;
+  }
+  
+  .black-player {
+    background-color: #b58863;
+    color: #fff;
+  }
+  
+  .chess-board {
+    display: grid;
+    grid-template-columns: repeat(8, min(12vw, 50px));
+    grid-template-rows: repeat(8, min(12vw, 50px));
+    border: 2px solid #555;
+    width: min(96vw, 400px);
+    height: min(96vw, 400px);
+    margin: 0 auto;
+  }
+  
+  .square {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+  
+  .square.light {
+    background-color: #f0d9b5;
+  }
+  
+  .square.dark {
+    background-color: #b58863;
+  }
+  
+  .square.highlight {
+    background-color: rgba(0, 255, 0, 0.3);
+    box-shadow: inset 0 0 10px rgba(0, 200, 0, 0.5);
+  }
+  
+  .square.highlight.capture {
+    background-color: rgba(255, 50, 50, 0.3);
+    box-shadow: inset 0 0 10px rgba(200, 0, 0, 0.5);
+    border: 2px dashed red;
+  }
+  
+  .square.highlight.en-passant {
+    background-color: rgba(255, 165, 0, 0.3);
+    box-shadow: inset 0 0 10px rgba(255, 140, 0, 0.5);
+  }
+  
+  .square.highlight.promotion {
+    background-color: rgba(147, 112, 219, 0.3);
+    box-shadow: inset 0 0 15px rgba(147, 112, 219, 0.7);
+  }
+  
+  .square.last-move-from {
+    background-color: rgba(247, 247, 105, 0.7) !important;
+  }
+  
+  .square.last-move-to {
+    background-color: rgba(247, 247, 105, 0.7) !important;
+  }
+  
+  .game-controls {
+    background-color: #ffffff;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .game-status {
+    font-size: 1.1em;
+    font-weight: 500;
+    margin-bottom: 12px;
+    text-align: center;
+    color: #212121;
+  }
+  
+  .move-history {
+    height: 120px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    padding: 10px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: #212121;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  
+  .tg-button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.95em;
+    flex: 1;
+    background-color: #2481cc;
+    color: white;
+    transition: opacity 0.2s;
+  }
+  
+  .tg-button.danger {
+    background-color: #dc3545;
+  }
+  
+  #offer-draw {
+    background-color: #2481cc;
+  }
+  
+  #resign {
+    background-color: #dc3545;
+    color: white;
+  }
+  
+  button:hover {
+    opacity: 0.9;
+  }
+  
+  /* CHESS PIECES - COMPLETELY FIXED */
+  /* Ensure SVG pieces display correctly */
+  .piece {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+  
+  .piece svg {
+      width: 80%;
+      height: 80%;
+      pointer-events: none; /* Prevent SVG from blocking clicks */
+  }
+  
+  /* Explicitly set colors for pieces */
+  .white-piece svg [fill="#ffffff"] {
+      fill: #ffffff !important;
+  }
+  
+  .black-piece svg [fill="#333333"] {
+      fill: #333333 !important;
+  }
+  
+  /* Ensure strokes are visible */
+  .white-piece svg [stroke="#000000"] {
+      stroke: #000000 !important;
+  }
+  
+  .black-piece svg [stroke="#ffffff"] {
+      stroke: #ffffff !important;
+  }
+  /* PROMOTION DIALOG - COMPLETELY FIXED */
+  #promotion-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+  }
+  
+  .promotion-options {
+    display: flex;
+    background: #f0d9b5;
+    padding: 20px;
+    border-radius: 12px;
+    gap: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  }
+  
+  .promotion-option {
+    width: 65px;
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid #b58863;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background-color: #f0d9b5;
+  }
+  
+  .promotion-option:hover {
+    transform: scale(1.15);
+    background: #e8d0a5;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  }
+  
+  .promotion-option svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  
+  /* Rest of the CSS remains exactly the same */
+  .piece.moved {
+    animation: pop 0.3s ease-out;
+  }
+  
+  @keyframes pop {
+    0% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  
+  .notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 1000;
+  }
+  
+  .player-status {
+    padding: 5px 10px;
+    border-radius: 3px;
+    margin: 5px 0;
+  }
+  
+  .player-status.connected {
+    background: #4CAF50;
+    color: white;
+  }
+  
+  .player-status.waiting {
+    background: #FFC107;
+    color: black;
+  }
+  
+  #chess-board.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  
+  .blink {
+    animation: blink-animation 1s steps(2, start) infinite;
+  }
+  
+  @keyframes blink-animation {
+    to { visibility: hidden; }
+  }
+  
+  .game-active {
+    border: 2px solid #4CAF50;
+  }
+  
+  .game-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 5px;
+    z-index: 1001;
+    animation: slideIn 0.5s forwards;
+  }
+  
+  @keyframes slideIn {
+    from { top: -50px; opacity: 0; }
+    to { top: 20px; opacity: 1; }
+  }
+  
+  #animation-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  
+  .coin-increase, .coin-decrease {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: gold;
+    border-radius: 50%;
+  }
+  
+  .coin-increase {
+    animation: flyIn 2s forwards;
+  }
+  
+  .coin-decrease {
+    animation: flyOut 2s forwards;
+  }
+  
+  @keyframes flyIn {
+    0% { transform: translate(0, 0); opacity: 1; }
+    100% { transform: translate(calc(var(--tx) - 50vw), calc(var(--ty) - 50vh)); opacity: 0; }
+  }
+  
+  @keyframes flyOut {
+    0% { transform: translate(0, 0); opacity: 1; }
+    100% { transform: translate(calc(var(--tx) - 50vw), calc(var(--ty) - 50vh)); opacity: 0; }
+  }
+  
+  .balance-update {
+    animation: pulse 1s;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  
+  .celebration {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .celebration::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    animation: celebrate 3s forwards;
+    pointer-events: none;
+  }
+  
+  @keyframes celebrate {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+  
+  .bet-display {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 1000;
+    display: flex;
+    gap: 15px;
+  }
+  
+  .bet-amount {
+    color: gold;
+    font-weight: bold;
+  }
+  
+  @keyframes pulse-gold {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  
+  .bet-update {
+    animation: pulse-gold 0.5s;
+  }
+  
+  #game-code-display {
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 5px;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    color: #212121;
+  }
+  
+  #copy-code {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    margin-left: 5px;
+    color: #2481cc;
+  }
+  
+  .active-player {
+    font-weight: bold;
+    color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
+    padding: 2px 5px;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+  }
+  
+  @keyframes capture-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  
+  .captured-piece {
+    animation: capture-pulse 0.5s ease-out;
+    position: relative;
+    z-index: 20;
+  }
+  
+  @keyframes fade-out {
+    to { opacity: 0; transform: scale(0.8); }
+  }
+  
+  .captured-piece.fade-out {
+    animation: fade-out 0.3s forwards;
+  }
+  
+  #waiting-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5em;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    opacity: 1;
+  }
+  
+  #waiting-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  #promotion-dialog button {
+    background: none;
+    border: 2px solid #555;
+    border-radius: 5px;
+    padding: 5px 15px;
+    transition: all 0.2s;
+  }
+  
+  #promotion-dialog button:hover {
+    background: #f0f0f0;
+    transform: scale(1.1);
+  }
+  
+  .primary-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #2481cc;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    width: 100%;
+  }
+  
+  .primary-btn:hover {
+    opacity: 0.9;
+  }
+  
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  
+  .modal.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .modal-content {
+    background-color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    transform: translateY(-20px);
+    transition: transform 0.3s;
+  }
+  
+  .modal.active .modal-content {
+    transform: translateY(0);
+  }
+  
+  .modal-content h2 {
+    margin-bottom: 1rem;
+    color: #212121;
+  }
+  
+  .modal-content p {
+    margin-bottom: 1.5rem;
+    color: #757575;
+  }
+  
+  .result-details {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+  }
+  
+  .result-amount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    color: #212121;
+  }
+  
+  .result-amount.win {
+    color: #4CAF50;
+  }
+  
+  .result-amount.lose {
+    color: #dc3545;
+  }
+  
+  .result-amount svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .danger-btn {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    color: #dc3545;
+    border: 1px solid #dc3545;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+  }
+  
+  .danger-btn:hover {
+    background-color: #fee2e2;
+  }
+  
+  .danger-btn svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  .move-history::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .move-history::-webkit-scrollbar-track {
+    background: #f0f0f0;
+  }
+  
+  .move-history::-webkit-scrollbar-thumb {
+    background: #bdbdbd;
+    border-radius: 3px;
+  }
+  
+  @media (max-width: 400px) {
+    .player {
+      padding: 8px 12px;
+      font-size: 0.9em;
+    }
+    
+    .game-status {
+      font-size: 1em;
+    }
+    
+    .tg-button {
+      padding: 8px 12px;
+      font-size: 0.85em;
+    }
+    
+    .move-history {
+      height: 100px;
+      font-size: 0.8em;
+    }
+    
+    /* Mobile-specific promotion dialog */
+    .promotion-option {
+      width: 50px;
+      height: 50px;
+    }
+    
+    .promotion-options {
+      padding: 15px;
+      gap: 10px;
+    }
+  }
+  .timeout-result {
+      border: 3px solid #ff5722;
+      animation: pulseTimeout 1.5s infinite;
+    }
+    
+    @keyframes pulseTimeout {
+      0% { border-color: #ff5722; }
+      50% { border-color: #ff9800; }
+      100% { border-color: #ff5722; }
+    }
+    
+    #result-title.timeout {
+      color: #ff5722;
+    }
+    .time-warning {
+      color: #ff5722;
+      font-weight: bold;
+      animation: blink 1s infinite;
+    }
+    
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
