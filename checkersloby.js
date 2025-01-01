@@ -159,7 +159,7 @@ async function createGame(bet) {
         const phone = localStorage.getItem('phone');
 
         const { data: createdGameData, error } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games') // Changed from chess_games to checkers_games
             .insert([{
                 code: gameCode,
                 white_phone: phone,
@@ -208,7 +208,7 @@ function generateGameCode() {
 async function fetchAvailableGames() {
     try {
         const { data, error } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games') // Changed from chess_games to checkers_games
             .select(`
                 code, 
                 white_username, 
@@ -307,7 +307,7 @@ async function joinGame(gameCode, gameBet) {
     try {
         const phone = localStorage.getItem('phone');
         const { data: gameData, error: fetchError } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games') // Changed from chess_games to checkers_games
             .select('white_phone, black_phone, bet, is_private')
             .eq('code', gameCode)
             .single();
@@ -324,7 +324,7 @@ async function joinGame(gameCode, gameBet) {
         }*/
 
         const { error: joinError } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games') // Changed from chess_games to checkers_games
             .update({
                 black_phone: phone,
                 black_username: user.username,
@@ -362,7 +362,7 @@ async function handleJoinPrivateGame() {
         displayMessage(joinPrivateStatus, 'Checking game...', 'info');
         
         const { data: gameData, error: fetchError } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games') // Changed from chess_games to checkers_games
             .select('white_phone, black_phone, bet, is_private, status, game_type')
             .eq('code', gameCode)
             .single();
@@ -387,7 +387,7 @@ function setupRealtimeUpdates() {
     }
 
     supabaseChannel = supabase
-        .channel('chess_games') // Changed channel name
+        .channel('checkers_games_changes') // Changed channel name
         .on(
             'postgres_changes',
             {
