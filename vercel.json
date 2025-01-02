@@ -6,6 +6,7 @@
     { "source": "/loby", "destination": "/loby.html" },
     { "source": "/home", "destination": "/home.html" },
     { "source": "/guessnumberorderloby", "destination": "/guessnumberorderloby.html" },
+    { "source": "/checkers", "destination": "/checkers.html" },
     { "source": "/chess", "destination": "/chess.html" }
   ]
 }
