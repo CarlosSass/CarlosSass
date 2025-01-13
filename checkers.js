@@ -2,52 +2,55 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { Draughts } from 'https://cdn.jsdelivr.net/npm/draughts.js@1.0.1/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
 
-
-// DOM Elements (same as before)
+// DOM Elements
 const board = document.getElementById('board');
 const gameStatus = document.getElementById('game-status');
 const whiteTimeDisplay = document.getElementById('white-time');
 const blackTimeDisplay = document.getElementById('black-time');
+
 const moveHistory = document.getElementById('move-history');
 const errorDisplay = document.getElementById('error-message');
 const gameResultModal = document.getElementById('game-result-modal');
+
 const resultTitle = document.getElementById('result-title');
 const resultMessage = document.getElementById('result-message');
 const resultAmount = document.getElementById('result-amount');
 const resultCloseBtn = document.getElementById('result-close-btn');
-
-// Initialize Supabase (same as before)
+// Initialize Supabase (for authentication and persistence)
 const supabase = createClient(
     'https://evberyanshxxalxtwnnc.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw'
-);
+  );
 
-// Initialize Socket.IO (same as before)
+// Initialize Socket.IO
 const socket = io('https://chess-game-production-9494.up.railway.app', {
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   timeout: 20000,
-  transports: ['websocket'],
+  transports: ['websocket'], // Force WebSocket protocol
   secure: true,
   withCredentials: true
 });
 
 // Game State - Updated for Checkers
 const gameState = {
-  playerColor: 'white',
-  boardFlipped: false,
-  checkers: new Checkers(), // Changed from Chess to Checkers
-  selectedSquare: null,
-  currentGame: null,
-  gameCode: '',
-  apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
-  isConnected: false,
-  betam: 0,
-    checkers: new Draughts(),
-  onetime: false,
-  pendingJumps: [] // Added for checkers jump sequences
-};
+    playerColor: 'white',
+    boardFlipped: false,
+    checkers: new Checkers(), // Changed from Chess to Checkers
+    selectedSquare: null,
+    currentGame: null,
+    gameCode: '',
+    apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
+    isConnected: false,
+    betam: 0,
+      checkers: new Draughts(),
+    onetime: false,
+    pendingJumps: [] // Added for checkers jump sequences
+  };
+  
+// Piece Symbols
+// Replace the PIECE_SYMBOLS with SVG icons or image references
 
 // Piece Symbols - Updated for Checkers
 const PIECE_SYMBOLS = {
@@ -104,7 +107,6 @@ function renderBoard() {
     }
 }
 
-// Handle Game Update - Updated for Checkers
 function handleGameUpdate(update) {
     if (!update || !update.gameState) return;
     
@@ -136,6 +138,141 @@ function handleGameUpdate(update) {
     
     updateGameState(update.gameState);
 }
+
+  // Update the showPromotionDialog function
+  function showPromotionDialog(color) {
+    const dialog = document.getElementById('promotion-dialog');
+    const options = dialog.querySelectorAll('.promotion-option');
+    
+    // Clear any existing content
+    options.forEach(option => {
+      option.innerHTML = '';
+      option.className = 'promotion-option'; // Reset classes
+      option.classList.add(color === 'w' ? 'white-promotion' : 'black-promotion');
+    });
+    
+    // Set the appropriate pieces based on color
+    options.forEach(option => {
+      const pieceType = option.dataset.piece;
+      const symbol = color === 'w' 
+        ? PIECE_SYMBOLS[pieceType.toUpperCase()]
+        : PIECE_SYMBOLS[pieceType.toLowerCase()];
+      
+      // Create container for the piece
+      const pieceContainer = document.createElement('div');
+      pieceContainer.className = 'promotion-piece';
+      pieceContainer.innerHTML = symbol;
+      
+      option.appendChild(pieceContainer);
+    });
+    
+    dialog.style.display = 'flex';
+  }
+  
+  // Update the CSS for pieces and promotion dialog
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Chess pieces */
+  
+     
+    
+    /* Promotion dialog */
+    #promotion-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(3px);
+    }
+    
+    .promotion-options {
+      display: flex;
+      background: #f0d9b5;
+      padding: 20px;
+      border-radius: 12px;
+      gap: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    
+    .promotion-option {
+      width: 65px;
+      height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid #b58863;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      background-color: #f0d9b5;
+    }
+    
+    .promotion-option:hover {
+      transform: scale(1.15);
+      background: #e8d0a5;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    
+    .promotion-piece {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .promotion-piece svg {
+      width: 80%;
+      height: 80%;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 400px) {
+      .promotion-option {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .promotion-options {
+        padding: 15px;
+        gap: 10px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ... rest of your existing code ...
+// Sound Effects
+const sounds = {
+  move: new Audio('move-self.mp3'),
+  capture: new Audio('capture.mp3'),
+  check: new Audio('notify.mp3'),
+  join: new Audio('join.mp3')
+};
+
+// Initialize the game when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  initGame();
+  board.addEventListener('click', handleBoardClick);
+  
+  // Setup connection status indicator
+  socket.on('connect', () => {
+    gameState.isConnected = true;
+    updateConnectionStatus();
+  });
+  
+  socket.on('disconnect', () => {
+    gameState.isConnected = false;
+    updateConnectionStatus();
+  });
+});
+
 
 // Create Board - Updated for Checkers
 function createBoard() {
@@ -180,38 +317,9 @@ function createBoard() {
     renderBoard();
 }
 
-// Handle Board Click - Updated for Checkers
-function handleBoardClick(event) {
-    if (!gameState.currentGame || gameState.currentGame.status === 'finished') return;
-    
-    const square = event.target.closest('.square');
-    if (!square || !square.classList.contains('dark')) return; // Only allow clicks on dark squares
-    
-    const row = parseInt(square.dataset.row);
-    const col = parseInt(square.dataset.col);
-    const algebraic = rowColToAlgebraic(row, col);
-    
-    // Check if we're in a jump sequence
-    if (gameState.pendingJumps.length > 0) {
-        handleJumpSequence(algebraic);
-        return;
-    }
-    
-    if (gameState.selectedSquare) {
-        // Try to make a move
-        tryMakeMove(gameState.selectedSquare, algebraic);
-        gameState.selectedSquare = null;
-        clearHighlights();
-    } else {
-        // Select a piece
-        const piece = gameState.checkers.get(algebraic);
-        if (piece && piece.color[0] === gameState.playerColor[0]) {
-            gameState.selectedSquare = algebraic;
-            highlightSquare(row, col);
-            highlightLegalMoves(algebraic);
-        }
-    }
-}
+
+
+
 
 // Handle Jump Sequence - Specific to Checkers
 function handleJumpSequence(toAlgebraic) {
@@ -254,6 +362,85 @@ function handleJumpSequence(toAlgebraic) {
         }
         
         renderBoard();
+    }
+}
+
+// Add this new function to show the promotion dialog
+
+// Update the promotion button event listeners
+document.querySelectorAll('.promotion-option').forEach(button => {
+  button.addEventListener('click', () => {
+    const promotion = button.dataset.piece;
+    document.getElementById('promotion-dialog').style.display = 'none';
+
+    if (pendingFrom && pendingTo) {
+      tryMakeMove(pendingFrom, pendingTo, promotion);
+
+      pendingFrom = null;
+      pendingTo = null;
+    }
+  });
+});
+// Highlight Legal Moves - Updated for Checkers
+function highlightLegalMoves(square) {
+    const moves = gameState.checkers.getValidMoves(square);
+    moves.forEach(move => {
+        const { row, col } = algebraicToRowCol(move.to);
+        highlightSquare(row, col);
+    });
+}
+
+// Update Game State - Updated for Checkers
+function updateGameState(gameData) {
+    renderBoard();
+    
+    if (gameData.status === 'finished') {
+        gameStatus.textContent = `Game over - ${gameData.winner} wins by ${gameData.result}`;
+    } else if (gameData.draw_offer) {
+        gameStatus.textContent = `${gameData.draw_offer} offers a draw`;
+    } else {
+        gameStatus.textContent = `${gameData.turn}'s turn`;
+    }
+    
+    if (gameData.white_time !== undefined && gameData.black_time !== undefined) {
+        if (gameState.playerColor === 'black') {
+            whiteTimeDisplay.textContent = formatTime(gameData.white_time);
+            blackTimeDisplay.textContent = formatTime(gameData.black_time);
+        } else {
+            whiteTimeDisplay.textContent = formatTime(gameData.black_time);
+            blackTimeDisplay.textContent = formatTime(gameData.white_time);
+        }
+    }
+}
+function handleBoardClick(event) {
+    if (!gameState.currentGame || gameState.currentGame.status === 'finished') return;
+    
+    const square = event.target.closest('.square');
+    if (!square || !square.classList.contains('dark')) return; // Only allow clicks on dark squares
+    
+    const row = parseInt(square.dataset.row);
+    const col = parseInt(square.dataset.col);
+    const algebraic = rowColToAlgebraic(row, col);
+    
+    // Check if we're in a jump sequence
+    if (gameState.pendingJumps.length > 0) {
+        handleJumpSequence(algebraic);
+        return;
+    }
+    
+    if (gameState.selectedSquare) {
+        // Try to make a move
+        tryMakeMove(gameState.selectedSquare, algebraic);
+        gameState.selectedSquare = null;
+        clearHighlights();
+    } else {
+        // Select a piece
+        const piece = gameState.checkers.get(algebraic);
+        if (piece && piece.color[0] === gameState.playerColor[0]) {
+            gameState.selectedSquare = algebraic;
+            highlightSquare(row, col);
+            highlightLegalMoves(algebraic);
+        }
     }
 }
 
@@ -313,38 +500,46 @@ async function tryMakeMove(from, to) {
     }
 }
 
-// Highlight Legal Moves - Updated for Checkers
-function highlightLegalMoves(square) {
-    const moves = gameState.checkers.getValidMoves(square);
-    moves.forEach(move => {
-        const { row, col } = algebraicToRowCol(move.to);
-        highlightSquare(row, col);
-    });
+
+function displayAlert(message, type = 'info') {
+  const alertBox = document.createElement('div');
+  alertBox.className = `alert ${type}`;
+  alertBox.textContent = message;
+  document.body.appendChild(alertBox);
+  setTimeout(() => alertBox.remove(), 3000);
 }
 
-// Update Game State - Updated for Checkers
-function updateGameState(gameData) {
-    renderBoard();
-    
-    if (gameData.status === 'finished') {
-        gameStatus.textContent = `Game over - ${gameData.winner} wins by ${gameData.result}`;
-    } else if (gameData.draw_offer) {
-        gameStatus.textContent = `${gameData.draw_offer} offers a draw`;
-    } else {
-        gameStatus.textContent = `${gameData.turn}'s turn`;
-    }
-    
-    if (gameData.white_time !== undefined && gameData.black_time !== undefined) {
-        if (gameState.playerColor === 'black') {
-            whiteTimeDisplay.textContent = formatTime(gameData.white_time);
-            blackTimeDisplay.textContent = formatTime(gameData.black_time);
-        } else {
-            whiteTimeDisplay.textContent = formatTime(gameData.black_time);
-            blackTimeDisplay.textContent = formatTime(gameData.white_time);
-        }
-    }
+function showWaitingOverlay() {
+  const overlay = document.getElementById('waiting-overlay');
+  if (overlay) {
+      overlay.classList.remove('hidden');
+  }
 }
 
+// Add this function somewhere in your script
+function removeWaitingOverlay() {
+  const overlay = document.getElementById('waiting-overlay');
+  if (overlay) {
+      overlay.classList.add('hidden');
+      playSound("join");
+  }
+}
+// Initialize Game
+
+// Add click handler for the copy button
+document.getElementById('copy-code')?.addEventListener('click', () => {
+  if (!gameState.gameCode) return;
+  
+  navigator.clipboard.writeText(gameState.gameCode).then(() => {
+    const button = document.getElementById('copy-code');
+    button.textContent = '✓ Copied!';
+    setTimeout(() => {
+      button.textContent = '📋';
+    }, 2000);
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+  });
+});
 // Initialize Game UI - Updated for Checkers
 function initializeGameUI(gameData) {
     gameState.currentGame = gameData;
@@ -355,7 +550,425 @@ function initializeGameUI(gameData) {
     updateGameState(gameData);
     updateConnectionStatus();
 }
+// New helper function to update player info
+function updatePlayerInfo(gameData) {
+  const whiteUsernameElement = document.getElementById('white-username');
+  const blackUsernameElement = document.getElementById('black-username');
 
+  if (gameState.playerColor === 'black') {
+    whiteUsernameElement.textContent = gameData.white_username || 'White';
+    blackUsernameElement.textContent = gameData.black_username || 'Black';
+    
+    // Initialize timer display (normal)
+    whiteTimeDisplay.textContent = formatTime(gameData.white_time || 600);
+    blackTimeDisplay.textContent = formatTime(gameData.black_time || 600);
+  } else {
+    // Player is black - swap the display
+    whiteUsernameElement.textContent = gameData.black_username || 'Black';
+    blackUsernameElement.textContent = gameData.white_username || 'White';
+    
+    // Swap time displays
+    whiteTimeDisplay.textContent = formatTime(gameData.black_time || 600);
+    blackTimeDisplay.textContent = formatTime(gameData.white_time || 600);
+  }
+}
+// Handle game updates from server
+
+// Create Chess Board
+
+
+// Handle Board Clicks// Add these variables at the top with your other game state variables
+let pendingFrom = null;
+let pendingTo = null;
+
+// Modify your handleBoardClick function to detect promotions
+
+// Try to Make a Move
+// Update tryMakeMove to accept promotion parameter
+
+// Helper Functions
+function rowColToAlgebraic(row, col) {
+  const file = String.fromCharCode(97 + col);
+  const rank = 8 - row;
+  return file + rank;
+}
+
+function algebraicToRowCol(algebraic) {
+  // No changes needed here either
+  const col = algebraic.charCodeAt(0) - 97;
+  const row = 8 - parseInt(algebraic[1], 10);
+  return { row, col };
+}
+
+
+
+function highlightSquare(row, col) {
+  const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+  if (square) square.classList.add('highlight');
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.highlight').forEach(el => {
+    el.classList.remove('highlight');
+  });
+}
+
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
+function playSound(type) {
+  try {
+    sounds[type].currentTime = 0;
+    sounds[type].play();
+  } catch (e) {
+    console.log('Audio error:', e);
+  }
+}
+
+function addMoveToHistory(move) {
+  if (!moveHistory) return;
+  
+  const moveNumber = Math.ceil(moveHistory.children.length / 2) + 1;
+  const isWhiteMove = moveHistory.children.length % 2 === 0;
+  
+  if (isWhiteMove) {
+    const moveElement = document.createElement('div');
+    moveElement.className = 'move-number';
+    moveElement.textContent = `${moveNumber}.`;
+    moveHistory.appendChild(moveElement);
+  }
+  
+  const moveElement = document.createElement('div');
+  moveElement.className = 'move';
+  moveElement.textContent = `${move.from}-${move.to}`;
+  moveHistory.appendChild(moveElement);
+  
+  // Auto-scroll to bottom
+  moveHistory.scrollTop = moveHistory.scrollHeight;
+}
+
+function showError(message) {
+  if (!errorDisplay) {
+    alert(message);
+    return;
+  }
+  
+  errorDisplay.textContent = message;
+  errorDisplay.style.display = 'block';
+  setTimeout(() => {
+    errorDisplay.style.display = 'none';
+  }, 3000);
+}
+
+function updateConnectionStatus() {
+  const statusElement = document.getElementById('connection-status');
+  if (!statusElement) return;
+  
+  statusElement.textContent = gameState.isConnected 
+    ? 'Online (Real-time)' 
+    : 'Offline (Polling every 30s)';
+  statusElement.className = gameState.isConnected ? 'online' : 'offline';
+}
+
+// Fallback Functions
+async function fetchInitialGameState() {
+  try {
+    const response = await fetch(`${gameState.apiBaseUrl}/api/game-by-code/${gameState.gameCode}`);
+    const gameData = await response.json();
+    if (gameData) initializeGameUI(gameData);
+  } catch (error) {
+    console.error('API fallback error:', error);
+    showError('Connection issues - trying to reconnect...');
+  }
+}
+
+async function fetchGameState() {
+  if (gameState.isConnected) return;
+  
+  try {
+    const response = await fetch(`${gameState.apiBaseUrl}/api/game-by-code/${gameState.gameCode}`);
+    const gameData = await response.json();
+    if (gameData) updateGameState(gameData);
+  } catch (error) {
+    console.error('Periodic sync error:', error);
+  }
+}
+
+// Game Actions
+document.getElementById('offer-draw')?.addEventListener('click', () => {
+  if (!gameState.currentGame) return;
+  
+  if (confirm('Offer draw to your opponent?')) {
+    socket.emit('offerDraw', {
+      gameCode: gameState.gameCode,
+      player: gameState.playerColor
+    });
+  }
+});
+
+document.getElementById('resign')?.addEventListener('click', () => {
+  if (!gameState.currentGame) return;
+  
+  if (confirm('Are you sure you want to resign?')) {
+    socket.emit('resign', {
+      gameCode: gameState.gameCode,
+      player: gameState.playerColor
+    });
+  }
+});
+
+// Handle draw offers
+function handleDrawOffer(offer) {
+  if (confirm(`${offer.player} offers a draw. Accept?`)) {
+    socket.emit('acceptDraw', { gameCode: gameState.gameCode });
+  } else {
+    socket.emit('declineDraw', { gameCode: gameState.gameCode });
+  }
+}
+
+// Handle game over
+function handleGameOver(result) {
+  let message = `Game over - ${result.winner} wins by ${result.reason}`;
+  if (result.reason === 'draw') {
+    message = 'Game ended in a draw';
+  }
+  showFinalResult(result);
+  
+  //alert(message);
+  gameStatus.textContent = message;
+}
+// Add this listener in initGame():
+
+// Update the timerUpdate listener to handle swapped times:
+socket.on('timerUpdate', ({ whiteTime, blackTime }) => {
+  if (gameState.playerColor === 'black') {
+    whiteTimeDisplay.textContent = formatTime(whiteTime);
+    blackTimeDisplay.textContent = formatTime(blackTime);
+  } else {
+    // Player is black - swap the times
+    whiteTimeDisplay.textContent = formatTime(blackTime);
+    blackTimeDisplay.textContent = formatTime(whiteTime);
+  }
+});
+
+  // Listen for notifications from the server
+socket.on('notification', (data) => {
+  switch(data.type) {
+    case 'role-assignment':
+      // For the player who just joined
+      showNotification(`You are playing as ${data.role.toUpperCase()}. ${data.message}`);
+     // updatePlayerRole(data.role); // Update UI to show their role
+      break;
+      
+    case 'game-start':
+      // For both players when game begins
+      showNotification(data.message);
+      removeWaitingOverlay();
+      //enableChessBoard(); // Enable the board for play
+      break;
+      
+    case 'opponent-connected':
+      // For the waiting player
+      removeWaitingOverlay();
+      showNotification(`Your opponent has joined! Game starting...`);
+      break;
+  }
+});
+
+// UI Notification Function (example)
+// Animation functions
+function showAnimation(type) {
+  const animationContainer = document.getElementById('animation-container');
+  
+  // Clear any existing animations
+  animationContainer.innerHTML = '';
+  
+  if (type === 'moneyIncrease') {
+    // Create coins flying into wallet animation
+    for (let i = 0; i < 10; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'coin-increase';
+      coin.style.left = `${Math.random() * 100}%`;
+      coin.style.top = `${Math.random() * 100}%`;
+      animationContainer.appendChild(coin);
+    }
+  } 
+  else if (type === 'moneyDecrease') {
+    // Create coins flying out of wallet animation
+    for (let i = 0; i < 10; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'coin-decrease';
+      coin.style.left = '50%';
+      coin.style.top = '50%';
+      animationContainer.appendChild(coin);
+    }
+  }
+  
+  // Remove animations after 3 seconds
+  setTimeout(() => {
+    animationContainer.innerHTML = '';
+  }, 3000);
+}
+
+// Update balance display
+
+
+// Show notification
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'game-notification';
+  notification.textContent = message;
+  
+  document.body.appendChild(notification);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    notification.remove();
+  }, 5000);
+}
+// CSS for notifications
+// Handle winning the game
+// Handle winning the game
+socket.on('gameWon', (data) => {
+  showFinalResult({
+    winner: gameState.playerColor,
+    reason: data.message,
+    bet: data.bet
+  });
+  
+  // Update UI
+  gameStatus.textContent = `You won! ${data.message}`;
+});
+
+socket.on('gameLost', (data) => {
+  showFinalResult({
+    winner: gameState.playerColor === 'white' ? 'black' : 'white',
+    reason: data.message,
+    bet: data.bet
+  });
+  
+  // Update UI
+  gameStatus.textContent = `You lost! ${data.message}`;
+});
+// Handle balance updates (for real-time updates)
+socket.on('balanceUpdate', (data) => {
+  
+  if (data.amountChanged > 0) {
+    //showNotification(`+$${data.amountChanged}`);
+  } else {
+    //showNotification(`-$${Math.abs(data.amountChanged)}`);
+  }
+});
+
+
+
+
+
+// Function to update bet display
+function updateBetDisplay(betAmount) {
+  const betElement = document.getElementById('current-bet');
+  if (betElement) {
+    betElement.textContent = betAmount;
+    betElement.classList.add('bet-update');
+    setTimeout(() => betElement.classList.remove('bet-update'), 500);
+    if(!gameState.onetime){
+      gameState.onetime=true;
+      gameState.betam = betAmount;
+
+    }
+  }
+}
+
+// Fetch bet amount when game starts
+socket.on('gameState', (gameData) => {
+  if (gameData?.bet) {
+    updateBetDisplay(gameData.bet);
+  }
+});
+
+// Update when bet changes
+socket.on('gameUpdate', (update) => {
+  if (update?.gameState?.bet !== undefined) {
+    updateBetDisplay(update.gameState.bet);
+  }
+});
+
+// Reset when game ends
+socket.on('gameOver', () => {
+  updateBetDisplay(0);
+});
+
+// Initial fetch in case we missed the gameState event
+async function fetchInitialBet() {
+  try {
+    const { data: game, error } = await supabase
+      .from('chess_games')
+      .select('bet')
+      .eq('code', gameState.gameCode)
+      .single();
+      
+    if (!error && game?.bet) {
+      updateBetDisplay(game.bet);
+    }
+  } catch (err) {
+    console.error("Couldn't fetch initial bet:", err);
+  }
+}
+
+// Call this after game initialization
+setTimeout(fetchInitialBet, 1000);
+document.addEventListener('DOMContentLoaded', function() {
+  // Get the back button
+  const backBtn = document.getElementById('back-btn');
+  resultCloseBtn.addEventListener('click', () => {
+    gameResultModal.classList.remove('active');
+    window.location.href = '/';
+});
+  if (backBtn) {
+      backBtn.addEventListener('click', function() {
+         
+          if (confirm('Are you sure you want to leave the game?')) {
+             
+            window.history.back();
+          }
+        
+      });
+  }
+});
+
+function formatBalance(amount) {
+  const numericAmount = typeof amount === 'number' ? amount : 0;
+  return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
+}
+function showFinalResult(result) {
+  if (!result) return;
+
+  const isWinner = result.winner === gameState.playerColor;
+  const betAmount = Number(result.bet) || 0;
+  
+  gameResultModal.classList.add('active');
+  
+  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+  resultMessage.textContent = result.reason || 
+    (isWinner ? 'You won the game!' : 'You lost the game');
+
+  if (betAmount > 0) {
+    if (isWinner) {
+      const winnings = betAmount * 1.8; // 1.8x payout
+      resultAmount.textContent = `+${formatBalance(winnings)}`;
+    } else {
+      resultAmount.textContent = `-${formatBalance(betAmount)}`;
+    }
+  } else {
+    resultAmount.textContent = '';
+  }
+
+  resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+}
 // The rest of your functions (rowColToAlgebraic, algebraicToRowCol, highlightSquare, 
 // clearHighlights, formatTime, playSound, addMoveToHistory, showError, etc.) 
 // can remain the same as they're generic utility functions
