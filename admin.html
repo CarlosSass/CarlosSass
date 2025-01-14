@@ -432,7 +432,10 @@
       // 2. Update original transaction to "approved"
       const { error: txUpdateError } = await supabase
         .from('player_transactions')
-        .update({ status: 'approved' })
+        .update({ 
+          status: 'approved',
+          description: "Your transactioin is approved"
+        })
         .eq('id', id);
 
       if (txUpdateError) {
