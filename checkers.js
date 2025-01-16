@@ -1,5 +1,4 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { Draughts } from 'https://cdn.jsdelivr.net/npm/draughts.js@1.0.1/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
 
 // DOM Elements
@@ -44,7 +43,6 @@ const gameState = {
     apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
     isConnected: false,
     betam: 0,
-      checkers: new Draughts(),
     onetime: false,
     pendingJumps: [] // Added for checkers jump sequences
   };
