@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
+import { Draughts } from 'https://cdn.jsdelivr.net/npm/draughts.js@1.0.1/+esm';
 
 // DOM Elements
 const board = document.getElementById('board');
@@ -36,8 +37,8 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
 const gameState = {
     playerColor: 'white',
     boardFlipped: false,
-    checkers: new Checkers(), // Changed from Chess to Checkers
-    selectedSquare: null,
+    checkers: new Draughts(),
+        selectedSquare: null,
     currentGame: null,
     gameCode: '',
     apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
@@ -52,58 +53,76 @@ const gameState = {
 
 // Piece Symbols - Updated for Checkers
 const PIECE_SYMBOLS = {
-    // White pieces
-    'w': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#ffffff" stroke="#000000" stroke-width="2"/></svg>',
-    'W': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#ffffff" stroke="#000000" stroke-width="2"/><circle cx="22.5" cy="22.5" r="15" fill="#ffffff" stroke="#000000" stroke-width="1"/></svg>',
-    
-    // Black pieces
-    'b': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#333333" stroke="#ffffff" stroke-width="2"/></svg>',
-    'B': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#333333" stroke="#ffffff" stroke-width="2"/><circle cx="22.5" cy="22.5" r="15" fill="#333333" stroke="#ffffff" stroke-width="1"/></svg>'
+    'w': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#fff" stroke="#000"/></svg>',
+    'W': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#fff" stroke="#000"/><circle cx="22.5" cy="22.5" r="10" fill="#fff" stroke="#000"/></svg>',
+    'b': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#000" stroke="#fff"/></svg>',
+    'B': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#000" stroke="#fff"/><circle cx="22.5" cy="22.5" r="10" fill="#000" stroke="#fff"/></svg>'
 };
+function createBoard() {
+    board.innerHTML = '';
 
-// Render Board - Updated for Checkers
-function renderBoard() {
-    document.querySelectorAll('.piece').forEach(p => p.remove());
-    
-    if (gameState.checkers.history().length > 0) {
-        const lastMove = gameState.checkers.history()[gameState.checkers.history().length - 1];
-        if (lastMove.captured) {
-            playSound('capture');
-        } else {
-            playSound('move');
-        }
-    }
-    
-    // Get board state from checkers.js
-    const boardState = gameState.checkers.board();
-    
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
-            // Only render on dark squares for checkers
+            // Only create dark squares (checkers rules)
             if ((row + col) % 2 === 1) {
-                const algebraic = rowColToAlgebraic(row, col);
-                const piece = boardState[row][col];
-                
-                if (piece) {
-                    const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    const pieceElement = document.createElement('div');
-                    pieceElement.className = 'piece';
-                    
-                    // Get the correct SVG based on piece type
-                    pieceElement.innerHTML = PIECE_SYMBOLS[piece.type] || '';
-                    
-                    // Add color class for styling
-                    pieceElement.classList.add(piece.color === 'w' ? 'white-piece' : 'black-piece');
-                    if (piece.king) {
-                        pieceElement.classList.add('king');
-                    }
-                    
-                    square.appendChild(pieceElement);
-                }
+                const square = document.createElement('div');
+                square.className = 'square dark';
+                square.dataset.row = row;
+                square.dataset.col = col;
+                square.dataset.square = rowColToAlgebraic(row, col);
+                board.appendChild(square);
+            } else {
+                // Light squares (unused in checkers)
+                const square = document.createElement('div');
+                square.className = 'square light';
+                board.appendChild(square);
             }
         }
     }
 }
+
+
+
+
+function tryMakeMove(from, to) {
+    // Check if a jump is mandatory
+    const jumps = gameState.checkers.getJumpMoves(from);
+    if (jumps.length > 0 && !jumps.some(j => j.to === to)) {
+        showError("You must capture when possible!");
+        return false;
+    }
+
+    const move = gameState.checkers.move({ from, to });
+    if (!move) {
+        showError("Invalid move");
+        return false;
+    }
+
+    // If the move was a jump, check for additional jumps
+    if (move.captures?.length > 0) {
+        const nextJumps = gameState.checkers.getJumpMoves(to);
+        if (nextJumps.length > 0) {
+            gameState.pendingJumps = nextJumps;
+            gameState.selectedSquare = to;
+            highlightSquare(...algebraicToRowCol(to));
+            highlightLegalMoves(to);
+            return;
+        }
+    }
+
+    // Send move to server
+    socket.emit('move', {
+        gameCode: gameState.gameCode,
+        from,
+        to,
+        player: gameState.playerColor
+    });
+
+    renderBoard();
+    return true;
+}
+// Render Board - Updated for Checkers
+
 
 function handleGameUpdate(update) {
     if (!update || !update.gameState) return;
@@ -273,47 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // Create Board - Updated for Checkers
-function createBoard() {
-    board.innerHTML = '';
-    
-    const rowStart = gameState.boardFlipped ? 7 : 0;
-    const rowEnd = gameState.boardFlipped ? -1 : 8;
-    const rowStep = gameState.boardFlipped ? -1 : 1;
-    
-    const colStart = gameState.boardFlipped ? 7 : 0;
-    const colEnd = gameState.boardFlipped ? -1 : 8;
-    const colStep = gameState.boardFlipped ? -1 : 1;
 
-    for (let row = rowStart; row !== rowEnd; row += rowStep) {
-        for (let col = colStart; col !== colEnd; col += colStep) {
-            // Only create squares on dark squares for checkers
-            if ((row + col) % 2 === 1) {
-                const square = document.createElement('div');
-                square.className = `square dark`; // All playable squares are dark in checkers
-                square.dataset.row = row;
-                square.dataset.col = col;
-                
-                const algebraic = rowColToAlgebraic(row, col);
-                square.dataset.square = algebraic;
-                
-                if (gameState.boardFlipped) {
-                    square.classList.add('flipped');
-                }
-
-                board.appendChild(square);
-            } else {
-                // Light squares (not playable in checkers)
-                const square = document.createElement('div');
-                square.className = `square light`;
-                square.dataset.row = row;
-                square.dataset.col = col;
-                board.appendChild(square);
-            }
-        }
-    }
-
-    renderBoard();
-}
 
 
 
@@ -410,94 +389,59 @@ function updateGameState(gameData) {
         }
     }
 }
+function renderBoard() {
+    document.querySelectorAll('.piece').forEach(p => p.remove());
+
+    const boardState = gameState.checkers.board();
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            if ((row + col) % 2 === 1) { // Only dark squares
+                const piece = boardState[row][col];
+                if (piece) {
+                    const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `piece ${piece.color}-piece`;
+                    pieceElement.innerHTML = PIECE_SYMBOLS[piece.type];
+                    square.appendChild(pieceElement);
+                }
+            }
+        }
+    }
+}
+// Try Make Move - Updated for Checkers
+
 function handleBoardClick(event) {
-    if (!gameState.currentGame || gameState.currentGame.status === 'finished') return;
-    
-    const square = event.target.closest('.square');
-    if (!square || !square.classList.contains('dark')) return; // Only allow clicks on dark squares
-    
-    const row = parseInt(square.dataset.row);
-    const col = parseInt(square.dataset.col);
-    const algebraic = rowColToAlgebraic(row, col);
-    
-    // Check if we're in a jump sequence
+    const square = event.target.closest('.square.dark');
+    if (!square) return;
+
+    const { row, col } = square.dataset;
+    const algebraic = rowColToAlgebraic(parseInt(row), parseInt(col));
+
+    // If in a jump sequence, force the player to complete it
     if (gameState.pendingJumps.length > 0) {
-        handleJumpSequence(algebraic);
+        const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
+        if (!isValidJump) {
+            showError("You must complete the jump sequence!");
+            return;
+        }
+        tryMakeMove(gameState.selectedSquare, algebraic);
         return;
     }
-    
+
+    // Normal move logic
     if (gameState.selectedSquare) {
-        // Try to make a move
         tryMakeMove(gameState.selectedSquare, algebraic);
         gameState.selectedSquare = null;
-        clearHighlights();
     } else {
-        // Select a piece
+        // Select a piece if it's the player's color
         const piece = gameState.checkers.get(algebraic);
-        if (piece && piece.color[0] === gameState.playerColor[0]) {
+        if (piece && piece.color === gameState.playerColor) {
             gameState.selectedSquare = algebraic;
             highlightSquare(row, col);
             highlightLegalMoves(algebraic);
         }
     }
 }
-
-// Try Make Move - Updated for Checkers
-async function tryMakeMove(from, to) {
-    try {
-        const move = gameState.checkers.move({ from, to });
-        
-        if (!move) {
-            // Check if it's a jump move
-            const jumps = gameState.checkers.getJumpMoves(from);
-            if (jumps.some(j => j.to === to)) {
-                gameState.pendingJumps = jumps.filter(j => j.from === from);
-                return handleJumpSequence(to);
-            }
-            return;
-        }
-        
-        // Check if this move leads to a jump sequence
-        const nextJumps = gameState.checkers.getJumpMoves(to);
-        if (nextJumps.length > 0) {
-            gameState.pendingJumps = nextJumps;
-            gameState.selectedSquare = to;
-            highlightSquare(...algebraicToRowCol(to));
-            highlightLegalMoves(to);
-            return;
-        }
-        
-        renderBoard();
-        
-        const moveData = {
-            gameCode: gameState.gameCode,
-            from,
-            to,
-            player: gameState.playerColor
-        };
-
-        if (gameState.isConnected) {
-            socket.emit('move', moveData);
-        } else {
-            const response = await fetch(`${gameState.apiBaseUrl}/api/move`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(moveData)
-            });
-            
-            if (!response.ok) throw new Error('Move failed');
-        }
-        
-    } catch (error) {
-        console.error('Move error:', error);
-        if (gameState.currentGame?.state) {
-            gameState.checkers.load(gameState.currentGame.state);
-            renderBoard();
-        }
-        showError(error.message);
-    }
-}
-
 
 function displayAlert(message, type = 'info') {
   const alertBox = document.createElement('div');
