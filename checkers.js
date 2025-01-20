@@ -1,7 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
-import { Draughts } from 'https://cdn.jsdelivr.net/npm/draughts.js@1.0.1/+esm';
 
+import { Draughts } from 'https://cdn.jsdelivr.net/npm/draughtsground@8.3.0/dist/draughtsground.min.js';
 // DOM Elements
 const board = document.getElementById('board');
 const gameStatus = document.getElementById('game-status');
@@ -37,17 +37,16 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
 const gameState = {
     playerColor: 'white',
     boardFlipped: false,
-    checkers: new Draughts(),
-        selectedSquare: null,
+    checkers: new Draughts(), // This will work with draughtsground
+    selectedSquare: null,
     currentGame: null,
     gameCode: '',
     apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
     isConnected: false,
     betam: 0,
     onetime: false,
-    pendingJumps: [] // Added for checkers jump sequences
-  };
-  
+    pendingJumps: []
+};
 // Piece Symbols
 // Replace the PIECE_SYMBOLS with SVG icons or image references
 
@@ -84,15 +83,40 @@ function createBoard() {
 
 
 
+function renderBoard() {
+    document.querySelectorAll('.piece').forEach(p => p.remove());
+
+    // Get the current board position
+    const position = gameState.checkers.getPosition();
+    
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            if ((row + col) % 2 === 1) { // Only dark squares
+                const square = rowColToAlgebraic(row, col);
+                const piece = position[square];
+                if (piece) {
+                    const squareElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `piece ${piece.color}-piece`;
+                    pieceElement.innerHTML = PIECE_SYMBOLS[piece.type];
+                    squareElement.appendChild(pieceElement);
+                }
+            }
+        }
+    }
+}
+
 function tryMakeMove(from, to) {
     // Check if a jump is mandatory
-    const jumps = gameState.checkers.getJumpMoves(from);
+    const moves = gameState.checkers.getLegalMoves(from);
+    const jumps = moves.filter(m => m.captures.length > 0);
+    
     if (jumps.length > 0 && !jumps.some(j => j.to === to)) {
         showError("You must capture when possible!");
         return false;
     }
 
-    const move = gameState.checkers.move({ from, to });
+    const move = gameState.checkers.move({from, to});
     if (!move) {
         showError("Invalid move");
         return false;
@@ -100,7 +124,9 @@ function tryMakeMove(from, to) {
 
     // If the move was a jump, check for additional jumps
     if (move.captures?.length > 0) {
-        const nextJumps = gameState.checkers.getJumpMoves(to);
+        const nextJumps = gameState.checkers.getLegalMoves(to)
+            .filter(m => m.captures.length > 0);
+            
         if (nextJumps.length > 0) {
             gameState.pendingJumps = nextJumps;
             gameState.selectedSquare = to;
@@ -389,27 +415,15 @@ function updateGameState(gameData) {
         }
     }
 }
-function renderBoard() {
-    document.querySelectorAll('.piece').forEach(p => p.remove());
-
-    const boardState = gameState.checkers.board();
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            if ((row + col) % 2 === 1) { // Only dark squares
-                const piece = boardState[row][col];
-                if (piece) {
-                    const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    const pieceElement = document.createElement('div');
-                    pieceElement.className = `piece ${piece.color}-piece`;
-                    pieceElement.innerHTML = PIECE_SYMBOLS[piece.type];
-                    square.appendChild(pieceElement);
-                }
-            }
-        }
-    }
-}
 // Try Make Move - Updated for Checkers
-
+function initializeGameUI(gameData) {
+    gameState.currentGame = gameData;
+    gameState.checkers = new Draughts(gameData.state || 'start');
+    updatePlayerInfo(gameData);
+    createBoard();
+    updateGameState(gameData);
+    updateConnectionStatus();
+}
 function handleBoardClick(event) {
     const square = event.target.closest('.square.dark');
     if (!square) return;
@@ -483,15 +497,7 @@ document.getElementById('copy-code')?.addEventListener('click', () => {
   });
 });
 // Initialize Game UI - Updated for Checkers
-function initializeGameUI(gameData) {
-    gameState.currentGame = gameData;
-    gameState.checkers.load(gameData.state); // Changed from fen to state
 
-    updatePlayerInfo(gameData);
-    createBoard();
-    updateGameState(gameData);
-    updateConnectionStatus();
-}
 // New helper function to update player info
 function updatePlayerInfo(gameData) {
   const whiteUsernameElement = document.getElementById('white-username');
