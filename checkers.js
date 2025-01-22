@@ -1,7 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
 
-import { Draughts } from 'https://cdn.jsdelivr.net/npm/draughtsground@8.3.0/dist/draughtsground.min.js';
+import { Checkers } from 'https://cdn.jsdelivr.net/npm/checkers.js@latest/dist/checkers.min.js';
 // DOM Elements
 const board = document.getElementById('board');
 const gameStatus = document.getElementById('game-status');
@@ -37,8 +37,8 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
 const gameState = {
     playerColor: 'white',
     boardFlipped: false,
-    checkers: new Draughts(), // This will work with draughtsground
-    selectedSquare: null,
+    checkers: new Checkers(), // Instead of Draughts
+    //     selectedSquare: null,
     currentGame: null,
     gameCode: '',
     apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
