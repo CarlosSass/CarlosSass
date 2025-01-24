@@ -1,8 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
 
-import { Checkers } from 'https://cdn.jsdelivr.net/npm/checkers.js@latest/dist/checkers.min.js';
-// DOM Elements
+// Use chessboard.js with checkers configuration
+import { Chessboard } from 'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js';
 const board = document.getElementById('board');
 const gameStatus = document.getElementById('game-status');
 const whiteTimeDisplay = document.getElementById('white-time');
@@ -34,11 +34,11 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
 });
 
 // Game State - Updated for Checkers
+// Game State - Updated for Checkers
 const gameState = {
     playerColor: 'white',
     boardFlipped: false,
-    checkers: new Checkers(), // Instead of Draughts
-    //     selectedSquare: null,
+    board: null, // Will hold our chessboard instance
     currentGame: null,
     gameCode: '',
     apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
@@ -456,7 +456,34 @@ function handleBoardClick(event) {
         }
     }
 }
-
+function handleMove(source, target) {
+    // Checkers move logic here
+    if (gameState.pendingJumps.length > 0) {
+        // Handle jump sequence
+        const isValidJump = gameState.pendingJumps.some(j => j.to === target);
+        if (!isValidJump) {
+            showError("You must complete the jump sequence!");
+            return 'snapback';
+        }
+        // Process the jump...
+    } else {
+        // Normal move
+        if (!isValidMove(source, target)) {
+            return 'snapback';
+        }
+        // Process the move...
+    }
+    
+    // Emit move to server
+    socket.emit('move', {
+        gameCode: gameState.gameCode,
+        from: source,
+        to: target,
+        player: gameState.playerColor
+    });
+    
+    return true;
+}
 function displayAlert(message, type = 'info') {
   const alertBox = document.createElement('div');
   alertBox.className = `alert ${type}`;
@@ -937,6 +964,32 @@ async function initGame() {
         showError('No game code provided');
         return;
     }
+     
+    // Initialize the board
+    gameState.board = Chessboard('board', {
+        pieceTheme: 'img/chesspieces/wikipedia/{piece}.png',
+        position: 'start',
+        draggable: true,
+        dropOffBoard: 'trash',
+        sparePieces: false,
+        orientation: gameState.playerColor === 'white' ? 'white' : 'black',
+        onDrop: handleMove,
+        showNotation: true
+    });
+    
+    // Set up checkers starting position
+    const checkersPosition = {
+        a8: 'bP', c8: 'bP', e8: 'bP', g8: 'bP',
+        b7: 'bP', d7: 'bP', f7: 'bP', h7: 'bP',
+        a6: 'bP', c6: 'bP', e6: 'bP', g6: 'bP',
+        b5: '', d5: '', f5: '', h5: '',
+        a4: '', c4: '', e4: '', g4: '',
+        b3: 'wP', d3: 'wP', f3: 'wP', h3: 'wP',
+        a2: 'wP', c2: 'wP', e2: 'wP', g2: 'wP',
+        b1: 'wP', d1: 'wP', f1: 'wP', h1: 'wP'
+    };
+    
+    gameState.board.position(checkersPosition);
 
     try {
         socket.emit('joinGame', gameState.gameCode);
