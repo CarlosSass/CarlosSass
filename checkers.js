@@ -1,8 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { io } from 'https://cdn.socket.io/4.4.1/socket.io.esm.min.js';
-
-// Use chessboard.js with checkers configuration
-import { Chessboard } from 'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js';
+import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@0.11.0/+esm';
 const board = document.getElementById('board');
 const gameStatus = document.getElementById('game-status');
 const whiteTimeDisplay = document.getElementById('white-time');
@@ -32,13 +30,104 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
   secure: true,
   withCredentials: true
 });
-
+// Custom checkers implementation using chess.js as a base
+class CheckersGame {
+    constructor() {
+      this.chess = new Chess();
+      this.reset();
+    }
+  
+    reset() {
+      // Clear the board
+      this.chess.clear();
+      
+      // Set up checkers pieces using chess pieces as stand-ins
+      // White pieces = pawns (p)
+      // Black pieces = knights (n) - just for visualization
+      // Kings = queens (q)
+      
+      // Setup black pieces (top 3 rows)
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 8; col++) {
+          if ((row + col) % 2 === 1) {
+            this.chess.put({ type: 'n', color: 'b' }, this.toAlgebraic(row, col));
+          }
+        }
+      }
+      
+      // Setup white pieces (bottom 3 rows)
+      for (let row = 5; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          if ((row + col) % 2 === 1) {
+            this.chess.put({ type: 'p', color: 'w' }, this.toAlgebraic(row, col));
+          }
+        }
+      }
+      
+      this.turn = 'w'; // White starts
+    }
+  
+    toAlgebraic(row, col) {
+      const files = 'abcdefgh';
+      const ranks = '87654321'; // Chess.js uses 8 as the top row
+      return files[col] + ranks[row];
+    }
+  
+    toRowCol(algebraic) {
+      const files = 'abcdefgh';
+      const ranks = '87654321';
+      return {
+        row: ranks.indexOf(algebraic[1]),
+        col: files.indexOf(algebraic[0])
+      };
+    }
+  
+    isValidMove(from, to) {
+      const { row: fromRow, col: fromCol } = this.toRowCol(from);
+      const { row: toRow, col: toCol } = this.toRowCol(to);
+      
+      // Basic checkers move validation
+      const piece = this.chess.get(from);
+      if (!piece) return false;
+      
+      // Must move to dark square
+      if ((toRow + toCol) % 2 === 0) return false;
+      
+      // Must be empty
+      if (this.chess.get(to)) return false;
+      
+      // Implement your checkers movement rules here
+      // This is simplified - you'll need proper move validation
+      return true;
+    }
+  
+    move(from, to) {
+      if (!this.isValidMove(from, to)) return false;
+      
+      const piece = this.chess.get(from);
+      this.chess.remove(from);
+      this.chess.put(piece, to);
+      
+      // Check for promotion to king (queen)
+      if ((piece.color === 'w' && to[1] === '8') || 
+          (piece.color === 'b' && to[1] === '1')) {
+        this.chess.put({ type: 'q', color: piece.color }, to);
+      }
+      
+      this.turn = this.turn === 'w' ? 'b' : 'w';
+      return true;
+    }
+  
+    getPosition() {
+      return this.chess.fen();
+    }
+  }
 // Game State - Updated for Checkers
 // Game State - Updated for Checkers
 const gameState = {
     playerColor: 'white',
     boardFlipped: false,
-    board: null, // Will hold our chessboard instance
+    checkers: new CheckersGame(), // Our adapted implementation
     currentGame: null,
     gameCode: '',
     apiBaseUrl: 'https://chess-game-production-9494.up.railway.app',
@@ -52,10 +141,9 @@ const gameState = {
 
 // Piece Symbols - Updated for Checkers
 const PIECE_SYMBOLS = {
-    'w': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#fff" stroke="#000"/></svg>',
-    'W': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#fff" stroke="#000"/><circle cx="22.5" cy="22.5" r="10" fill="#fff" stroke="#000"/></svg>',
-    'b': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#000" stroke="#fff"/></svg>',
-    'B': '<svg viewBox="0 0 45 45"><circle cx="22.5" cy="22.5" r="20" fill="#000" stroke="#fff"/><circle cx="22.5" cy="22.5" r="10" fill="#000" stroke="#fff"/></svg>'
+    'p': '○', // White pawn = white piece
+    'n': '●', // Black knight = black piece (using knight as stand-in)
+    'q': '♔'  // Queen = king
 };
 function createBoard() {
     board.innerHTML = '';
@@ -84,24 +172,25 @@ function createBoard() {
 
 
 function renderBoard() {
-    document.querySelectorAll('.piece').forEach(p => p.remove());
-
-    // Get the current board position
-    const position = gameState.checkers.getPosition();
+    board.innerHTML = '';
     
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
-            if ((row + col) % 2 === 1) { // Only dark squares
-                const square = rowColToAlgebraic(row, col);
-                const piece = position[square];
-                if (piece) {
-                    const squareElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    const pieceElement = document.createElement('div');
-                    pieceElement.className = `piece ${piece.color}-piece`;
-                    pieceElement.innerHTML = PIECE_SYMBOLS[piece.type];
-                    squareElement.appendChild(pieceElement);
-                }
+            const square = document.createElement('div');
+            square.className = (row + col) % 2 === 0 ? 'square light' : 'square dark';
+            square.dataset.row = row;
+            square.dataset.col = col;
+            square.dataset.square = gameState.checkers.toAlgebraic(row, col);
+            
+            const piece = gameState.checkers.chess.get(gameState.checkers.toAlgebraic(row, col));
+            if (piece) {
+                const pieceElement = document.createElement('div');
+                pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                pieceElement.textContent = PIECE_SYMBOLS[piece.type];
+                square.appendChild(pieceElement);
             }
+            
+            board.appendChild(square);
         }
     }
 }
