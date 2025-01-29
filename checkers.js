@@ -1053,33 +1053,11 @@ async function initGame() {
         showError('No game code provided');
         return;
     }
-     
-    // Initialize the board
-    gameState.board = Chessboard('board', {
-        pieceTheme: 'img/chesspieces/wikipedia/{piece}.png',
-        position: 'start',
-        draggable: true,
-        dropOffBoard: 'trash',
-        sparePieces: false,
-        orientation: gameState.playerColor === 'white' ? 'white' : 'black',
-        onDrop: handleMove,
-        showNotation: true
-    });
     
-    // Set up checkers starting position
-    const checkersPosition = {
-        a8: 'bP', c8: 'bP', e8: 'bP', g8: 'bP',
-        b7: 'bP', d7: 'bP', f7: 'bP', h7: 'bP',
-        a6: 'bP', c6: 'bP', e6: 'bP', g6: 'bP',
-        b5: '', d5: '', f5: '', h5: '',
-        a4: '', c4: '', e4: '', g4: '',
-        b3: 'wP', d3: 'wP', f3: 'wP', h3: 'wP',
-        a2: 'wP', c2: 'wP', e2: 'wP', g2: 'wP',
-        b1: 'wP', d1: 'wP', f1: 'wP', h1: 'wP'
-    };
+    // Initialize the checkers board - replace Chessboard with your own implementation
+    createBoard(); // Use your existing createBoard function
+    renderBoard(); // Render the initial board state
     
-    gameState.board.position(checkersPosition);
-
     try {
         socket.emit('joinGame', gameState.gameCode);
         showWaitingOverlay();
@@ -1125,7 +1103,6 @@ async function initGame() {
     
     setupReconnectionUI();
 }
-
 // Add this new handler for multiple jumps
 socket.on('mustContinueJump', (data) => {
     gameState.pendingJumps = data.possibleJumps;
