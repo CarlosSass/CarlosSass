@@ -145,29 +145,54 @@ const PIECE_SYMBOLS = {
     'n': '●', // Black knight = black piece (using knight as stand-in)
     'q': '♔'  // Queen = king
 };
-function createBoard() {
-    board.innerHTML = '';
+// Add these at the top with other utility functions
+function algebraicToRowCol(algebraic) {
+    const col = algebraic.charCodeAt(0) - 'a'.charCodeAt(0);
+    const row = 8 - parseInt(algebraic[1]);
+    return { row, col };
+  }
+  
+  function rowColToAlgebraic(row, col) {
+    const file = String.fromCharCode(97 + col);
+    const rank = 8 - row;
+    return file + rank;
+  }
+  
+// Update the handleBoardClick function
+function handleBoardClick(event) {
+    const square = event.target.closest('.square.dark');
+    if (!square) return;
 
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            // Only create dark squares (checkers rules)
-            if ((row + col) % 2 === 1) {
-                const square = document.createElement('div');
-                square.className = 'square dark';
-                square.dataset.row = row;
-                square.dataset.col = col;
-                square.dataset.square = rowColToAlgebraic(row, col);
-                board.appendChild(square);
-            } else {
-                // Light squares (unused in checkers)
-                const square = document.createElement('div');
-                square.className = 'square light';
-                board.appendChild(square);
-            }
+    const row = parseInt(square.dataset.row);
+    const col = parseInt(square.dataset.col);
+    const algebraic = rowColToAlgebraic(row, col);
+
+    // If in a jump sequence
+    if (gameState.pendingJumps.length > 0) {
+        const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
+        if (isValidJump) {
+            tryMakeMove(gameState.selectedSquare, algebraic);
+        } else {
+            showError("You must complete the jump sequence!");
+        }
+        return;
+    }
+
+    // Normal move logic
+    if (gameState.selectedSquare) {
+        tryMakeMove(gameState.selectedSquare, algebraic);
+        gameState.selectedSquare = null;
+        clearHighlights();
+    } else {
+        // Select a piece if it's the player's turn and color
+        const piece = gameState.checkers.chess.get(algebraic);
+        if (piece && piece.color === (gameState.playerColor === 'white' ? 'w' : 'b')) {
+            gameState.selectedSquare = algebraic;
+            highlightSquare(row, col);
+            highlightLegalMoves(algebraic);
         }
     }
 }
-
 
 
 
@@ -513,38 +538,7 @@ function initializeGameUI(gameData) {
     updateGameState(gameData);
     updateConnectionStatus();
 }
-function handleBoardClick(event) {
-    const square = event.target.closest('.square.dark');
-    if (!square) return;
 
-    const { row, col } = square.dataset;
-    const algebraic = rowColToAlgebraic(parseInt(row), parseInt(col));
-
-    // If in a jump sequence, force the player to complete it
-    if (gameState.pendingJumps.length > 0) {
-        const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
-        if (!isValidJump) {
-            showError("You must complete the jump sequence!");
-            return;
-        }
-        tryMakeMove(gameState.selectedSquare, algebraic);
-        return;
-    }
-
-    // Normal move logic
-    if (gameState.selectedSquare) {
-        tryMakeMove(gameState.selectedSquare, algebraic);
-        gameState.selectedSquare = null;
-    } else {
-        // Select a piece if it's the player's color
-        const piece = gameState.checkers.get(algebraic);
-        if (piece && piece.color === gameState.playerColor) {
-            gameState.selectedSquare = algebraic;
-            highlightSquare(row, col);
-            highlightLegalMoves(algebraic);
-        }
-    }
-}
 function handleMove(source, target) {
     // Checkers move logic here
     if (gameState.pendingJumps.length > 0) {
@@ -1036,13 +1030,69 @@ function showFinalResult(result) {
 // The rest of your functions (rowColToAlgebraic, algebraicToRowCol, highlightSquare, 
 // clearHighlights, formatTime, playSound, addMoveToHistory, showError, etc.) 
 // can remain the same as they're generic utility functions
+function createBoard() {
+    board.innerHTML = '';
+    
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const square = document.createElement('div');
+            square.className = (row + col) % 2 === 0 ? 'square light' : 'square dark';
+            square.dataset.row = row;
+            square.dataset.col = col;
+            square.dataset.square = gameState.checkers.toAlgebraic(row, col);
+            
+            // Only add pieces to dark squares (checkers rules)
+            if ((row + col) % 2 === 1) {
+                const piece = gameState.checkers.chess.get(gameState.checkers.toAlgebraic(row, col));
+                if (piece) {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                    pieceElement.textContent = PIECE_SYMBOLS[piece.type];
+                    square.appendChild(pieceElement);
+                }
+            }
+            
+            board.appendChild(square);
+        }
+    }
+    
+    // Ensure the board is clickable
+    board.addEventListener('click', handleBoardClick);
+}
 
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    initGame();
+    
+    // Set up socket listeners
+    socket.on('connect', () => {
+        gameState.isConnected = true;
+        updateConnectionStatus();
+    });
+    
+    socket.on('disconnect', () => {
+        gameState.isConnected = false;
+        updateConnectionStatus();
+    });
+});
 // Initialize Game - Same as before but with checkers
 async function initGame() {
-    const params = new URLSearchParams(window.location.search);
-    gameState.gameCode = params.get('code');
-    gameState.playerColor = params.get('color') || 'white';
-    gameState.boardFlipped = gameState.playerColor === 'black';
+
+
+        const params = new URLSearchParams(window.location.search);
+        gameState.gameCode = params.get('code');
+        gameState.playerColor = params.get('color') || 'white';
+        gameState.boardFlipped = gameState.playerColor === 'black';
+    
+        // Initialize the checkers game
+        gameState.checkers = new CheckersGame();
+        
+        // Create and render the board
+        createBoard();
+        renderBoard();
+        
 
     const gameCodeElement = document.getElementById('game-code-text');
     if (gameCodeElement) {
@@ -1054,9 +1104,7 @@ async function initGame() {
         return;
     }
     
-    // Initialize the checkers board - replace Chessboard with your own implementation
-    createBoard(); // Use your existing createBoard function
-    renderBoard(); // Render the initial board state
+
     
     try {
         socket.emit('joinGame', gameState.gameCode);
