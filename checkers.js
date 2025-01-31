@@ -146,18 +146,7 @@ const PIECE_SYMBOLS = {
     'q': '♔'  // Queen = king
 };
 // Add these at the top with other utility functions
-function algebraicToRowCol(algebraic) {
-    const col = algebraic.charCodeAt(0) - 'a'.charCodeAt(0);
-    const row = 8 - parseInt(algebraic[1]);
-    return { row, col };
-  }
-  
-  function rowColToAlgebraic(row, col) {
-    const file = String.fromCharCode(97 + col);
-    const rank = 8 - row;
-    return file + rank;
-  }
-  
+
 // Update the handleBoardClick function
 function handleBoardClick(event) {
     const square = event.target.closest('.square.dark');
@@ -645,19 +634,17 @@ let pendingTo = null;
 // Update tryMakeMove to accept promotion parameter
 
 // Helper Functions
-function rowColToAlgebraic(row, col) {
-  const file = String.fromCharCode(97 + col);
-  const rank = 8 - row;
-  return file + rank;
-}
-
 function algebraicToRowCol(algebraic) {
-  // No changes needed here either
-  const col = algebraic.charCodeAt(0) - 97;
-  const row = 8 - parseInt(algebraic[1], 10);
-  return { row, col };
-}
-
+    const col = algebraic.charCodeAt(0) - 'a'.charCodeAt(0);
+    const row = 8 - parseInt(algebraic[1]);
+    return { row, col };
+  }
+  
+  function rowColToAlgebraic(row, col) {
+    const file = String.fromCharCode(97 + col);
+    const rank = 8 - row;
+    return file + rank;
+  }
 
 
 function highlightSquare(row, col) {
