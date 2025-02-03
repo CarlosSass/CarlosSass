@@ -404,7 +404,7 @@ const sounds = {
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  initGame();
+  //initGame();
   board.addEventListener('click', handleBoardClick);
   
   // Setup connection status indicator
