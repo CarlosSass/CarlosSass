@@ -33,51 +33,83 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
 // Custom checkers implementation using chess.js as a base
 class CheckersGame {
     constructor() {
-      this.chess = new Chess();
-      this.reset();
+        this.chess = new Chess();
+        this.reset();
+        this.pendingJumps = [];
     }
-    isValidMove(from, to) {
-        const { row: fromRow, col: fromCol } = this.toRowCol(from);
-        const { row: toRow, col: toCol } = this.toRowCol(to);
+
+    reset() {
+        this.chess.clear();
+        
+        // Setup black pieces (top 3 rows)
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 8; col++) {
+                if ((row + col) % 2 === 1) {
+                    this.chess.put({ type: 'p', color: 'b' }, this.toAlgebraic(row, col));
+                }
+            }
+        }
+        
+        // Setup white pieces (bottom 3 rows)
+        for (let row = 5; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                if ((row + col) % 2 === 1) {
+                    this.chess.put({ type: 'p', color: 'w' }, this.toAlgebraic(row, col));
+                }
+            }
+        }
+        
+        this.turn = 'w'; // White starts
+        this.pendingJumps = [];
+    }
+
+    toAlgebraic(row, col) {
+        const files = 'abcdefgh';
+        const ranks = '87654321';
+        return files[col] + ranks[row];
+    }
+
+    toRowCol(algebraic) {
+        const files = 'abcdefgh';
+        const ranks = '87654321';
+        return {
+            row: ranks.indexOf(algebraic[1]),
+            col: files.indexOf(algebraic[0])
+        };
+    }
+
+    getValidMoves(from) {
+        const { row, col } = this.toRowCol(from);
         const piece = this.chess.get(from);
-        
-        if (!piece) return false;
-        if (piece.color !== this.turn) return false;
-        if ((toRow + toCol) % 2 === 0) return false; // Must move to dark square
-        if (this.chess.get(to)) return false; // Target must be empty
-        
-        const rowDiff = toRow - fromRow;
-        const colDiff = toCol - fromCol;
-        const direction = piece.color === 'w' ? -1 : 1; // White moves up, black moves down
-        
-        // Regular move (1 square diagonally)
-        if (Math.abs(rowDiff) === 1 && Math.abs(colDiff) === 1) {
-            // Check if any jumps are available (mandatory capture rule)
-            const allPieces = this.chess.board().flat().filter(Boolean);
-            const playerPieces = allPieces.filter(p => p.color === this.turn);
-            
-            const hasPossibleJumps = playerPieces.some(p => {
-                const pos = this.chess.board().flat().findIndex(sq => sq === p);
-                if (pos === -1) return false;
-                const {row, col} = this.toRowCol(String.fromCharCode(97 + (pos % 8)) + (8 - Math.floor(pos / 8)));
-                return this.getPossibleJumps(row, col).length > 0;
-            });
-            
-            return !hasPossibleJumps && rowDiff === direction;
+        if (!piece || piece.color !== this.turn) return [];
+
+        const moves = [];
+        const directions = piece.type === 'q' ? 
+            [[-1,-1],[-1,1],[1,-1],[1,1]] : // King can move both directions
+            piece.color === 'w' ? 
+                [[-1,-1],[-1,1]] : // White moves up
+                [[1,-1],[1,1]];    // Black moves down
+
+        // Check for jumps first (mandatory capture rule)
+        const jumps = this.getPossibleJumps(row, col);
+        if (jumps.length > 0) {
+            return jumps;
         }
-        
-        // Jump move (2 squares diagonally)
-        if (Math.abs(rowDiff) === 2 && Math.abs(colDiff) === 2) {
-            const jumpedRow = fromRow + rowDiff/2;
-            const jumpedCol = fromCol + colDiff/2;
-            const jumpedSquare = this.toAlgebraic(jumpedRow, jumpedCol);
-            const jumpedPiece = this.chess.get(jumpedSquare);
+
+        // Regular moves
+        for (const [rowDir, colDir] of directions) {
+            const newRow = row + rowDir;
+            const newCol = col + colDir;
             
-            return jumpedPiece && jumpedPiece.color !== piece.color && 
-                   Math.sign(rowDiff) === direction;
+            if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                const to = this.toAlgebraic(newRow, newCol);
+                if (!this.chess.get(to)) {
+                    moves.push({ from, to });
+                }
+            }
         }
-        
-        return false;
+
+        return moves;
     }
 
     getPossibleJumps(row, col) {
@@ -101,8 +133,9 @@ class CheckersGame {
                 const middleCol = col + colDir;
                 const middleSquare = this.toAlgebraic(middleRow, middleCol);
                 const jumpSquare = this.toAlgebraic(jumpRow, jumpCol);
+                const middlePiece = this.chess.get(middleSquare);
                 
-                if (!this.chess.get(jumpSquare) && this.chess.get(middleSquare)?.color !== piece.color) {
+                if (!this.chess.get(jumpSquare) && middlePiece && middlePiece.color !== piece.color) {
                     jumps.push({
                         from: algebraic,
                         to: jumpSquare,
@@ -115,93 +148,65 @@ class CheckersGame {
         return jumps;
     }
 
-    reset() {
-      // Clear the board
-      this.chess.clear();
-      
-      // Set up checkers pieces using chess pieces as stand-ins
-      // White pieces = pawns (p)
-      // Black pieces = knights (n) - just for visualization
-      // Kings = queens (q)
-      
-      // Setup black pieces (top 3 rows)
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 8; col++) {
-          if ((row + col) % 2 === 1) {
-            this.chess.put({ type: 'n', color: 'b' }, this.toAlgebraic(row, col));
-          }
-        }
-      }
-      
-      // Setup white pieces (bottom 3 rows)
-      for (let row = 5; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-          if ((row + col) % 2 === 1) {
-            this.chess.put({ type: 'p', color: 'w' }, this.toAlgebraic(row, col));
-          }
-        }
-      }
-      
-      this.turn = 'w'; // White starts
-    }
-  
-    toAlgebraic(row, col) {
-      const files = 'abcdefgh';
-      const ranks = '87654321'; // Chess.js uses 8 as the top row
-      return files[col] + ranks[row];
-    }
-  
-    toRowCol(algebraic) {
-      const files = 'abcdefgh';
-      const ranks = '87654321';
-      return {
-        row: ranks.indexOf(algebraic[1]),
-        col: files.indexOf(algebraic[0])
-      };
-    }
-  
-    isValidMove(from, to) {
-      const { row: fromRow, col: fromCol } = this.toRowCol(from);
-      const { row: toRow, col: toCol } = this.toRowCol(to);
-      
-      // Basic checkers move validation
-      const piece = this.chess.get(from);
-      if (!piece) return false;
-      
-      // Must move to dark square
-      if ((toRow + toCol) % 2 === 0) return false;
-      
-      // Must be empty
-      if (this.chess.get(to)) return false;
-      
-      // Implement your checkers movement rules here
-      // This is simplified - you'll need proper move validation
-      return true;
-    }
-  
     move(from, to) {
-      if (!this.isValidMove(from, to)) return false;
-      
-      const piece = this.chess.get(from);
-      this.chess.remove(from);
-      this.chess.put(piece, to);
-      
-      // Check for promotion to king (queen)
-      if ((piece.color === 'w' && to[1] === '8') || 
-          (piece.color === 'b' && to[1] === '1')) {
-        this.chess.put({ type: 'q', color: piece.color }, to);
-      }
-      
-      this.turn = this.turn === 'w' ? 'b' : 'w';
-      return true;
+        const { row: toRow } = this.toRowCol(to);
+        const piece = this.chess.get(from);
+        
+        // Check if this is part of a jump sequence
+        if (this.pendingJumps.length > 0) {
+            const jump = this.pendingJumps.find(j => j.to === to);
+            if (!jump) return false;
+            
+            this.chess.remove(from);
+            this.chess.put(piece, to);
+            this.chess.remove(jump.capture);
+            
+            // Check for promotion
+            if ((piece.color === 'w' && toRow === 0) || 
+                (piece.color === 'b' && toRow === 7)) {
+                this.chess.put({ type: 'q', color: piece.color }, to);
+            }
+            
+            // Check for additional jumps
+            const nextJumps = this.getPossibleJumps(...Object.values(this.toRowCol(to)));
+            if (nextJumps.length > 0) {
+                this.pendingJumps = nextJumps;
+                return true;
+            }
+            
+            this.pendingJumps = [];
+            this.turn = this.turn === 'w' ? 'b' : 'w';
+            return true;
+        }
+        
+        // Regular move
+        const moves = this.getValidMoves(from);
+        const validMove = moves.some(m => m.to === to);
+        if (!validMove) return false;
+        
+        this.chess.remove(from);
+        this.chess.put(piece, to);
+        
+        // Check for promotion
+        if ((piece.color === 'w' && toRow === 0) || 
+            (piece.color === 'b' && toRow === 7)) {
+            this.chess.put({ type: 'q', color: piece.color }, to);
+        }
+        
+        this.turn = this.turn === 'w' ? 'b' : 'w';
+        return true;
     }
-  
+
     getPosition() {
-      return this.chess.fen();
+        return this.chess.fen();
     }
-  }
-// Game State - Updated for Checkers
-// Game State - Updated for Checkers
+
+    load(fen) {
+        this.chess.load(fen);
+        // Determine whose turn it is based on FEN
+        this.turn = fen.split(' ')[1] === 'w' ? 'w' : 'b';
+    }
+}
 const gameState = {
     playerColor: 'white',
     boardFlipped: false,
@@ -343,7 +348,6 @@ function endTurn(from, to) {
     renderBoard();
 }
 
-
 function renderBoard() {
     board.innerHTML = '';
     
@@ -355,19 +359,27 @@ function renderBoard() {
             square.dataset.col = col;
             square.dataset.square = gameState.checkers.toAlgebraic(row, col);
             
-            const piece = gameState.checkers.chess.get(gameState.checkers.toAlgebraic(row, col));
-            if (piece) {
-                const pieceElement = document.createElement('div');
-                pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
-                pieceElement.textContent = PIECE_SYMBOLS[piece.type];
-                square.appendChild(pieceElement);
+            // Only render pieces on dark squares
+            if ((row + col) % 2 === 1) {
+                const piece = gameState.checkers.chess.get(gameState.checkers.toAlgebraic(row, col));
+                if (piece) {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                    pieceElement.textContent = PIECE_SYMBOLS[piece.type];
+                    
+                    // Add crown for kings
+                    if (piece.type === 'q') {
+                        pieceElement.classList.add('king');
+                    }
+                    
+                    square.appendChild(pieceElement);
+                }
             }
             
             board.appendChild(square);
         }
     }
 }
-
 
 // Render Board - Updated for Checkers
 
