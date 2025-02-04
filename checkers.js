@@ -36,7 +36,85 @@ class CheckersGame {
       this.chess = new Chess();
       this.reset();
     }
-  
+    isValidMove(from, to) {
+        const { row: fromRow, col: fromCol } = this.toRowCol(from);
+        const { row: toRow, col: toCol } = this.toRowCol(to);
+        const piece = this.chess.get(from);
+        
+        if (!piece) return false;
+        if (piece.color !== this.turn) return false;
+        if ((toRow + toCol) % 2 === 0) return false; // Must move to dark square
+        if (this.chess.get(to)) return false; // Target must be empty
+        
+        const rowDiff = toRow - fromRow;
+        const colDiff = toCol - fromCol;
+        const direction = piece.color === 'w' ? -1 : 1; // White moves up, black moves down
+        
+        // Regular move (1 square diagonally)
+        if (Math.abs(rowDiff) === 1 && Math.abs(colDiff) === 1) {
+            // Check if any jumps are available (mandatory capture rule)
+            const allPieces = this.chess.board().flat().filter(Boolean);
+            const playerPieces = allPieces.filter(p => p.color === this.turn);
+            
+            const hasPossibleJumps = playerPieces.some(p => {
+                const pos = this.chess.board().flat().findIndex(sq => sq === p);
+                if (pos === -1) return false;
+                const {row, col} = this.toRowCol(String.fromCharCode(97 + (pos % 8)) + (8 - Math.floor(pos / 8)));
+                return this.getPossibleJumps(row, col).length > 0;
+            });
+            
+            return !hasPossibleJumps && rowDiff === direction;
+        }
+        
+        // Jump move (2 squares diagonally)
+        if (Math.abs(rowDiff) === 2 && Math.abs(colDiff) === 2) {
+            const jumpedRow = fromRow + rowDiff/2;
+            const jumpedCol = fromCol + colDiff/2;
+            const jumpedSquare = this.toAlgebraic(jumpedRow, jumpedCol);
+            const jumpedPiece = this.chess.get(jumpedSquare);
+            
+            return jumpedPiece && jumpedPiece.color !== piece.color && 
+                   Math.sign(rowDiff) === direction;
+        }
+        
+        return false;
+    }
+
+    getPossibleJumps(row, col) {
+        const jumps = [];
+        const algebraic = this.toAlgebraic(row, col);
+        const piece = this.chess.get(algebraic);
+        if (!piece) return jumps;
+
+        const directions = piece.type === 'q' ? 
+            [[-1,-1],[-1,1],[1,-1],[1,1]] : // King can move both directions
+            piece.color === 'w' ? 
+                [[-1,-1],[-1,1]] : // White moves up
+                [[1,-1],[1,1]];    // Black moves down
+
+        for (const [rowDir, colDir] of directions) {
+            const jumpRow = row + rowDir * 2;
+            const jumpCol = col + colDir * 2;
+            
+            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8) {
+                const middleRow = row + rowDir;
+                const middleCol = col + colDir;
+                const middleSquare = this.toAlgebraic(middleRow, middleCol);
+                const jumpSquare = this.toAlgebraic(jumpRow, jumpCol);
+                
+                if (!this.chess.get(jumpSquare) && this.chess.get(middleSquare)?.color !== piece.color) {
+                    jumps.push({
+                        from: algebraic,
+                        to: jumpSquare,
+                        capture: middleSquare
+                    });
+                }
+            }
+        }
+        
+        return jumps;
+    }
+
     reset() {
       // Clear the board
       this.chess.clear();
@@ -155,12 +233,30 @@ function handleBoardClick(event) {
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
     const algebraic = rowColToAlgebraic(row, col);
+    const piece = gameState.checkers.chess.get(algebraic);
 
     // If in a jump sequence
     if (gameState.pendingJumps.length > 0) {
         const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
         if (isValidJump) {
-            tryMakeMove(gameState.selectedSquare, algebraic);
+            const jump = gameState.pendingJumps.find(j => j.to === algebraic);
+            if (gameState.checkers.move(jump.from, jump.to)) {
+                gameState.checkers.chess.remove(jump.capture);
+                
+                // Check for additional jumps
+                const nextJumps = gameState.checkers.getPossibleJumps(...algebraicToRowCol(jump.to));
+                if (nextJumps.length > 0) {
+                    gameState.pendingJumps = nextJumps;
+                    gameState.selectedSquare = jump.to;
+                    highlightSquare(...algebraicToRowCol(jump.to));
+                    highlightLegalMoves(jump.to);
+                } else {
+                    gameState.pendingJumps = [];
+                    gameState.selectedSquare = null;
+                    clearHighlights();
+                    endTurn(jump.from, jump.to);
+                }
+            }
         } else {
             showError("You must complete the jump sequence!");
         }
@@ -174,7 +270,6 @@ function handleBoardClick(event) {
         clearHighlights();
     } else {
         // Select a piece if it's the player's turn and color
-        const piece = gameState.checkers.chess.get(algebraic);
         if (piece && piece.color === (gameState.playerColor === 'white' ? 'w' : 'b')) {
             gameState.selectedSquare = algebraic;
             highlightSquare(row, col);
@@ -182,7 +277,71 @@ function handleBoardClick(event) {
         }
     }
 }
+function tryMakeMove(from, to) {
+    const move = {
+        from,
+        to,
+        captures: []
+    };
 
+    // Check if it's a jump
+    const fromPos = algebraicToRowCol(from);
+    const toPos = algebraicToRowCol(to);
+    const rowDiff = toPos.row - fromPos.row;
+    const colDiff = toPos.col - fromPos.col;
+
+    if (Math.abs(rowDiff) === 2 && Math.abs(colDiff) === 2) {
+        const jumpedRow = fromPos.row + rowDiff/2;
+        const jumpedCol = fromPos.col + colDiff/2;
+        move.captures = [gameState.checkers.toAlgebraic(jumpedRow, jumpedCol)];
+    }
+
+    if (!gameState.checkers.isValidMove(from, to)) {
+        showError("Invalid move");
+        return false;
+    }
+
+    if (gameState.checkers.move(from, to)) {
+        // Remove captured pieces
+        move.captures.forEach(capture => {
+            gameState.checkers.chess.remove(capture);
+        });
+
+        // Check for promotion
+        const piece = gameState.checkers.chess.get(to);
+        if (piece && ((piece.color === 'w' && to[1] === '8') || 
+                     (piece.color === 'b' && to[1] === '1'))) {
+            gameState.checkers.chess.put({ type: 'q', color: piece.color }, to);
+        }
+
+        // Check for additional jumps
+        const nextJumps = gameState.checkers.getPossibleJumps(...algebraicToRowCol(to));
+        if (nextJumps.length > 0) {
+            gameState.pendingJumps = nextJumps;
+            gameState.selectedSquare = to;
+            highlightSquare(...algebraicToRowCol(to));
+            highlightLegalMoves(to);
+            return true;
+        }
+
+        endTurn(from, to);
+        return true;
+    }
+
+    return false;
+}
+
+function endTurn(from, to) {
+    // Send move to server
+    socket.emit('move', {
+        gameCode: gameState.gameCode,
+        from,
+        to,
+        player: gameState.playerColor
+    });
+
+    renderBoard();
+}
 
 
 function renderBoard() {
@@ -209,50 +368,77 @@ function renderBoard() {
     }
 }
 
-function tryMakeMove(from, to) {
-    // Check if a jump is mandatory
-    const moves = gameState.checkers.getLegalMoves(from);
-    const jumps = moves.filter(m => m.captures.length > 0);
-    
-    if (jumps.length > 0 && !jumps.some(j => j.to === to)) {
-        showError("You must capture when possible!");
-        return false;
-    }
 
-    const move = gameState.checkers.move({from, to});
-    if (!move) {
-        showError("Invalid move");
-        return false;
-    }
-
-    // If the move was a jump, check for additional jumps
-    if (move.captures?.length > 0) {
-        const nextJumps = gameState.checkers.getLegalMoves(to)
-            .filter(m => m.captures.length > 0);
-            
-        if (nextJumps.length > 0) {
-            gameState.pendingJumps = nextJumps;
-            gameState.selectedSquare = to;
-            highlightSquare(...algebraicToRowCol(to));
-            highlightLegalMoves(to);
-            return;
-        }
-    }
-
-    // Send move to server
-    socket.emit('move', {
-        gameCode: gameState.gameCode,
-        from,
-        to,
-        player: gameState.playerColor
-    });
-
-    renderBoard();
-    return true;
-}
 // Render Board - Updated for Checkers
 
+// Initialize the game properly
+async function initGame() {
+    const params = new URLSearchParams(window.location.search);
+    gameState.gameCode = params.get('code');
+    gameState.playerColor = params.get('color') || 'white';
+    gameState.boardFlipped = gameState.playerColor === 'black';
 
+    // Initialize the checkers game
+    gameState.checkers = new CheckersGame();
+    
+    // Create and render the board
+    createBoard();
+    renderBoard();
+
+    // Rest of initialization code...
+    const gameCodeElement = document.getElementById('game-code-text');
+    if (gameCodeElement) {
+        gameCodeElement.textContent = gameState.gameCode || 'Not set';
+    }
+
+    if (!gameState.gameCode) {
+        showError('No game code provided');
+        return;
+    }
+    try {
+        socket.emit('joinGame', gameState.gameCode);
+        showWaitingOverlay();
+        
+        socket.on('gameState', initializeGameUI);
+        socket.on('gameUpdate', handleGameUpdate);
+        socket.on('moveError', showError);
+        socket.on('drawOffer', handleDrawOffer);
+        socket.on('gameOver', handleGameOver);
+        
+        socket.on('playerUpdate', (data) => {
+            if (gameState.currentGame) {
+                if (data.color === 'white') {
+                    gameState.currentGame.white_username = data.username;
+                } else {
+                    gameState.currentGame.black_username = data.username;
+                }
+                updatePlayerInfo(gameState.currentGame);
+            }
+        });
+
+        socket.on('gameReady', (data) => {
+            const notification = 'Both players connected! Game is starting...';
+            showNotification(notification, 5000);
+            displayAlert("White must move first!", 'warning');
+            initGame();
+            playSound('join');
+            gameStatus.textContent = 'Game in progress';
+        });
+        
+        setTimeout(() => {
+            if (!gameState.isConnected) {
+                fetchInitialGameState();
+            }
+        }, 2000);
+        
+        setInterval(fetchGameState, 30000);
+        
+    } catch (error) {
+        console.error('Init error:', error);
+        showError('Error loading game');
+    }
+
+}
 function handleGameUpdate(update) {
     if (!update || !update.gameState) return;
     
@@ -1065,79 +1251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 // Initialize Game - Same as before but with checkers
-async function initGame() {
 
-
-        const params = new URLSearchParams(window.location.search);
-        gameState.gameCode = params.get('code');
-        gameState.playerColor = params.get('color') || 'white';
-        gameState.boardFlipped = gameState.playerColor === 'black';
-    
-        // Initialize the checkers game
-        gameState.checkers = new CheckersGame();
-        
-        // Create and render the board
-        createBoard();
-        renderBoard();
-        
-
-    const gameCodeElement = document.getElementById('game-code-text');
-    if (gameCodeElement) {
-        gameCodeElement.textContent = gameState.gameCode || 'Not set';
-    }
-
-    if (!gameState.gameCode) {
-        showError('No game code provided');
-        return;
-    }
-    
-
-    
-    try {
-        socket.emit('joinGame', gameState.gameCode);
-        showWaitingOverlay();
-        
-        socket.on('gameState', initializeGameUI);
-        socket.on('gameUpdate', handleGameUpdate);
-        socket.on('moveError', showError);
-        socket.on('drawOffer', handleDrawOffer);
-        socket.on('gameOver', handleGameOver);
-        
-        socket.on('playerUpdate', (data) => {
-            if (gameState.currentGame) {
-                if (data.color === 'white') {
-                    gameState.currentGame.white_username = data.username;
-                } else {
-                    gameState.currentGame.black_username = data.username;
-                }
-                updatePlayerInfo(gameState.currentGame);
-            }
-        });
-
-        socket.on('gameReady', (data) => {
-            const notification = 'Both players connected! Game is starting...';
-            showNotification(notification, 5000);
-            displayAlert("White must move first!", 'warning');
-            initGame();
-            playSound('join');
-            gameStatus.textContent = 'Game in progress';
-        });
-        
-        setTimeout(() => {
-            if (!gameState.isConnected) {
-                fetchInitialGameState();
-            }
-        }, 2000);
-        
-        setInterval(fetchGameState, 30000);
-        
-    } catch (error) {
-        console.error('Init error:', error);
-        showError('Error loading game');
-    }
-    
-    setupReconnectionUI();
-}
 // Add this new handler for multiple jumps
 socket.on('mustContinueJump', (data) => {
     gameState.pendingJumps = data.possibleJumps;
