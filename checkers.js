@@ -233,54 +233,50 @@ const PIECE_SYMBOLS = {
 function handleBoardClick(event) {
     const square = event.target.closest('.square.dark');
     if (!square) return;
-
+  
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
-    const algebraic = rowColToAlgebraic(row, col);
-    const piece = gameState.checkers.chess.get(algebraic);
-
+    const algebraic = gameState.checkers.toAlgebraic(row, col);
+  
     // If in a jump sequence
     if (gameState.pendingJumps.length > 0) {
-        const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
-        if (isValidJump) {
-            const jump = gameState.pendingJumps.find(j => j.to === algebraic);
-            if (gameState.checkers.move(jump.from, jump.to)) {
-                gameState.checkers.chess.remove(jump.capture);
-                
-                // Check for additional jumps
-                const nextJumps = gameState.checkers.getPossibleJumps(...algebraicToRowCol(jump.to));
-                if (nextJumps.length > 0) {
-                    gameState.pendingJumps = nextJumps;
-                    gameState.selectedSquare = jump.to;
-                    highlightSquare(...algebraicToRowCol(jump.to));
-                    highlightLegalMoves(jump.to);
-                } else {
-                    gameState.pendingJumps = [];
-                    gameState.selectedSquare = null;
-                    clearHighlights();
-                    endTurn(jump.from, jump.to);
-                }
-            }
-        } else {
-            showError("You must complete the jump sequence!");
+      const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
+      if (isValidJump) {
+        const jump = gameState.pendingJumps.find(j => j.to === algebraic);
+        gameState.checkers.move(jump.from, jump.to);
+        
+        // Check for additional jumps
+        const nextJumps = gameState.checkers.getPossibleJumps(row, col);
+        if (nextJumps.length > 0) {
+          gameState.pendingJumps = nextJumps;
+          gameState.selectedSquare = jump.to;
+          highlightSquare(row, col);
+          return;
         }
-        return;
+        
+        gameState.pendingJumps = [];
+        endTurn(jump.from, jump.to);
+      } else {
+        showError("You must complete the jump sequence!");
+      }
+      return;
     }
-
+  
     // Normal move logic
     if (gameState.selectedSquare) {
-        tryMakeMove(gameState.selectedSquare, algebraic);
-        gameState.selectedSquare = null;
-        clearHighlights();
+      tryMakeMove(gameState.selectedSquare, algebraic);
+      gameState.selectedSquare = null;
+      clearHighlights();
     } else {
-        // Select a piece if it's the player's turn and color
-        if (piece && piece.color === (gameState.playerColor === 'white' ? 'w' : 'b')) {
-            gameState.selectedSquare = algebraic;
-            highlightSquare(row, col);
-            highlightLegalMoves(algebraic);
-        }
+      // Select a piece if it's the player's turn and color
+      const piece = gameState.checkers.board[row][col];
+      if (piece && piece.color === gameState.playerColor) {
+        gameState.selectedSquare = algebraic;
+        highlightSquare(row, col);
+        highlightLegalMoves(algebraic);
+      }
     }
-}
+  }
 function tryMakeMove(from, to) {
     const move = {
         from,
@@ -346,53 +342,7 @@ function endTurn(from, to) {
 
     renderBoard();
 }
-function handleBoardClick(event) {
-    const square = event.target.closest('.square.dark');
-    if (!square) return;
-  
-    const row = parseInt(square.dataset.row);
-    const col = parseInt(square.dataset.col);
-    const algebraic = gameState.checkers.toAlgebraic(row, col);
-  
-    // If in a jump sequence
-    if (gameState.pendingJumps.length > 0) {
-      const isValidJump = gameState.pendingJumps.some(j => j.to === algebraic);
-      if (isValidJump) {
-        const jump = gameState.pendingJumps.find(j => j.to === algebraic);
-        gameState.checkers.move(jump.from, jump.to);
-        
-        // Check for additional jumps
-        const nextJumps = gameState.checkers.getPossibleJumps(row, col);
-        if (nextJumps.length > 0) {
-          gameState.pendingJumps = nextJumps;
-          gameState.selectedSquare = jump.to;
-          highlightSquare(row, col);
-          return;
-        }
-        
-        gameState.pendingJumps = [];
-        endTurn(jump.from, jump.to);
-      } else {
-        showError("You must complete the jump sequence!");
-      }
-      return;
-    }
-  
-    // Normal move logic
-    if (gameState.selectedSquare) {
-      tryMakeMove(gameState.selectedSquare, algebraic);
-      gameState.selectedSquare = null;
-      clearHighlights();
-    } else {
-      // Select a piece if it's the player's turn and color
-      const piece = gameState.checkers.board[row][col];
-      if (piece && piece.color === gameState.playerColor) {
-        gameState.selectedSquare = algebraic;
-        highlightSquare(row, col);
-        highlightLegalMoves(algebraic);
-      }
-    }
-  }
+
 // Render Board - Updated for Checkers
 
 // Initialize the game properly
