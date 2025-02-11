@@ -132,278 +132,7 @@ const gameRooms = new Map();
 // Add this to your configuration section
 const ABANDON_TIMEOUT = 60 * 1000; // 1 minute in milliseconds
 const playerConnections = new Map(); // gameCode -> { white: socketId, black: socketId }
-class CheckersGame {
-  constructor() {
-    // Initialize an 8x8 board
-    this.board = Array(8).fill().map(() => Array(8).fill(null));
-    
-    // Set up initial pieces
-    this.currentPlayer = 'white'; // white moves first
-    this.gameOver = false;
-    this.winner = null;
-    this.lastCapturePosition = null; // For multi-capture moves
-    this.initializeBoard();
-  }
 
-  initializeBoard() {
-    // Black pieces (top 3 rows)
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 8; col++) {
-        if ((row + col) % 2 === 1) {
-          this.board[row][col] = { color: 'black', king: false };
-        }
-      }
-    }
-    
-    // White pieces (bottom 3 rows)
-    for (let row = 5; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        if ((row + col) % 2 === 1) {
-          this.board[row][col] = { color: 'white', king: false };
-        }
-      }
-    }
-  }
-
-  move(from, to) {
-    const [fromRow, fromCol] = from;
-    const [toRow, toCol] = to;
-    const piece = this.board[fromRow][fromCol];
-
-    // Validate basic move conditions
-    if (!this.validateBasicMove(from, to)) {
-      return { success: false, message: 'Invalid move' };
-    }
-
-    // Check if it's a capture move
-    const isCapture = Math.abs(fromRow - toRow) === 2;
-    
-    if (isCapture) {
-      return this.handleCaptureMove(from, to);
-    } else {
-      // Regular move
-      if (this.isCaptureAvailable()) {
-        return { success: false, message: 'You must make a capture when available' };
-      }
-      return this.handleRegularMove(from, to);
-    }
-  }
-
-  validateBasicMove(from, to) {
-    const [fromRow, fromCol] = from;
-    const [toRow, toCol] = to;
-    const piece = this.board[fromRow][fromCol];
-
-    // Check 1: Is there a piece at from position?
-    if (!piece) return false;
-    
-    // Check 2: Does the piece belong to current player?
-    if (piece.color !== this.currentPlayer) return false;
-    
-    // Check 3: Is to position empty?
-    if (this.board[toRow][toCol]) return false;
-    
-    // Check 4: Is it a diagonal move?
-    if (Math.abs(fromCol - toCol) !== Math.abs(fromRow - toRow)) return false;
-    
-    // Check 5: For non-kings, moving in correct direction
-    if (!piece.king) {
-      if (piece.color === 'white' && toRow > fromRow) return false;
-      if (piece.color === 'black' && toRow < fromRow) return false;
-    }
-    
-    // Check 6: Move distance
-    const moveDistance = Math.abs(fromRow - toRow);
-    if (moveDistance > 2) return false;
-    if (moveDistance === 2 && !this.isValidCapture(from, to)) return false;
-    
-    return true;
-  }
-
-  isValidCapture(from, to) {
-    const [fromRow, fromCol] = from;
-    const [toRow, toCol] = to;
-    const piece = this.board[fromRow][fromCol];
-    
-    // Calculate jumped position
-    const jumpedRow = (fromRow + toRow) / 2;
-    const jumpedCol = (fromCol + toCol) / 2;
-    const jumpedPiece = this.board[jumpedRow][jumpedCol];
-    
-    // Check if jumped piece exists and is opponent's
-    return jumpedPiece && jumpedPiece.color !== piece.color;
-  }
-
-  handleRegularMove(from, to) {
-    const [fromRow, fromCol] = from;
-    const [toRow, toCol] = to;
-    const piece = this.board[fromRow][fromCol];
-    
-    // Move the piece
-    this.board[toRow][toCol] = piece;
-    this.board[fromRow][fromCol] = null;
-    
-    // Check for promotion
-    this.checkPromotion(to);
-    
-    // Switch turns
-    this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-    this.lastCapturePosition = null;
-    
-    return { success: true, message: 'Move successful' };
-  }
-
-  handleCaptureMove(from, to) {
-    const [fromRow, fromCol] = from;
-    const [toRow, toCol] = to;
-    const piece = this.board[fromRow][fromCol];
-    
-    // Remove captured piece
-    const jumpedRow = (fromRow + toRow) / 2;
-    const jumpedCol = (fromCol + toCol) / 2;
-    this.board[jumpedRow][jumpedCol] = null;
-    
-    // Move the capturing piece
-    this.board[toRow][toCol] = piece;
-    this.board[fromRow][fromCol] = null;
-    
-    // Check for promotion
-    this.checkPromotion(to);
-    
-    // Check for additional captures
-    if (this.hasAdditionalCaptures(to)) {
-      this.lastCapturePosition = to;
-      return { 
-        success: true, 
-        message: 'Capture successful - continue capturing',
-        mustContinue: true 
-      };
-    } else {
-      // Switch turns
-      this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-      this.lastCapturePosition = null;
-      return { success: true, message: 'Capture successful' };
-    }
-  }
-
-  checkPromotion(position) {
-    const [row, col] = position;
-    const piece = this.board[row][col];
-    
-    if (!piece.king) {
-      if ((piece.color === 'white' && row === 0) || 
-          (piece.color === 'black' && row === 7)) {
-        piece.king = true;
-      }
-    }
-  }
-
-  hasAdditionalCaptures(position) {
-    const [row, col] = position;
-    const piece = this.board[row][col];
-    
-    // Check all possible capture directions
-    const directions = piece.king ? 
-      [[-1, -1], [-1, 1], [1, -1], [1, 1]] : // King can move any direction
-      (piece.color === 'white' ? 
-        [[-1, -1], [-1, 1]] : // White moves up
-        [[1, -1], [1, 1]]);    // Black moves down
-    
-    for (const [dr, dc] of directions) {
-      const captureRow = row + dr;
-      const captureCol = col + dc;
-      const landRow = row + 2*dr;
-      const landCol = col + 2*dc;
-      
-      // Check if landing position is on board
-      if (landRow >= 0 && landRow < 8 && landCol >= 0 && landCol < 8) {
-        // Check if intermediate piece is opponent and landing is empty
-        const jumpedPiece = this.board[captureRow][captureCol];
-        if (jumpedPiece && 
-            jumpedPiece.color !== piece.color && 
-            !this.board[landRow][landCol]) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  }
-
-  isCaptureAvailable() {
-    // Check all pieces of current player for possible captures
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const piece = this.board[row][col];
-        if (piece && piece.color === this.currentPlayer) {
-          if (this.hasAdditionalCaptures([row, col])) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  checkGameOver() {
-    // Check if either player has no pieces left
-    let whitePieces = 0;
-    let blackPieces = 0;
-    
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const piece = this.board[row][col];
-        if (piece) {
-          if (piece.color === 'white') whitePieces++;
-          else blackPieces++;
-        }
-      }
-    }
-    
-    if (whitePieces === 0) {
-      this.gameOver = true;
-      this.winner = 'black';
-    } else if (blackPieces === 0) {
-      this.gameOver = true;
-      this.winner = 'white';
-    }
-    
-    // TODO: Add other end conditions (blocked pieces, etc.)
-    
-    return this.gameOver;
-  }
-
-  getState() {
-    return {
-      board: this.board,
-      currentPlayer: this.currentPlayer,
-      gameOver: this.gameOver,
-      winner: this.winner,
-      lastCapturePosition: this.lastCapturePosition
-    };
-  }
-
-  serialize() {
-    return JSON.stringify({
-      board: this.board,
-      currentPlayer: this.currentPlayer,
-      gameOver: this.gameOver,
-      winner: this.winner,
-      lastCapturePosition: this.lastCapturePosition
-    });
-  }
-
-  static deserialize(data) {
-    const obj = JSON.parse(data);
-    const game = new CheckersGame();
-    game.board = obj.board;
-    game.currentPlayer = obj.currentPlayer;
-    game.gameOver = obj.gameOver;
-    game.winner = obj.winner;
-    game.lastCapturePosition = obj.lastCapturePosition;
-    return game;
-  }
-}
 // Socket.IO Connection Handling
 io.on('connection', (socket) => {
   console.log(`New connection: ${socket.id}`);
@@ -514,64 +243,39 @@ io.on('connection', (socket) => {
 
   });
   // Handle move events
-// In your socket.io move handler:
-socket.on('move', async (moveData) => {
-  try {
-    const { gameCode, from, to, player } = moveData;
-    const game = activeGames.get(gameCode);
-    
-    if (game.gameType === 'checkers') {
-      const checkers = game.checkers || new CheckersGame();
+  socket.on('move', async (moveData) => {
+    try {
+      const { gameCode, from, to, player, promotion } = moveData;
       
-      // Validate turn
-      if (checkers.currentPlayer !== player) {
-        throw new Error("It's not your turn");
+      // Basic validation
+      if (!gameCode || !from || !to || !player) {
+        throw new Error('Invalid move data');
       }
       
-      // Special case: Continuing a capture
-      if (checkers.lastCapturePosition && 
-          (from[0] !== checkers.lastCapturePosition[0] || 
-           from[1] !== checkers.lastCapturePosition[1])) {
-        throw new Error("You must continue your capture sequence");
+      // Anti-cheat checks
+      const cheatCheck = await checkForCheating(socket, gameCode, moveData);
+      if (cheatCheck.isCheating) {
+        console.warn(`Cheating detected from ${player} in game ${gameCode}: ${cheatCheck.reason}`);
+        
+        // Handle cheating - you might want to end the game or take other action
+        handleCheatingViolation(gameCode, player, cheatCheck.reason);
+        return;
       }
       
-      // Execute move
-      const result = checkers.move(from, to);
-      if (!result.success) {
-        throw new Error(result.message);
-      }
+      // Process the move if no cheating detected
+      const result = await processMove(gameCode, from, to, player, promotion);
       
-      // Check if game over
-      checkers.checkGameOver();
+      // Update behavior tracking
+      updatePlayerBehavior(socket.id, moveData, result.move);
       
-      // Save game state
-      game.state = checkers.serialize();
-      game.moves.push({
-        from, 
-        to,
-        player,
-        timestamp: new Date().toISOString()
-      });
+      io.to(gameCode).emit('gameUpdate', result);
+      checkGameEndConditions(gameCode, result.gameState);
       
-      // Update database
-      await saveGameToDB(game);
-      
-      // Send update to players
-      io.to(gameCode).emit('gameUpdate', {
-        state: checkers.getState(),
-        move: { from, to },
-        mustContinue: result.mustContinue || false
-      });
-      
-      // Handle game over
-      if (checkers.gameOver) {
-        await endGame(gameCode, checkers.winner, 'capture');
-      }
+    } catch (error) {
+      console.error('Move error:', error);
+      socket.emit('moveError', error.message);
     }
-  } catch (error) {
-    socket.emit('moveError', error.message);
-  }
-});
+  });
 
   socket.on('gameOver', async ({ winner, reason }) => {
     try {
