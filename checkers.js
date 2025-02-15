@@ -1138,7 +1138,35 @@ socket.on('balanceUpdate', (data) => {
 });
 
 
-
+function createBoard() {
+    board.innerHTML = '';
+    
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const square = document.createElement('div');
+            square.className = (row + col) % 2 === 0 ? 'square light' : 'square dark';
+            square.dataset.row = row;
+            square.dataset.col = col;
+            square.dataset.square = gameState.checkers.toAlgebraic(row, col);
+            
+            // Only add pieces to dark squares (checkers rules)
+            if ((row + col) % 2 === 1) {
+                const piece = gameState.checkers.board[row][col]; // Changed this line
+                if (piece) {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `piece ${piece.color}`;
+                    pieceElement.textContent = piece.king ? '♔' : '●';
+                    square.appendChild(pieceElement);
+                }
+            }
+            
+            board.appendChild(square);
+        }
+    }
+    
+    // Ensure the board is clickable
+    board.addEventListener('click', handleBoardClick);
+}
 
 
 // Function to update bet display
@@ -1245,35 +1273,7 @@ function showFinalResult(result) {
 // The rest of your functions (rowColToAlgebraic, algebraicToRowCol, highlightSquare, 
 // clearHighlights, formatTime, playSound, addMoveToHistory, showError, etc.) 
 // can remain the same as they're generic utility functions
-function createBoard() {
-    board.innerHTML = '';
-    
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            const square = document.createElement('div');
-            square.className = (row + col) % 2 === 0 ? 'square light' : 'square dark';
-            square.dataset.row = row;
-            square.dataset.col = col;
-            square.dataset.square = gameState.checkers.toAlgebraic(row, col);
-            
-            // Only add pieces to dark squares (checkers rules)
-            if ((row + col) % 2 === 1) {
-                const piece = gameState.checkers.chess.get(gameState.checkers.toAlgebraic(row, col));
-                if (piece) {
-                    const pieceElement = document.createElement('div');
-                    pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
-                    pieceElement.textContent = PIECE_SYMBOLS[piece.type];
-                    square.appendChild(pieceElement);
-                }
-            }
-            
-            board.appendChild(square);
-        }
-    }
-    
-    // Ensure the board is clickable
-    board.addEventListener('click', handleBoardClick);
-}
+
 
 
 
