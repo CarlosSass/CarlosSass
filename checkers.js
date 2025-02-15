@@ -531,37 +531,7 @@ async function initGame() {
     }
 
 }
-function handleGameUpdate(update) {
-    if (!update || !update.gameState) return;
-    
-    document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
-        el.classList.remove('last-move-from', 'last-move-to');
-    });
-    
-    gameState.currentGame = update.gameState;
-    gameState.checkers.load(update.gameState.state); // Changed from fen to state
-    gameState.turn = update.gameState.turn;
-    
-    updatePlayerInfo(update.gameState);
-    
-    if (update.move) {
-        if (update.move.from) {
-            const { row: fromRow, col: fromCol } = algebraicToRowCol(update.move.from);
-            const fromSquare = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
-            if (fromSquare) fromSquare.classList.add('last-move-from');
-        }
-        
-        if (update.move.to) {
-            const { row: toRow, col: toCol } = algebraicToRowCol(update.move.to);
-            const toSquare = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
-            if (toSquare) toSquare.classList.add('last-move-to');
-        }
-        
-        addMoveToHistory(update.move);
-    }
-    
-    updateGameState(update.gameState);
-}
+
 
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
