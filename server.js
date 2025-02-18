@@ -291,10 +291,10 @@ io.on('connection', (socket) => {
     // Generate device fingerprint
     const fingerprint = generateFingerprint(socket.handshake.headers);
     socket.fingerprint = fingerprint;
-    
-    socket.on('joinGame', async (gameCode) => {
+   
+    socket.on('joinGame', async (gameCode, gameType) => {  // Add gameType parameter
       try {
-        gameTypes.set(gameCode, gameType);
+        gameTypes.set(gameCode, gameType);  // Now properly set
 
         // Store fingerprint for this player
         if (!deviceFingerprints.has(gameCode)) {
