@@ -437,7 +437,7 @@ async function initGame() {
 
   try {
     // Join game room via Socket.IO
-    socket.emit('joinGame', gameState.gameCode);
+    socket.emit('joinGame', gameState.gameCode,'chess');
     showWaitingOverlay();
     
     // Set up Socket.IO listeners
