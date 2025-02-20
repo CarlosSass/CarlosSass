@@ -488,7 +488,9 @@ async function initGame() {
         return;
     }
     try {
-        socket.emit('joinGame', gameState.gameCode);
+        // Client-side when creating a game:
+       // socket.emit('joinGame', { gameType: 'checkers', timeControl: 600 });
+        socket.emit('joinGame', gameState.gameCode,'checkers');
         showWaitingOverlay();
         
         socket.on('gameState', initializeGameUI);
