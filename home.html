@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Habesha Games - Home</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --primary-color: #2E7D32; /* Dark green */
@@ -15,6 +15,7 @@
       --text-color: #333333;
       --btn-hover: #1B5E20;
       --highlight-color: #81C784; /* Light green for accents */
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
     * {
@@ -37,7 +38,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      box-shadow: var(--shadow);
       position: sticky;
       top: 0;
       z-index: 10;
@@ -56,6 +57,10 @@
     .header-left small {
       font-size: 0.85rem;
       opacity: 0.9;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .header-right {
@@ -105,6 +110,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      margin-bottom: 30px;
     }
 
     .game {
@@ -154,6 +160,102 @@
       color: #555;
     }
 
+    /* New features */
+    .balance-hidden {
+      filter: blur(4px);
+      user-select: none;
+    }
+
+    .stats-container {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 25px;
+      gap: 15px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      flex: 1;
+      transition: transform 0.3s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .stat-card h3 {
+      font-size: 1rem;
+      color: var(--primary-dark);
+      margin-bottom: 5px;
+    }
+
+    .stat-card p {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .quick-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: var(--shadow);
+    }
+
+    .action-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .action-btn:active {
+      transform: translateY(0);
+    }
+
+    .action-btn .material-icons {
+      font-size: 20px;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #FF5252;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .notification-icon {
+      position: relative;
+    }
+
     @media (max-width: 480px) {
       header {
         padding: 16px 12px;
@@ -183,6 +285,14 @@
       .game {
         padding: 16px;
       }
+
+      .quick-actions {
+        flex-direction: column;
+      }
+
+      .action-btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -190,9 +300,16 @@
   <header>
     <div class="header-left">
       <strong id="user-name">Welcome, ...</strong>
-      <small id="user-balance">Balance: ...</small>
+      <small id="user-balance" onclick="toggleBalance()">
+        <span class="material-icons" style="font-size: 18px;">visibility</span>
+        <span id="balance-text">Balance: *****</span>
+      </small>
     </div>
     <div class="header-right">
+      <div class="notification-icon">
+        <span class="material-icons" onclick="showNotifications()">notifications</span>
+        <div class="notification-badge" id="notification-count">3</div>
+      </div>
       <span class="material-icons" onclick="location.href='profile.html'" title="Profile">account_circle</span>
       <span class="material-icons" onclick="logout()" title="Logout">logout</span>
     </div>
@@ -201,7 +318,37 @@
   <main>
     <div class="welcome-message">
       <h2>Habesha Games</h2>
-      <p>Play traditional games with friends</p>
+      <p id="greeting">Good day for gaming!</p>
+    </div>
+
+    <div class="quick-actions">
+      <button class="action-btn" onclick="location.href='deposit.html'">
+        <span class="material-icons">account_balance_wallet</span>
+        Deposit
+      </button>
+      <button class="action-btn" onclick="location.href='withdraw.html'">
+        <span class="material-icons">payments</span>
+        Withdraw
+      </button>
+      <button class="action-btn" onclick="location.href='invite.html'">
+        <span class="material-icons">share</span>
+        Invite
+      </button>
+    </div>
+
+    <div class="stats-container">
+      <div class="stat-card" onclick="location.href='stats.html#wins'">
+        <h3>Wins</h3>
+        <p id="wins-count">24</p>
+      </div>
+      <div class="stat-card" onclick="location.href='stats.html#streak'">
+        <h3>Streak</h3>
+        <p id="streak-count">5 days</p>
+      </div>
+      <div class="stat-card" onclick="location.href='stats.html#friends'">
+        <h3>Friends</h3>
+        <p id="friends-count">12</p>
+      </div>
     </div>
     
     <h2>Available Games</h2>
@@ -218,6 +365,10 @@
         <span>Checkers</span>
         <span class="material-icons">casino</span>
       </div>
+      <div class="game" onclick="location.href='dominoes.html'">
+        <span>Dominoes</span>
+        <span class="material-icons">games</span>
+      </div>
     </div>
   </main>
 
@@ -228,35 +379,122 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // User data
+    let balanceVisible = false;
     const user = JSON.parse(localStorage.getItem('user'));
+    let userBalance = 0;
+    let userStats = {
+      wins: 0,
+      streak: 0,
+      friends: 0,
+      notifications: 0
+    };
+
+    // Initialize page
     if (!user) {
       window.location.href = 'index.html';
     } else {
       document.getElementById('user-name').textContent = `Welcome, ${user.username}`;
-      fetchBalance(user.phone);
+      updateGreeting();
+      fetchUserData();
       localStorage.setItem('playerPhone', user.phone);
     }
 
-    async function fetchBalance(phone) {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('balance')
-          .eq('phone', phone)
-          .single();
-
-        if (!error && data) {
-          document.getElementById('user-balance').textContent = `Balance: ${data.balance} ETB`;
-        } else {
-          document.getElementById('user-balance').textContent = `Balance: Error`;
-          console.error('Error fetching balance:', error);
-        }
-      } catch (err) {
-        console.error('Exception when fetching balance:', err);
-        document.getElementById('user-balance').textContent = `Balance: Offline`;
+    // Toggle balance visibility
+    function toggleBalance() {
+      balanceVisible = !balanceVisible;
+      const balanceText = document.getElementById('balance-text');
+      const visibilityIcon = document.querySelector('#user-balance .material-icons');
+      
+      if (balanceVisible) {
+        balanceText.textContent = `Balance: ${userBalance} ETB`;
+        visibilityIcon.textContent = 'visibility_off';
+      } else {
+        balanceText.textContent = 'Balance: *****';
+        visibilityIcon.textContent = 'visibility';
       }
     }
 
+    // Update greeting based on time of day
+    function updateGreeting() {
+      const hour = new Date().getHours();
+      let greeting = 'Good day for gaming!';
+      
+      if (hour < 12) greeting = 'Good morning!';
+      else if (hour < 18) greeting = 'Good afternoon!';
+      else greeting = 'Good evening!';
+      
+      document.getElementById('greeting').textContent = greeting;
+    }
+
+    // Fetch user data from Supabase
+    async function fetchUserData() {
+      try {
+        // Fetch balance
+        const { data: balanceData, error: balanceError } = await supabase
+          .from('users')
+          .select('balance')
+          .eq('phone', user.phone)
+          .single();
+
+        if (!balanceError && balanceData) {
+          userBalance = balanceData.balance;
+          document.getElementById('balance-text').textContent = 'Balance: *****';
+        }
+
+        // Fetch stats (mock data - you'll need to implement actual queries)
+        const { data: statsData } = await supabase
+          .from('user_stats')
+          .select('wins, streak, friends, notifications')
+          .eq('user_id', user.id)
+          .single();
+
+        if (statsData) {
+          userStats = statsData;
+          updateStatsDisplay();
+        } else {
+          // Default stats if no data found
+          userStats = {
+            wins: 24,
+            streak: 5,
+            friends: 12,
+            notifications: 3
+          };
+          updateStatsDisplay();
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        // Fallback to default stats if error occurs
+        userStats = {
+          wins: 24,
+          streak: 5,
+          friends: 12,
+          notifications: 3
+        };
+        updateStatsDisplay();
+      }
+    }
+
+    // Update stats display
+    function updateStatsDisplay() {
+      document.getElementById('wins-count').textContent = userStats.wins;
+      document.getElementById('streak-count').textContent = `${userStats.streak} days`;
+      document.getElementById('friends-count').textContent = userStats.friends;
+      document.getElementById('notification-count').textContent = userStats.notifications;
+      
+      // Hide notification badge if no notifications
+      if (userStats.notifications === 0) {
+        document.getElementById('notification-count').style.display = 'none';
+      }
+    }
+
+    // Show notifications
+    function showNotifications() {
+      alert(`You have ${userStats.notifications} new notifications`);
+      // In a real app, you would show a notifications panel
+    }
+
+    // Logout function
     function logout() {
       if (confirm('Are you sure you want to log out?')) {
         localStorage.removeItem('user');
@@ -264,6 +502,16 @@
         window.location.href = 'index.html';
       }
     }
+
+    // Add click animation to all buttons
+    document.querySelectorAll('button, .game, .stat-card').forEach(button => {
+      button.addEventListener('click', function() {
+        this.style.transform = 'scale(0.98)';
+        setTimeout(() => {
+          this.style.transform = '';
+        }, 100);
+      });
+    });
   </script>
 </body>
 </html>
