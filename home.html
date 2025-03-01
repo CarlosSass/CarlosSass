@@ -2,20 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Habesha Games - Home</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-color: #2E7D32; /* Dark green */
-      --primary-dark: #1B5E20; /* Darker green */
-      --accent-color: #f5f5f5;
+      --primary-color: #1b5e20; /* Dark green */
+      --secondary-color: #43a047; /* Vibrant green */
+      --accent-color: #f1f8e9;
       --card-bg: #ffffff;
-      --text-color: #333333;
-      --btn-hover: #1B5E20;
-      --highlight-color: #81C784; /* Light green for accents */
+      --text-color: #2e7d32;
+      --text-light: #689f38;
+      --btn-hover: #2e7d32;
+      --success-color: #4caf50;
       --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --border-radius: 16px;
     }
 
     * {
@@ -28,11 +30,12 @@
       font-family: 'Poppins', sans-serif;
       background: var(--accent-color);
       color: var(--text-color);
-      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-tap-highlight-color: transparent;
     }
 
     header {
-      background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
       color: white;
       padding: 18px 16px;
       display: flex;
@@ -41,7 +44,7 @@
       box-shadow: var(--shadow);
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 100;
     }
 
     .header-left {
@@ -57,10 +60,7 @@
     .header-left small {
       font-size: 0.85rem;
       opacity: 0.9;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 5px;
+      margin-top: 2px;
     }
 
     .header-right {
@@ -76,19 +76,20 @@
       transition: transform 0.2s;
     }
 
-    .material-icons:hover {
-      transform: scale(1.1);
+    .material-icons:active {
+      transform: scale(0.9);
     }
 
     main {
-      padding: 20px;
+      padding: 20px 16px;
       max-width: 500px;
       margin: 0 auto;
+      width: 100%;
     }
 
     h2 {
-      margin: 0 0 20px 0;
-      color: var(--primary-dark);
+      margin: 0 0 20px;
+      color: var(--primary-color);
       font-weight: 600;
       font-size: 1.5rem;
       position: relative;
@@ -102,272 +103,239 @@
       left: 0;
       width: 60px;
       height: 3px;
-      background: var(--highlight-color);
+      background: var(--secondary-color);
       border-radius: 3px;
     }
 
     .game-list {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr;
       gap: 16px;
-      margin-bottom: 30px;
+      margin-top: 24px;
     }
 
     .game {
       background: var(--card-bg);
-      padding: 18px;
-      border-radius: 14px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      padding: 20px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
       transition: all 0.3s ease;
-      border-left: 5px solid var(--highlight-color);
+      border-left: 5px solid var(--secondary-color);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(27, 94, 32, 0.1), rgba(67, 160, 71, 0.05));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .game:hover::before {
+      opacity: 1;
     }
 
     .game:hover {
       transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
     }
 
     .game:active {
       transform: translateY(0);
     }
 
-    .game span {
-      font-size: 1.1rem;
-      color: var(--text-color);
-      font-weight: 500;
-    }
-
-    .game .material-icons {
-      color: var(--primary-color);
-      background: rgba(129, 199, 132, 0.2);
-      padding: 8px;
-      border-radius: 50%;
-    }
-
-    .welcome-message {
-      text-align: center;
-      margin-bottom: 25px;
-      color: var(--primary-dark);
-    }
-
-    .welcome-message p {
-      font-size: 0.95rem;
-      margin-top: 5px;
-      color: #555;
-    }
-
-    /* New features */
-    .balance-hidden {
-      filter: blur(4px);
-      user-select: none;
-    }
-
-    .stats-container {
+    .game-content {
       display: flex;
-      justify-content: space-around;
-      margin-bottom: 25px;
+      align-items: center;
       gap: 15px;
     }
 
-    .stat-card {
-      background: white;
-      padding: 15px;
+    .game-icon {
+      width: 50px;
+      height: 50px;
       border-radius: 12px;
-      text-align: center;
-      box-shadow: var(--shadow);
-      flex: 1;
-      transition: transform 0.3s;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-5px);
-    }
-
-    .stat-card h3 {
-      font-size: 1rem;
-      color: var(--primary-dark);
-      margin-bottom: 5px;
-    }
-
-    .stat-card p {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-
-    .quick-actions {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      gap: 10px;
-    }
-
-    .action-btn {
-      background: var(--primary-color);
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 10px;
-      font-family: 'Poppins', sans-serif;
-      font-weight: 500;
-      flex: 1;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      cursor: pointer;
+      color: white;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .game-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .game-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+    }
+
+    .game-desc {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    .game-arrow {
+      color: var(--primary-color);
+      opacity: 0.7;
       transition: all 0.3s;
-      box-shadow: var(--shadow);
     }
 
-    .action-btn:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-    }
-
-    .action-btn:active {
-      transform: translateY(0);
-    }
-
-    .action-btn .material-icons {
-      font-size: 20px;
+    .game:hover .game-arrow {
+      transform: translateX(5px);
+      opacity: 1;
     }
 
     .notification-badge {
       position: absolute;
       top: -5px;
       right: -5px;
-      background: #FF5252;
+      background: var(--secondary-color);
       color: white;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      font-size: 0.7rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 0.7rem;
+      font-weight: bold;
     }
 
-    .notification-icon {
-      position: relative;
+    .balance-display {
+      background: white;
+      padding: 12px 16px;
+      border-radius: var(--border-radius);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    @media (max-width: 480px) {
-      header {
-        padding: 16px 12px;
-      }
-      
-      .header-left strong {
-        font-size: 1.1rem;
-      }
-      
-      .header-left small {
-        font-size: 0.8rem;
-      }
-      
-      .material-icons {
-        font-size: 24px;
-      }
-      
-      main {
-        padding: 16px;
-      }
-      
-      h2 {
-        font-size: 1.3rem;
-        margin-bottom: 18px;
-      }
-      
+    .balance-amount {
+      font-weight: 700;
+      color: var(--success-color);
+      font-size: 1.2rem;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 400px) {
       .game {
         padding: 16px;
       }
-
-      .quick-actions {
-        flex-direction: column;
+      
+      .game-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
       }
-
-      .action-btn {
-        width: 100%;
+      
+      .game-title {
+        font-size: 1rem;
       }
+    }
+
+    /* Animation for balance refresh */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spinning {
+      animation: spin 0.7s linear infinite;
     }
   </style>
 </head>
 <body>
   <header>
     <div class="header-left">
-      <strong id="user-name">Welcome, ...</strong>
-      <small id="user-balance" onclick="toggleBalance()">
-        <span class="material-icons" style="font-size: 18px;">visibility</span>
-        <span id="balance-text">Balance: *****</span>
-      </small>
+      <strong id="user-name">Welcome</strong>
+      <small id="user-status">Ready to play!</small>
     </div>
     <div class="header-right">
-      <div class="notification-icon">
-        <span class="material-icons" onclick="showNotifications()">notifications</span>
-        <div class="notification-badge" id="notification-count">3</div>
-      </div>
-      <span class="material-icons" onclick="location.href='profile.html'" title="Profile">account_circle</span>
-      <span class="material-icons" onclick="logout()" title="Logout">logout</span>
+      <span class="material-icons" onclick="location.href='profile.html'">account_circle</span>
+      <span class="material-icons" onclick="showLogoutConfirm()">logout</span>
     </div>
   </header>
 
   <main>
-    <div class="welcome-message">
-      <h2>Habesha Games</h2>
-      <p id="greeting">Good day for gaming!</p>
-    </div>
-
-    <div class="quick-actions">
-      <button class="action-btn" onclick="location.href='deposit.html'">
-        <span class="material-icons">account_balance_wallet</span>
-        Deposit
-      </button>
-      <button class="action-btn" onclick="location.href='withdraw.html'">
-        <span class="material-icons">payments</span>
-        Withdraw
-      </button>
-      <button class="action-btn" onclick="location.href='invite.html'">
-        <span class="material-icons">share</span>
-        Invite
+    <div class="balance-display">
+      <div>
+        <div style="font-size: 0.9rem; color: var(--text-light);">Your Balance</div>
+        <div class="balance-amount" id="user-balance">Loading...</div>
+      </div>
+      <button class="refresh-btn" onclick="fetchBalance()">
+        <span class="material-icons" id="refresh-icon">refresh</span>
+        Refresh
       </button>
     </div>
 
-    <div class="stats-container">
-      <div class="stat-card" onclick="location.href='stats.html#wins'">
-        <h3>Wins</h3>
-        <p id="wins-count">24</p>
-      </div>
-      <div class="stat-card" onclick="location.href='stats.html#streak'">
-        <h3>Streak</h3>
-        <p id="streak-count">5 days</p>
-      </div>
-      <div class="stat-card" onclick="location.href='stats.html#friends'">
-        <h3>Friends</h3>
-        <p id="friends-count">12</p>
-      </div>
-    </div>
-    
-    <h2>Available Games</h2>
+    <h2>Featured Games</h2>
     <div class="game-list">
-      <div class="game" onclick="location.href='guessnumberorderloby.html'">
-        <span>Guess Number Order</span>
-        <span class="material-icons">psychology</span>
+      <div class="game" onclick="navigateTo('guessnumberorderloby.html')">
+        <div class="game-content">
+          <div class="game-icon">
+            <span class="material-icons">psychology</span>
+          </div>
+          <div class="game-info">
+            <div class="game-title">Guess Number Order</div>
+            <div class="game-desc">Test your intuition</div>
+          </div>
+        </div>
+        <span class="material-icons game-arrow">chevron_right</span>
+        <div class="notification-badge">3</div>
       </div>
-      <div class="game" onclick="location.href='loby.html'">
-        <span>Chess</span>
-        <span class="material-icons">sports_esports</span>
+      
+      <div class="game" onclick="navigateTo('loby.html')">
+        <div class="game-content">
+          <div class="game-icon">
+            <span class="material-icons">sports_esports</span>
+          </div>
+          <div class="game-info">
+            <div class="game-title">Chess</div>
+            <div class="game-desc">Classic strategy game</div>
+          </div>
+        </div>
+        <span class="material-icons game-arrow">chevron_right</span>
       </div>
-      <div class="game" onclick="location.href='checkerslobby.html'">
-        <span>Checkers</span>
-        <span class="material-icons">casino</span>
-      </div>
-      <div class="game" onclick="location.href='dominoes.html'">
-        <span>Dominoes</span>
-        <span class="material-icons">games</span>
+      
+      <div class="game" onclick="navigateTo('checkerslobby.html')">
+        <div class="game-content">
+          <div class="game-icon">
+            <span class="material-icons">casino</span>
+          </div>
+          <div class="game-info">
+            <div class="game-title">Checkers</div>
+            <div class="game-desc">Simple yet challenging</div>
+          </div>
+        </div>
+        <span class="material-icons game-arrow">chevron_right</span>
       </div>
     </div>
   </main>
@@ -379,137 +347,75 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // User data
-    let balanceVisible = false;
+    // Check authentication
     const user = JSON.parse(localStorage.getItem('user'));
-    let userBalance = 0;
-    let userStats = {
-      wins: 0,
-      streak: 0,
-      friends: 0,
-      notifications: 0
-    };
-
-    // Initialize page
     if (!user) {
       window.location.href = 'index.html';
     } else {
-      document.getElementById('user-name').textContent = `Welcome, ${user.username}`;
-      updateGreeting();
-      fetchUserData();
+      document.getElementById('user-name').textContent = `Hi, ${user.username || 'Player'}`;
+      fetchBalance();
       localStorage.setItem('playerPhone', user.phone);
     }
 
-    // Toggle balance visibility
-    function toggleBalance() {
-      balanceVisible = !balanceVisible;
-      const balanceText = document.getElementById('balance-text');
-      const visibilityIcon = document.querySelector('#user-balance .material-icons');
-      
-      if (balanceVisible) {
-        balanceText.textContent = `Balance: ${userBalance} ETB`;
-        visibilityIcon.textContent = 'visibility_off';
-      } else {
-        balanceText.textContent = 'Balance: *****';
-        visibilityIcon.textContent = 'visibility';
-      }
+    // Navigation function with animation
+    function navigateTo(page) {
+      document.body.style.opacity = '0.7';
+      setTimeout(() => {
+        window.location.href = page;
+      }, 200);
     }
 
-    // Update greeting based on time of day
-    function updateGreeting() {
-      const hour = new Date().getHours();
-      let greeting = 'Good day for gaming!';
+    // Fetch user balance with animation
+    async function fetchBalance() {
+      const refreshIcon = document.getElementById('refresh-icon');
+      refreshIcon.classList.add('spinning');
       
-      if (hour < 12) greeting = 'Good morning!';
-      else if (hour < 18) greeting = 'Good afternoon!';
-      else greeting = 'Good evening!';
-      
-      document.getElementById('greeting').textContent = greeting;
-    }
-
-    // Fetch user data from Supabase
-    async function fetchUserData() {
       try {
-        // Fetch balance
-        const { data: balanceData, error: balanceError } = await supabase
+        const { data, error } = await supabase
           .from('users')
           .select('balance')
           .eq('phone', user.phone)
           .single();
 
-        if (!balanceError && balanceData) {
-          userBalance = balanceData.balance;
-          document.getElementById('balance-text').textContent = 'Balance: *****';
-        }
-
-        // Fetch stats (mock data - you'll need to implement actual queries)
-        const { data: statsData } = await supabase
-          .from('user_stats')
-          .select('wins, streak, friends, notifications')
-          .eq('user_id', user.id)
-          .single();
-
-        if (statsData) {
-          userStats = statsData;
-          updateStatsDisplay();
+        if (!error && data) {
+          document.getElementById('user-balance').textContent = `${data.balance} ETB`;
+          document.getElementById('user-balance').style.color = data.balance > 0 ? 'var(--success-color)' : 'var(--secondary-color)';
         } else {
-          // Default stats if no data found
-          userStats = {
-            wins: 24,
-            streak: 5,
-            friends: 12,
-            notifications: 3
-          };
-          updateStatsDisplay();
+          document.getElementById('user-balance').textContent = 'Error loading';
+          document.getElementById('user-balance').style.color = 'var(--secondary-color)';
         }
       } catch (err) {
-        console.error('Error fetching user data:', err);
-        // Fallback to default stats if error occurs
-        userStats = {
-          wins: 24,
-          streak: 5,
-          friends: 12,
-          notifications: 3
-        };
-        updateStatsDisplay();
+        console.error('Balance fetch error:', err);
+      } finally {
+        setTimeout(() => {
+          refreshIcon.classList.remove('spinning');
+        }, 500);
       }
     }
 
-    // Update stats display
-    function updateStatsDisplay() {
-      document.getElementById('wins-count').textContent = userStats.wins;
-      document.getElementById('streak-count').textContent = `${userStats.streak} days`;
-      document.getElementById('friends-count').textContent = userStats.friends;
-      document.getElementById('notification-count').textContent = userStats.notifications;
-      
-      // Hide notification badge if no notifications
-      if (userStats.notifications === 0) {
-        document.getElementById('notification-count').style.display = 'none';
+    // Enhanced logout confirmation
+    function showLogoutConfirm() {
+      if (confirm('Are you sure you want to logout?')) {
+        logout();
       }
     }
 
-    // Show notifications
-    function showNotifications() {
-      alert(`You have ${userStats.notifications} new notifications`);
-      // In a real app, you would show a notifications panel
-    }
-
-    // Logout function
     function logout() {
-      if (confirm('Are you sure you want to log out?')) {
+      // Add logout animation
+      document.body.style.opacity = '0.5';
+      setTimeout(() => {
         localStorage.removeItem('user');
         localStorage.removeItem('playerPhone');
         window.location.href = 'index.html';
-      }
+      }, 300);
     }
 
-    // Add click animation to all buttons
-    document.querySelectorAll('button, .game, .stat-card').forEach(button => {
-      button.addEventListener('click', function() {
-        this.style.transform = 'scale(0.98)';
-        setTimeout(() => {
-          this.style.transform = '';
-        }, 100);
+    // Add vibration feedback on mobile
+    document.querySelectorAll('.game, .refresh-btn').forEach(element => {
+      element.addEventListener('click', () => {
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
       });
     });
   </script>
