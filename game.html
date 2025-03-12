@@ -3,37 +3,560 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Number Guessing Game</title>
-    <link rel="stylesheet" href="game.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Number Guessing Game | Habesha Games</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2E7D32; /* Dark green */
+            --primary-dark: #1B5E20; /* Darker green */
+            --accent-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --btn-hover: #1B5E20;
+            --highlight-color: #81C784; /* Light green for accents */
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --danger-color: #e53935;
+            --success-color: #43a047;
+            --warning-color: #fb8c00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            color: white;
+            position: relative;
+        }
+
+        #back-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        #back-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .material-icons {
+            font-size: 24px;
+        }
+
+        .game-code {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .game-code strong {
+            font-weight: 600;
+        }
+
+        .game-bet {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .players-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 16px;
+            position: relative;
+        }
+
+        .player-card {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-radius: var(--border-radius);
+            background-color: var(--card-bg);
+            box-shadow: var(--shadow);
+            max-width: 200px;
+            border-left: 4px solid var(--highlight-color);
+            transition: transform 0.3s;
+        }
+
+        .player-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .player-card.creator {
+            margin-right: auto;
+        }
+
+        .player-card.opponent {
+            margin-left: auto;
+        }
+
+        .player-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: white;
+            margin-right: 12px;
+            background-color: var(--primary-color);
+        }
+
+        .player-info {
+            overflow: hidden;
+        }
+
+        .player-info h3 {
+            font-size: 1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 600;
+        }
+
+        .player-status {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .vs-circle {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            font-size: 1rem;
+        }
+
+        .game-status {
+            text-align: center;
+            padding: 12px 16px;
+            background-color: rgba(129, 199, 132, 0.2);
+            margin: 0 16px;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            color: var(--primary-dark);
+            font-weight: 500;
+            border-left: 4px solid var(--highlight-color);
+        }
+
+        .game-board {
+            padding: 16px;
+        }
+
+        .guess-input-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .guess-input-container input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .guess-input-container input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+        }
+
+        .guess-input-container button {
+            padding: 0 24px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .guess-input-container button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .guess-input-container button:active {
+            transform: translateY(0);
+        }
+
+        .guess-input-container button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .guess-history {
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            position: relative;
+            min-height: 100px;
+        }
+
+        #guess-history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #guess-history-table th,
+        #guess-history-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        #guess-history-table th {
+            background-color: #f9f9f9;
+            font-weight: 600;
+            color: var(--primary-dark);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        #guess-history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        #guess-history-table tbody tr:hover {
+            background-color: rgba(129, 199, 132, 0.05);
+        }
+
+        .correct {
+            color: var(--success-color);
+            font-weight: 500;
+        }
+
+        .partial {
+            color: var(--warning-color);
+            font-weight: 500;
+        }
+
+        .incorrect {
+            color: var(--danger-color);
+            font-weight: 500;
+        }
+
+        #history-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #999;
+            text-align: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--card-bg);
+        }
+
+        #history-empty-state .material-icons {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .game-actions {
+            padding: 16px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .danger-btn {
+            padding: 12px 20px;
+            background-color: white;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .danger-btn:hover {
+            background-color: #ffebee;
+            transform: translateY(-2px);
+        }
+
+        .danger-btn:active {
+            transform: translateY(0);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transform: translateY(-20px);
+            transition: transform 0.3s;
+            border-top: 5px solid var(--highlight-color);
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 16px;
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+            position: relative;
+            padding-bottom: 8px;
+        }
+
+        .modal-content h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: var(--highlight-color);
+            border-radius: 3px;
+        }
+
+        .modal-content p {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .result-details {
+            margin: 20px 0;
+            padding: 16px;
+            background-color: rgba(129, 199, 132, 0.1);
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--highlight-color);
+        }
+
+        .result-amount {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            gap: 12px;
+        }
+
+        .result-amount.win {
+            color: var(--success-color);
+        }
+
+        .result-amount.lose {
+            color: var(--danger-color);
+        }
+
+        .result-amount .material-icons {
+            font-size: 32px;
+        }
+
+        .primary-btn {
+            padding: 14px 24px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            font-size: 1rem;
+            margin-top: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .primary-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .primary-btn:active {
+            transform: translateY(0);
+        }
+
+        .game-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                top: -50px;
+                opacity: 0;
+            }
+            to {
+                top: 20px;
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .game-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            #back-btn {
+                position: static;
+                margin-bottom: 8px;
+            }
+
+            .game-code, .game-bet {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .players-section {
+                flex-direction: column;
+                gap: 24px;
+                padding: 20px 16px;
+            }
+
+            .player-card {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .player-card.creator, .player-card.opponent {
+                margin: 0;
+            }
+
+            .vs-circle {
+                position: relative;
+                margin: 16px 0;
+            }
+
+            .guess-input-container {
+                flex-direction: column;
+            }
+
+            #guess-history-table th,
+            #guess-history-table td {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="game-container">
         <header class="game-header">
             <button id="back-btn" class="icon-btn" title="Go back">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" fill="currentColor"/>
-                </svg>
+                <span class="material-icons">arrow_back</span>
             </button>
 
             <div class="game-code">
                 <span>Game Code:</span>
                 <strong id="game-code-display">XXXXXX</strong>
                 <button id="copy-code-btn" class="icon-btn" title="Copy code">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">content_copy</span>
                 </button>
             </div>
 
             <div class="game-bet">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                </svg>
+                <span class="material-icons">attach_money</span>
                 <span id="game-bet-amount">0 ETB</span>
             </div>
-
-            
         </header>
 
         <div class="players-section">
@@ -76,12 +599,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        </tbody>
+                        <!-- Filled dynamically -->
+                    </tbody>
                 </table>
                 <div class="empty-state" id="history-empty-state">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">info</span>
                     <p>Your guesses will appear here</p>
                 </div>
             </div>
@@ -89,9 +611,7 @@
 
         <div class="game-actions">
             <button id="leave-game-btn" class="danger-btn">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" fill="currentColor"/>
-                </svg>
+                <span class="material-icons">exit_to_app</span>
                 Leave Game
             </button>
         </div>
@@ -102,10 +622,8 @@
             <h2 id="result-title">Game Over</h2>
             <p id="result-message">You won the game!</p>
             <div class="result-details">
-                <div class="result-amount">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                    </svg>
+                <div class="result-amount win">
+                    <span class="material-icons">attach_money</span>
                     <span id="result-amount">+250 ETB</span>
                 </div>
             </div>
