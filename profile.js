@@ -1,11 +1,10 @@
-
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Get user from localStorage (same as home.html)
+// Get user from localStorage
 const user = JSON.parse(localStorage.getItem('user'));
 if (!user) {
     window.location.href = 'index.html';
@@ -23,6 +22,14 @@ if (!user) {
 
 async function loadProfile() {
     try {
+        // Show loading state
+        document.getElementById('transactions-list').innerHTML = `
+            <div class="loading-spinner">
+                <span class="material-icons">autorenew</span>
+                <p>Loading transactions...</p>
+            </div>
+        `;
+
         // Load balance
         const { data: balanceData } = await supabase
             .from('users')
@@ -47,6 +54,12 @@ async function loadProfile() {
     } catch (error) {
         console.error('Error loading profile:', error);
         showAlert('error', 'Failed to load profile data');
+        document.getElementById('transactions-list').innerHTML = `
+            <div class="no-transactions">
+                <span class="material-icons">error</span>
+                <p>Failed to load transactions</p>
+            </div>
+        `;
     }
 }
 
@@ -56,8 +69,8 @@ function renderTransactions(transactions) {
     if (transactions.length === 0) {
         transactionsList.innerHTML = `
             <div class="no-transactions">
-                <i class="fas fa-exchange-alt"></i>
-                <p>No transactions found</p>
+                <span class="material-icons">receipt</span>
+                <p>No transactions yet</p>
             </div>
         `;
         return;
@@ -69,24 +82,24 @@ function renderTransactions(transactions) {
         const transactionEl = document.createElement('div');
         transactionEl.className = 'transaction-item';
         
-        // Default values
+        // Determine icon and styling based on transaction type and status
         let iconClass = '';
         let amountClass = '';
         let icon = '';
         let statusText = '';
         
-        // Handle transaction status first (rejected/pending)
+        // Handle transaction status first
         if (transaction.status === 'rejected') {
             iconClass = 'icon-rejected';
-            amountClass = 'rejected';
-            icon = 'fa-times-circle';
-            statusText = ` (${transaction.status})`;
+            amountClass = 'negative';
+            icon = 'close';
+            statusText = ` (Rejected)`;
         } 
         else if (transaction.status === 'pending') {
             iconClass = 'icon-pending';
             amountClass = 'pending';
-            icon = 'fa-clock';
-            statusText = ` (${transaction.status})`;
+            icon = 'schedule';
+            statusText = ` (Pending)`;
         }
         // Handle transaction types if no special status
         else {
@@ -94,32 +107,32 @@ function renderTransactions(transactions) {
                 case 'deposit':
                     iconClass = 'icon-deposit';
                     amountClass = 'positive';
-                    icon = 'fa-arrow-down';
+                    icon = 'account_balance_wallet';
                     break;
                 case 'withdrawal':
                     iconClass = 'icon-withdrawal';
                     amountClass = 'negative';
-                    icon = 'fa-arrow-up';
+                    icon = 'account_balance';
                     break;
                 case 'bet':
                     iconClass = 'icon-bet';
                     amountClass = 'negative';
-                    icon = 'fa-chess';
+                    icon = 'sports_esports';
                     break;
                 case 'win':
                     iconClass = 'icon-win';
                     amountClass = 'positive';
-                    icon = 'fa-trophy';
+                    icon = 'emoji_events';
                     break;
                 case 'loss':
                     iconClass = 'icon-loss';
                     amountClass = 'negative';
-                    icon = 'fa-chess-board';
+                    icon = 'thumb_down';
                     break;
                 default:
                     iconClass = 'icon-default';
                     amountClass = 'neutral';
-                    icon = 'fa-exchange-alt';
+                    icon = 'receipt';
             }
         }
 
@@ -138,7 +151,7 @@ function renderTransactions(transactions) {
 
         transactionEl.innerHTML = `
             <div class="transaction-icon ${iconClass}">
-                <i class="fas ${icon}"></i>
+                <span class="material-icons">${icon}</span>
             </div>
             <div class="transaction-info">
                 <span class="transaction-type">
@@ -156,20 +169,18 @@ function renderTransactions(transactions) {
         transactionsList.appendChild(transactionEl);
     });
 }
-document.addEventListener('DOMContentLoaded', () => {
-    const depositButton = document.querySelector('.btn-deposit');
-    const confirmButton = document.querySelector('.btn-submit');
-  
-    depositButton.addEventListener('click', showDepositModal);
-    confirmButton.addEventListener('click', processDeposit);
-  });
-  
+
 // Modal functions
 function showDepositModal() {
+    // Reset form
+    document.getElementById('deposit-amount').value = '';
+    document.getElementById('transaction-id').value = '';
     document.getElementById('deposit-modal').style.display = 'flex';
 }
 
 function showWithdrawModal() {
+    // Set max amount to current balance
+    document.getElementById('withdraw-amount').value = '';
     document.getElementById('withdraw-amount').max = currentUser.balance;
     document.getElementById('withdraw-modal').style.display = 'flex';
 }
@@ -182,7 +193,7 @@ function closeModal(modalId) {
 async function processDeposit() {
     const amount = parseFloat(document.getElementById('deposit-amount').value);
     const method = document.getElementById('deposit-method').value;
-    const transactionId = document.getElementById('transaction-id').value;
+    const transactionId = document.getElementById('transaction-id').value.trim();
 
     if (!amount || amount <= 0 || !transactionId) {
         showAlert('error', 'Please enter a valid amount and transaction ID');
@@ -195,6 +206,11 @@ async function processDeposit() {
     }
 
     try {
+        // Show loading state
+        const submitBtn = document.querySelector('#deposit-modal .btn-submit');
+        submitBtn.innerHTML = '<span class="material-icons spinning">autorenew</span> Processing...';
+        submitBtn.disabled = true;
+
         // Create a pending transaction
         const { error } = await supabase
             .from('player_transactions')
@@ -204,7 +220,7 @@ async function processDeposit() {
                 amount: amount,
                 balance_before: currentUser.balance,
                 balance_after: currentUser.balance, // will update after approval
-                description: `Pending Telebirr deposit (TxID: ${transactionId})`,
+                description: `Pending ${method} deposit (TxID: ${transactionId})`,
                 status: 'pending',
                 game_id: null,
                 created_at: new Date().toISOString()
@@ -216,28 +232,13 @@ async function processDeposit() {
         closeModal('deposit-modal');
         loadProfile();
     } catch (error) {
-        console.error('Manual deposit error:', error);
+        console.error('Deposit error:', error);
         showAlert('error', 'Failed to submit deposit. Try again.');
+    } finally {
+        const submitBtn = document.querySelector('#deposit-modal .btn-submit');
+        submitBtn.innerHTML = '<span class="material-icons">check_circle</span> Confirm Deposit';
+        submitBtn.disabled = false;
     }
-}
-
-
-// Simulate Telebirr payment processing
-async function processTelebirrDeposit(amount) {
-    // In a real implementation, this would connect to the Telebirr API
-    // For demonstration, we'll simulate a successful response
-    
-    return new Promise(resolve => {
-        // Simulate API delay
-        setTimeout(() => {
-            resolve({
-                success: true,
-                transactionId: 'T' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0'),
-                amount: amount,
-                message: 'Payment processed successfully'
-            });
-        }, 1500);
-    });
 }
 
 // Process withdrawal
@@ -262,6 +263,11 @@ async function processWithdrawal() {
     }
     
     try {
+        // Show loading state
+        const submitBtn = document.querySelector('#withdraw-modal .btn-submit');
+        submitBtn.innerHTML = '<span class="material-icons spinning">autorenew</span> Processing...';
+        submitBtn.disabled = true;
+
         // Check current balance
         const { data: userData, error: userError } = await supabase
             .from('users')
@@ -296,7 +302,7 @@ async function processWithdrawal() {
                 balance_before: userData.balance,
                 balance_after: newBalance,
                 description: `Withdrawal via ${method}`,
-                status: 'completed',
+                status: 'pending',
                 game_id: null,
                 created_at: new Date().toISOString()
             });
@@ -309,6 +315,10 @@ async function processWithdrawal() {
     } catch (error) {
         console.error('Withdrawal error:', error);
         showAlert('error', 'Withdrawal failed. Please try again.');
+    } finally {
+        const submitBtn = document.querySelector('#withdraw-modal .btn-submit');
+        submitBtn.innerHTML = '<span class="material-icons">send</span> Request Withdrawal';
+        submitBtn.disabled = false;
     }
 }
 
@@ -317,9 +327,8 @@ function showAlert(type, message) {
     const alert = document.createElement('div');
     alert.className = `alert alert-${type}`;
     alert.innerHTML = `
-        <i class="fas ${
-            type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'
-        }"></i> ${message}
+        <span class="material-icons">${type === 'success' ? 'check_circle' : 'error'}</span>
+        ${message}
     `;
     
     document.body.appendChild(alert);
@@ -333,4 +342,26 @@ function showAlert(type, message) {
 // Back button functionality
 document.getElementById('back-btn').addEventListener('click', () => {
     window.location.href = 'home.html';
+});
+
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Deposit button
+    document.querySelector('.btn-deposit').addEventListener('click', showDepositModal);
+    
+    // Withdraw button
+    document.querySelector('.btn-withdraw').addEventListener('click', showWithdrawModal);
+    
+    // Confirm deposit button
+    document.querySelector('#deposit-modal .btn-submit').addEventListener('click', processDeposit);
+    
+    // Request withdrawal button
+    document.querySelector('#withdraw-modal .btn-submit').addEventListener('click', processWithdrawal);
+    
+    // Close modal buttons
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', function() {
+            closeModal(this.closest('.modal').id);
+        });
+    });
 });
