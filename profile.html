@@ -2,85 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Player Profile | Habesha Games</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Profile | Chess Betting</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #1b5e20; /* Dark green */
-            --secondary-color: #43a047; /* Vibrant green */
-            --accent-color: #f1f8e9;
-            --card-bg: #ffffff;
-            --text-color: #2e7d32;
-            --text-light: #689f38;
-            --btn-hover: #2e7d32;
-            --success-color: #4caf50;
-            --error-color: #f44336;
-            --warning-color: #ff9800;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --border-radius: 16px;
-        }
-
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
         
         body {
-            background-color: var(--accent-color);
-            color: var(--text-color);
-            -webkit-tap-highlight-color: transparent;
+            background-color: #f5f5f5;
+            color: #333;
         }
         
         .profile-container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
-            padding: 16px;
+            padding: 20px;
         }
         
         .profile-header {
             display: flex;
             align-items: center;
-            margin-bottom: 24px;
-            position: relative;
+            margin-bottom: 20px;
         }
         
         #back-btn {
             background: none;
             border: none;
-            color: var(--primary-color);
-            font-size: 28px;
-            margin-right: 12px;
+            font-size: 24px;
+            margin-right: 15px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-        }
-        
-        #back-btn:active {
-            background-color: rgba(0,0,0,0.05);
+            color: #333;
         }
         
         .profile-header h1 {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 600;
-            color: var(--primary-color);
         }
         
         .balance-card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
+            background: #f4f4f5;
+            color: black;
+            border-radius: 12px;
             padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow);
-            border-left: 5px solid var(--secondary-color);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
         .balance-info {
@@ -90,112 +60,84 @@
         .balance-label {
             display: block;
             font-size: 14px;
-            color: var(--text-light);
-            margin-bottom: 6px;
+            opacity: 0.8;
+            margin-bottom: 5px;
         }
         
         .balance-amount {
             font-size: 32px;
             font-weight: 700;
-            color: var(--primary-color);
         }
         
         .balance-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
         
         .btn-deposit, .btn-withdraw {
             flex: 1;
-            padding: 14px;
+            padding: 12px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            font-size: 15px;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
         
         .btn-deposit {
-            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            background-color: #4CAF50;
             color: white;
         }
         
         .btn-withdraw {
-            background: var(--card-bg);
-            color: var(--primary-color);
-            border: 1px solid var(--secondary-color);
-        }
-        
-        .btn-deposit:active, .btn-withdraw:active {
-            transform: scale(0.98);
+            background-color: #f44336;
+            color: white;
         }
         
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 15px;
         }
         
         .section-header h2 {
             font-size: 18px;
             font-weight: 600;
-            color: var(--primary-color);
-            position: relative;
-            padding-bottom: 6px;
-        }
-        
-        .section-header h2::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 40px;
-            height: 3px;
-            background: var(--secondary-color);
-            border-radius: 3px;
         }
         
         .transactions-list {
-            background-color: var(--card-bg);
-            border-radius: var(--border-radius);
+            background-color: white;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: var(--shadow);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         
         .transaction-item {
             display: flex;
-            padding: 16px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 15px;
+            border-bottom: 1px solid #eee;
             align-items: center;
-            transition: background-color 0.2s;
-        }
-        
-        .transaction-item:active {
-            background-color: rgba(0,0,0,0.03);
         }
         
         .transaction-icon {
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 16px;
-            font-size: 20px;
+            margin-right: 15px;
         }
         
-        .icon-deposit { background-color: rgba(67, 160, 71, 0.1); color: var(--secondary-color); }
-        .icon-withdrawal { background-color: rgba(244, 67, 54, 0.1); color: var(--error-color); }
-        .icon-bet { background-color: rgba(255, 152, 0, 0.1); color: var(--warning-color); }
-        .icon-win { background-color: rgba(67, 160, 71, 0.1); color: var(--secondary-color); }
-        .icon-loss { background-color: rgba(244, 67, 54, 0.1); color: var(--error-color); }
+        .icon-deposit { background-color: rgba(76, 175, 80, 0.1); color: #4CAF50; }
+        .icon-withdrawal { background-color: rgba(244, 67, 54, 0.1); color: #f44336; }
+        .icon-bet { background-color: rgba(255, 152, 0, 0.1); color: #FF9800; }
+        .icon-win { background-color: rgba(76, 175, 80, 0.1); color: #4CAF50; }
+        .icon-loss { background-color: rgba(244, 67, 54, 0.1); color: #f44336; }
         
         .transaction-info {
             flex: 1;
@@ -204,163 +146,128 @@
         .transaction-type {
             font-weight: 600;
             display: block;
-            margin-bottom: 4px;
-            font-size: 15px;
+            margin-bottom: 3px;
         }
         
         .transaction-description {
             font-size: 13px;
-            color: var(--text-light);
+            color: #666;
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         
         .transaction-date {
             font-size: 12px;
-            color: #888;
+            color: #999;
         }
         
         .transaction-amount {
             font-weight: 600;
-            font-size: 16px;
         }
         
-        .positive { color: var(--secondary-color); }
-        .negative { color: var(--error-color); }
+        .positive { color: #4CAF50; }
+        .negative { color: #f44336; }
         
         .no-transactions {
             text-align: center;
-            padding: 40px 20px;
-            color: #888;
+            padding: 30px;
+            color: #999;
         }
         
-        .no-transactions .material-icons {
-            font-size: 48px;
-            margin-bottom: 12px;
-            color: var(--text-light);
+        .no-transactions i {
+            font-size: 40px;
+            margin-bottom: 10px;
             opacity: 0.5;
-        }
-        
-        .no-transactions p {
-            font-size: 15px;
         }
         
         /* Modal styles */
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-        }
+  display: none;
+  position: fixed;
+  z-index: 99;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6);
+  justify-content: center;
+  align-items: center;
+}
 
-        .modal-content {
-            background-color: var(--card-bg);
-            margin: 20px;
-            padding: 24px;
-            border-radius: var(--border-radius);
-            max-width: 400px;
-            width: 100%;
-            position: relative;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-            animation: fadeIn 0.3s ease-in-out;
-        }
+.modal-content {
+  background-color: #fff;
+  margin: auto;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  animation: fadeIn 0.3s ease-in-out;
+}
 
-        .close-modal {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            color: #888;
-            font-size: 24px;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-        }
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+}
 
-        .close-modal:active {
-            background-color: rgba(0,0,0,0.05);
-        }
+.form-group {
+  margin-bottom: 1.2rem;
+}
 
-        .modal h3 {
-            margin-bottom: 20px;
-            color: var(--primary-color);
-            font-size: 20px;
-        }
+.form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--primary-color);
-            font-size: 14px;
-        }
+.deposit-instructions {
+  background: #f7f7f7;
+  padding: 10px;
+  border-left: 4px solid #ffc107;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+}
 
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 14px;
-            border-radius: 12px;
-            border: 1px solid #ddd;
-            font-size: 15px;
-            transition: border-color 0.2s;
-        }
+.deposit-instructions .info-text {
+  font-size: 14px;
+  margin: 6px 0;
+}
 
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-        }
+.btn-submit {
+  background-color: #28a745;
+  color: white;
+  padding: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
 
-        .deposit-instructions {
-            background: rgba(67, 160, 71, 0.05);
-            padding: 14px;
-            border-left: 4px solid var(--secondary-color);
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
+.btn-submit:hover {
+  background-color: #218838;
+}
 
-        .deposit-instructions .info-text {
-            font-size: 14px;
-            margin: 8px 0;
-            color: var(--text-color);
-        }
-
-        .btn-submit {
-            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
-            color: white;
-            padding: 16px;
-            width: 100%;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-submit:active {
-            transform: scale(0.98);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
 
         /* Alert styles */
         .alert {
@@ -368,26 +275,25 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 14px 24px;
-            border-radius: 12px;
+            padding: 12px 20px;
+            border-radius: 8px;
             color: white;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 12px;
-            box-shadow: var(--shadow);
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1100;
             opacity: 1;
             transition: opacity 0.5s ease;
-            max-width: 90%;
         }
         
         .alert-success {
-            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            background-color: #4CAF50;
         }
         
         .alert-error {
-            background-color: var(--error-color);
+            background-color: #f44336;
         }
         
         .fade-out {
@@ -396,32 +302,21 @@
         
         .loading-spinner {
             text-align: center;
-            padding: 40px 20px;
-            color: #888;
+            padding: 20px;
+            color: #999;
         }
         
-        .loading-spinner .material-icons {
-            font-size: 32px;
-            margin-bottom: 16px;
-            color: var(--secondary-color);
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-spinner p {
-            font-size: 15px;
-            color: var(--text-light);
+        .loading-spinner i {
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="profile-container">
         <header class="profile-header">
-            <button id="back-btn" class="material-icons">arrow_back</button>
+            <button id="back-btn" class="icon-btn" title="Go back">
+                <i class="fas fa-arrow-left"></i>
+            </button>
             <h1>Player Profile</h1>
         </header>
 
@@ -432,11 +327,11 @@
                     <span class="balance-amount" id="current-balance">0.00 ETB</span>
                 </div>
                 <div class="balance-actions">
-                    <button class="btn-deposit" onclick="showDepositModal()">
-                        <span class="material-icons">add_circle</span> Deposit
+                    <button class="btn-deposit">
+                        <i class="fas fa-plus-circle"></i> Deposit
                     </button>
                     <button class="btn-withdraw" onclick="showWithdrawModal()">
-                        <span class="material-icons">remove_circle</span> Withdraw
+                        <i class="fas fa-minus-circle"></i> Withdraw
                     </button>
                 </div>
             </div>
@@ -448,8 +343,7 @@
 
                 <div class="transactions-list" id="transactions-list">
                     <div class="loading-spinner">
-                        <span class="material-icons">autorenew</span>
-                        <p>Loading transactions...</p>
+                        <i class="fas fa-spinner fa-spin"></i> Loading transactions...
                     </div>
                 </div>
             </div>
@@ -457,50 +351,48 @@
     </div>
 
     <!-- Deposit Modal -->
-    <div class="modal" id="deposit-modal">
-        <div class="modal-content">
-            <span class="close-modal material-icons" onclick="closeModal('deposit-modal')">close</span>
-            <h3>Deposit Funds</h3>
-
-            <div class="form-group">
-                <label for="deposit-amount">Amount (ETB)</label>
-                <input type="number" id="deposit-amount" min="10" step="1" placeholder="10.00">
-            </div>
-
-            <div class="form-group">
-                <label for="deposit-method">Payment Method</label>
-                <select id="deposit-method">
-                    <option value="telebirr">Telebirr</option>
-                </select>
-            </div>
-
-            <div class="deposit-instructions">
-                <p class="info-text">
-                    <span class="material-icons" style="vertical-align: middle;">smartphone</span>
-                    Please send your deposit to: <strong>0961401822</strong>
-                </p>
-                <p class="info-text">
-                    <span class="material-icons" style="vertical-align: middle;">receipt</span>
-                    After sending, enter the <strong>Transaction ID</strong> below
-                </p>
-            </div>
-
-            <div class="form-group">
-                <label for="transaction-id">Transaction ID</label>
-                <input type="text" id="transaction-id" placeholder="e.g. T1234567890">
-            </div>
-
-            <button class="btn-submit" onclick="processDeposit()">
-                <span class="material-icons" style="vertical-align: middle;">check_circle</span>
-                Confirm Deposit
-            </button>
-        </div>
+<!-- Deposit Modal -->
+<div class="modal" id="deposit-modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('deposit-modal')">&times;</span>
+      <h3>Deposit Funds</h3>
+  
+      <div class="form-group">
+        <label for="deposit-amount">Amount (ETB)</label>
+        <input type="number" id="deposit-amount" min="10" step="1" placeholder="10.00">
+      </div>
+  
+      <div class="form-group">
+        <label for="deposit-method">Payment Method</label>
+        <select id="deposit-method">
+          <option value="telebirr">Telebirr</option>
+        </select>
+      </div>
+  
+      <div class="form-group deposit-instructions">
+        <p class="info-text">
+          📱 Please send your deposit to this number:
+          <strong style="color: #000;">0961401822</strong>
+        </p>
+        <p class="info-text">
+          🧾 After sending, enter the <strong>Transaction ID</strong> below.
+        </p>
+      </div>
+  
+      <div class="form-group">
+        <label for="transaction-id">Transaction ID</label>
+        <input type="text" id="transaction-id" placeholder="e.g. T1234567890">
+      </div>
+  
+      <button class="btn-submit">Confirm Deposit</button>
     </div>
+  </div>
+  
 
     <!-- Withdraw Modal -->
     <div class="modal" id="withdraw-modal">
         <div class="modal-content">
-            <span class="close-modal material-icons" onclick="closeModal('withdraw-modal')">close</span>
+            <span class="close-modal" onclick="closeModal('withdraw-modal')">&times;</span>
             <h3>Withdraw Funds</h3>
             <div class="form-group">
                 <label for="withdraw-amount">Amount (ETB)</label>
@@ -513,171 +405,11 @@
                     <option value="telebirr">Telebirr</option>
                 </select>
             </div>
-            <button class="btn-submit" onclick="processWithdrawal()">
-                <span class="material-icons" style="vertical-align: middle;">send</span>
-                Request Withdrawal
-            </button>
+            <button class="btn-submit" onclick="processWithdrawal()">Request Withdrawal</button>
         </div>
     </div>
 
-    <script>
-        // Sample transactions data
-        const transactions = [
-            {
-                type: "deposit",
-                amount: 500,
-                description: "Telebirr deposit",
-                date: "2023-06-15 14:30",
-                icon: "account_balance"
-            },
-            {
-                type: "bet",
-                amount: -50,
-                description: "Chess game bet",
-                date: "2023-06-14 10:15",
-                icon: "sports_esports"
-            },
-            {
-                type: "win",
-                amount: 90,
-                description: "Chess game win",
-                date: "2023-06-14 10:30",
-                icon: "emoji_events"
-            },
-            {
-                type: "withdrawal",
-                amount: -200,
-                description: "Telebirr withdrawal",
-                date: "2023-06-10 16:45",
-                icon: "account_balance_wallet"
-            }
-        ];
+    <script src="profile.js" type="module"></script>
 
-        // Display transactions
-        function displayTransactions() {
-            const container = document.getElementById('transactions-list');
-            
-            if (transactions.length === 0) {
-                container.innerHTML = `
-                    <div class="no-transactions">
-                        <span class="material-icons">receipt</span>
-                        <p>No transactions yet</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            transactions.forEach(txn => {
-                let iconClass = '';
-                let signClass = '';
-                
-                if (txn.type === 'deposit') {
-                    iconClass = 'icon-deposit';
-                    signClass = 'positive';
-                } else if (txn.type === 'withdrawal') {
-                    iconClass = 'icon-withdrawal';
-                    signClass = 'negative';
-                } else if (txn.type === 'bet') {
-                    iconClass = 'icon-bet';
-                    signClass = 'negative';
-                } else if (txn.type === 'win') {
-                    iconClass = 'icon-win';
-                    signClass = 'positive';
-                } else if (txn.type === 'loss') {
-                    iconClass = 'icon-loss';
-                    signClass = 'negative';
-                }
-                
-                html += `
-                    <div class="transaction-item">
-                        <div class="transaction-icon ${iconClass}">
-                            <span class="material-icons">${txn.icon}</span>
-                        </div>
-                        <div class="transaction-info">
-                            <span class="transaction-type">${txn.type.charAt(0).toUpperCase() + txn.type.slice(1)}</span>
-                            <span class="transaction-description">${txn.description}</span>
-                            <span class="transaction-date">${txn.date}</span>
-                        </div>
-                        <div class="transaction-amount ${signClass}">
-                            ${txn.amount > 0 ? '+' : ''}${txn.amount} ETB
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // Modal functions
-        function showDepositModal() {
-            document.getElementById('deposit-modal').style.display = 'flex';
-        }
-
-        function showWithdrawModal() {
-            document.getElementById('withdraw-modal').style.display = 'flex';
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-        }
-
-        function processDeposit() {
-            const amount = document.getElementById('deposit-amount').value;
-            const txnId = document.getElementById('transaction-id').value;
-            
-            if (!amount || !txnId) {
-                showAlert('Please fill all fields', 'error');
-                return;
-            }
-            
-            showAlert('Deposit request submitted', 'success');
-            closeModal('deposit-modal');
-        }
-
-        function processWithdrawal() {
-            const amount = document.getElementById('withdraw-amount').value;
-            
-            if (!amount) {
-                showAlert('Please enter amount', 'error');
-                return;
-            }
-            
-            showAlert('Withdrawal request submitted', 'success');
-            closeModal('withdraw-modal');
-        }
-
-        function showAlert(message, type) {
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.innerHTML = `
-                <span class="material-icons">${type === 'success' ? 'check_circle' : 'error'}</span>
-                ${message}
-            `;
-            
-            document.body.appendChild(alert);
-            
-            setTimeout(() => {
-                alert.classList.add('fade-out');
-                setTimeout(() => {
-                    alert.remove();
-                }, 500);
-            }, 3000);
-        }
-
-        // Back button
-        document.getElementById('back-btn').addEventListener('click', () => {
-            window.history.back();
-        });
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            // Set initial balance
-            document.getElementById('current-balance').textContent = '750.00 ETB';
-            
-            // Load transactions after a short delay (simulating API call)
-            setTimeout(displayTransactions, 1000);
-        });
-    </script>
 </body>
 </html>
