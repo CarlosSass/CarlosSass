@@ -5,40 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Player Profile | Habesha Games</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #2E7D32; /* Dark green */
-            --primary-dark: #1B5E20; /* Darker green */
-            --accent-color: #f5f5f5;
+            --primary-color: #4A6BFF; /* Vibrant blue */
+            --primary-dark: #3A56D4; /* Darker blue */
+            --accent-color: #F8FAFF;
             --card-bg: #ffffff;
-            --text-color: #333333;
-            --btn-hover: #1B5E20;
-            --highlight-color: #81C784; /* Light green for accents */
-            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            --border-radius: 12px;
-            --danger-color: #e53935;
-            --success-color: #43a047;
-            --warning-color: #fb8c00;
+            --text-color: #2D3748;
+            --text-light: #718096;
+            --btn-hover: #3A56D4;
+            --highlight-color: #EFF2FF; /* Light blue for accents */
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --danger-color: #FF4757;
+            --success-color: #2ED573;
+            --warning-color: #FFA502;
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
         
         body {
             background-color: var(--accent-color);
             color: var(--text-color);
-            padding: 12px;
-            font-size: 14px;
+            padding: 16px;
+            font-size: 15px;
+            line-height: 1.5;
         }
         
         .profile-container {
             width: 100%;
+            max-width: 480px;
             margin: 0 auto;
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
@@ -49,28 +55,35 @@
         .profile-header {
             display: flex;
             align-items: center;
-            padding: 16px;
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
-            color: white;
+            padding: 20px;
+            background: var(--card-bg);
+            color: var(--text-color);
             position: sticky;
             top: 0;
             z-index: 10;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
         
         #back-btn {
             background: none;
             border: none;
-            color: white;
+            color: var(--text-color);
             cursor: pointer;
             margin-right: 12px;
-            padding: 4px;
+            padding: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        #back-btn:active {
+            background-color: var(--highlight-color);
         }
         
         .profile-header h1 {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
@@ -78,41 +91,58 @@
         }
         
         .balance-card {
-            background: var(--card-bg);
+            background: var(--gradient);
             border-radius: var(--border-radius);
-            padding: 16px;
-            margin: 12px;
-            box-shadow: var(--shadow);
-            border-left: 4px solid var(--highlight-color);
+            padding: 24px;
+            margin: 16px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .balance-card::after {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
         }
         
         .balance-info {
-            margin-bottom: 16px;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
         }
         
         .balance-label {
             display: block;
-            font-size: 0.85rem;
-            color: var(--primary-dark);
-            margin-bottom: 4px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+            font-weight: 500;
         }
         
         .balance-amount {
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: 700;
+            letter-spacing: 0.5px;
         }
         
         .balance-actions {
             display: flex;
-            flex-direction: column;
             gap: 12px;
+            position: relative;
+            z-index: 1;
         }
         
         .btn-deposit, .btn-withdraw {
-            width: 100%;
+            flex: 1;
             padding: 14px;
             border: none;
-            border-radius: 8px;
+            border-radius: var(--border-radius-sm);
             font-weight: 600;
             cursor: pointer;
             display: flex;
@@ -120,59 +150,74 @@
             justify-content: center;
             gap: 8px;
             transition: all 0.2s;
-            box-shadow: var(--shadow);
             font-size: 0.95rem;
+            box-shadow: var(--shadow);
         }
         
         .btn-deposit {
-            background-color: var(--primary-color);
-            color: white;
+            background-color: white;
+            color: var(--primary-color);
         }
         
         .btn-deposit:active {
-            background-color: var(--primary-dark);
-            transform: scale(0.98);
+            transform: translateY(2px);
+            box-shadow: var(--shadow-hover);
         }
         
         .btn-withdraw {
-            background-color: var(--danger-color);
+            background-color: rgba(255, 255, 255, 0.2);
             color: white;
+            backdrop-filter: blur(5px);
         }
         
         .btn-withdraw:active {
-            background-color: #c62828;
-            transform: scale(0.98);
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(2px);
+            box-shadow: var(--shadow-hover);
         }
         
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 16px 12px 12px;
+            margin: 24px 16px 16px;
         }
         
         .section-header h2 {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 600;
-            color: var(--primary-dark);
+            color: var(--text-color);
+        }
+        
+        .view-all {
+            font-size: 0.85rem;
+            color: var(--primary-color);
+            font-weight: 500;
+            text-decoration: none;
         }
         
         .transactions-list {
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
-            margin: 0 12px 16px;
+            margin: 0 16px 24px;
             overflow: hidden;
             box-shadow: var(--shadow);
             max-height: 50vh;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
         
         .transaction-item {
             display: flex;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
+            padding: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             align-items: center;
+            transition: all 0.2s;
+        }
+
+        .transaction-item:active {
+            background-color: var(--highlight-color);
         }
 
         .transaction-item:last-child {
@@ -180,14 +225,14 @@
         }
         
         .transaction-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 12px;
-            background-color: rgba(129, 199, 132, 0.2);
+            margin-right: 16px;
+            background-color: var(--highlight-color);
             color: var(--primary-color);
             flex-shrink: 0;
         }
@@ -200,31 +245,31 @@
         .transaction-type {
             font-weight: 600;
             display: block;
-            margin-bottom: 2px;
-            font-size: 0.9rem;
+            margin-bottom: 4px;
+            font-size: 0.95rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
         .transaction-description {
-            font-size: 0.75rem;
-            color: #666;
+            font-size: 0.8rem;
+            color: var(--text-light);
             display: block;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
         .transaction-date {
-            font-size: 0.7rem;
-            color: #999;
+            font-size: 0.75rem;
+            color: var(--text-light);
         }
         
         .transaction-amount {
-            font-weight: 600;
-            font-size: 0.95rem;
+            font-weight: 700;
+            font-size: 1rem;
             margin-left: 8px;
             white-space: nowrap;
         }
@@ -234,20 +279,24 @@
         
         .no-transactions {
             text-align: center;
-            padding: 30px 16px;
-            color: #999;
+            padding: 40px 16px;
+            color: var(--text-light);
         }
         
         .no-transactions .material-icons {
-            font-size: 36px;
-            margin-bottom: 8px;
+            font-size: 48px;
+            margin-bottom: 12px;
             opacity: 0.3;
+        }
+
+        .no-transactions p {
+            font-size: 0.9rem;
         }
 
         .loading-spinner {
             text-align: center;
-            padding: 24px 16px;
-            color: #999;
+            padding: 32px 16px;
+            color: var(--text-light);
         }
 
         .material-icons.spin {
@@ -269,96 +318,106 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.6);
+            background-color: rgba(0,0,0,0.5);
             justify-content: center;
             align-items: center;
-            padding: 12px;
+            padding: 16px;
+            backdrop-filter: blur(5px);
         }
 
         .modal-content {
             background-color: var(--card-bg);
             margin: auto;
-            padding: 20px;
+            padding: 24px;
             border-radius: var(--border-radius);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
             animation: fadeIn 0.3s ease-in-out;
-            border-top: 4px solid var(--highlight-color);
+            border-top: 4px solid var(--primary-color);
             max-height: 90vh;
             overflow-y: auto;
         }
 
         .modal h3 {
-            color: var(--primary-dark);
-            margin-bottom: 16px;
-            font-size: 1.2rem;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
             text-align: center;
+            font-weight: 600;
         }
 
         .close-modal {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 16px;
+            right: 16px;
             font-size: 24px;
             cursor: pointer;
-            color: #666;
+            color: var(--text-light);
+            padding: 4px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .close-modal:active {
+            background-color: var(--highlight-color);
         }
 
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.6rem;
             font-weight: 500;
-            color: var(--primary-dark);
-            font-size: 0.85rem;
+            color: var(--text-color);
+            font-size: 0.9rem;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            padding: 14px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             font-size: 0.95rem;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
+            background-color: var(--card-bg);
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
             border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.2);
         }
 
         .deposit-instructions {
-            background: rgba(129, 199, 132, 0.1);
-            padding: 12px;
-            border-left: 4px solid var(--highlight-color);
-            margin-bottom: 1rem;
-            border-radius: 6px;
+            background: var(--highlight-color);
+            padding: 16px;
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 1.2rem;
             font-size: 0.85rem;
         }
 
         .deposit-instructions .info-text {
-            margin: 6px 0;
-            color: #555;
+            margin: 8px 0;
+            color: var(--text-color);
             display: flex;
             align-items: flex-start;
-            gap: 6px;
+            gap: 8px;
         }
 
         .btn-submit {
             background-color: var(--primary-color);
             color: white;
-            padding: 14px;
+            padding: 16px;
             width: 100%;
             border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
+            border-radius: var(--border-radius-sm);
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
@@ -368,33 +427,34 @@
 
         .btn-submit:active {
             background-color: var(--primary-dark);
-            transform: scale(0.98);
+            transform: translateY(2px);
+            box-shadow: var(--shadow-hover);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Alert styles */
         .alert {
             position: fixed;
-            bottom: 16px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 12px 20px;
-            border-radius: var(--border-radius);
+            padding: 14px 24px;
+            border-radius: var(--border-radius-sm);
             color: white;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            gap: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
             z-index: 1100;
             opacity: 1;
-            transition: opacity 0.3s ease;
-            max-width: calc(100% - 24px);
-            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            max-width: calc(100% - 32px);
+            font-size: 0.95rem;
         }
         
         .alert-success {
@@ -407,22 +467,17 @@
         
         .fade-out {
             opacity: 0;
+            transform: translateX(-50%) translateY(20px);
         }
 
         /* Responsive tweaks */
-        @media (min-width: 400px) {
-            body {
-                padding: 16px;
+        @media (max-width: 400px) {
+            .balance-actions {
+                flex-direction: column;
             }
             
-            .balance-actions {
-                flex-direction: row;
-            }
-        }
-
-        @media (min-width: 500px) {
-            .profile-container {
-                max-width: 480px;
+            .balance-card {
+                padding: 20px;
             }
         }
     </style>
@@ -443,23 +498,25 @@
                     <span class="balance-amount" id="current-balance">0.00 ETB</span>
                 </div>
                 <div class="balance-actions">
-                    <button class="btn-deposit">
-                        <span class="material-icons">add_circle</span> Deposit
+                    <button class="btn-deposit" onclick="showDepositModal()">
+                        <span class="material-icons">add</span> Deposit
                     </button>
                     <button class="btn-withdraw" onclick="showWithdrawModal()">
-                        <span class="material-icons">remove_circle</span> Withdraw
+                        <span class="material-icons">arrow_outward</span> Withdraw
                     </button>
                 </div>
             </div>
 
             <div class="transactions-section">
                 <div class="section-header">
-                    <h2>Transaction History</h2>
+                    <h2>Recent Transactions</h2>
+                    <a href="#" class="view-all">View All</a>
                 </div>
 
                 <div class="transactions-list" id="transactions-list">
                     <div class="loading-spinner">
-                        <span class="material-icons spin">autorenew</span> Loading transactions...
+                        <span class="material-icons spin">autorenew</span> 
+                        <p>Loading transactions...</p>
                     </div>
                 </div>
             </div>
@@ -481,6 +538,8 @@
                 <label for="deposit-method">Payment Method</label>
                 <select id="deposit-method">
                     <option value="telebirr">Telebirr</option>
+                    <option value="cbe">CBE Birr</option>
+                    <option value="bank">Bank Transfer</option>
                 </select>
             </div>
         
@@ -517,9 +576,14 @@
                 <select id="withdraw-method">
                     <option value="bank">Bank Transfer</option>
                     <option value="telebirr">Telebirr</option>
+                    <option value="cbe">CBE Birr</option>
                 </select>
             </div>
-            <button class="btn-submit" onclick="processWithdrawal()">Request Withdrawal</button>
+            <div class="form-group">
+                <label for="account-number">Account Number</label>
+                <input type="text" id="account-number" placeholder="Enter your account number">
+            </div>
+            <button class="btn-submit">Request Withdrawal</button>
         </div>
     </div>
 
