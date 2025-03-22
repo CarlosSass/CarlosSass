@@ -5,32 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Player Profile | Habesha Games</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4A6BFF; /* Vibrant blue */
-            --primary-dark: #3A56D4; /* Darker blue */
-            --accent-color: #F8FAFF;
+            --primary-color: #2E7D32; /* Dark green */
+            --primary-dark: #1B5E20; /* Darker green */
+            --primary-light: #81C784; /* Light green */
+            --accent-color: #f8faf8; /* Very light green background */
             --card-bg: #ffffff;
-            --text-color: #2D3748;
-            --text-light: #718096;
-            --btn-hover: #3A56D4;
-            --highlight-color: #EFF2FF; /* Light blue for accents */
+            --text-color: #333333;
+            --text-light: #666666;
+            --btn-hover: #1B5E20;
+            --highlight-color: #E8F5E9; /* Very light green for accents */
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
             --border-radius: 16px;
-            --border-radius-sm: 8px;
-            --danger-color: #FF4757;
-            --success-color: #2ED573;
-            --warning-color: #FFA502;
-            --gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            --border-radius-sm: 10px;
+            --danger-color: #e53935;
+            --success-color: #43a047;
+            --warning-color: #fb8c00;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Poppins', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
         
@@ -56,18 +56,18 @@
             display: flex;
             align-items: center;
             padding: 20px;
-            background: var(--card-bg);
-            color: var(--text-color);
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            color: white;
             position: sticky;
             top: 0;
             z-index: 10;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         #back-btn {
             background: none;
             border: none;
-            color: var(--text-color);
+            color: white;
             cursor: pointer;
             margin-right: 12px;
             padding: 6px;
@@ -79,11 +79,11 @@
         }
         
         #back-btn:active {
-            background-color: var(--highlight-color);
+            background-color: rgba(255,255,255,0.2);
         }
         
         .profile-header h1 {
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
@@ -91,11 +91,12 @@
         }
         
         .balance-card {
-            background: var(--gradient);
+            background: var(--card-bg);
             border-radius: var(--border-radius);
-            padding: 24px;
+            padding: 20px;
             margin: 16px;
-            color: white;
+            box-shadow: var(--shadow);
+            border-top: 4px solid var(--primary-light);
             position: relative;
             overflow: hidden;
         }
@@ -105,14 +106,14 @@
             position: absolute;
             top: -50px;
             right: -50px;
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
+            width: 120px;
+            height: 120px;
+            background-color: rgba(129, 199, 132, 0.1);
             border-radius: 50%;
         }
         
         .balance-info {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             position: relative;
             z-index: 1;
         }
@@ -120,15 +121,15 @@
         .balance-label {
             display: block;
             font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 8px;
+            color: var(--primary-dark);
+            margin-bottom: 6px;
             font-weight: 500;
         }
         
         .balance-amount {
-            font-size: 2rem;
+            font-size: 1.9rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            color: var(--primary-dark);
         }
         
         .balance-actions {
@@ -155,23 +156,24 @@
         }
         
         .btn-deposit {
-            background-color: white;
-            color: var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
         }
         
         .btn-deposit:active {
+            background-color: var(--primary-dark);
             transform: translateY(2px);
             box-shadow: var(--shadow-hover);
         }
         
         .btn-withdraw {
-            background-color: rgba(255, 255, 255, 0.2);
-            color: white;
-            backdrop-filter: blur(5px);
+            background-color: white;
+            color: var(--danger-color);
+            border: 1px solid rgba(229, 57, 53, 0.3);
         }
         
         .btn-withdraw:active {
-            background-color: rgba(255, 255, 255, 0.3);
+            background-color: rgba(229, 57, 53, 0.05);
             transform: translateY(2px);
             box-shadow: var(--shadow-hover);
         }
@@ -186,7 +188,7 @@
         .section-header h2 {
             font-size: 1.15rem;
             font-weight: 600;
-            color: var(--text-color);
+            color: var(--primary-dark);
         }
         
         .view-all {
@@ -333,17 +335,17 @@
             width: 100%;
             max-width: 420px;
             position: relative;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             animation: fadeIn 0.3s ease-in-out;
-            border-top: 4px solid var(--primary-color);
+            border-top: 4px solid var(--primary-light);
             max-height: 90vh;
             overflow-y: auto;
         }
 
         .modal h3 {
-            color: var(--text-color);
+            color: var(--primary-dark);
             margin-bottom: 20px;
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             text-align: center;
             font-weight: 600;
         }
@@ -372,7 +374,7 @@
             display: block;
             margin-bottom: 0.6rem;
             font-weight: 500;
-            color: var(--text-color);
+            color: var(--primary-dark);
             font-size: 0.9rem;
         }
 
@@ -391,7 +393,7 @@
         .form-group select:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.2);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
         }
 
         .deposit-instructions {
@@ -477,7 +479,11 @@
             }
             
             .balance-card {
-                padding: 20px;
+                padding: 18px;
+            }
+            
+            body {
+                padding: 12px;
             }
         }
     </style>
@@ -509,7 +515,7 @@
 
             <div class="transactions-section">
                 <div class="section-header">
-                    <h2>Recent Transactions</h2>
+                    <h2>Transaction History</h2>
                     <a href="#" class="view-all">View All</a>
                 </div>
 
