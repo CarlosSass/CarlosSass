@@ -559,56 +559,57 @@
             </div>
         </header>
 
-        <div class="players-section">
-            <div class="player-card creator">
-                <div class="player-avatar" id="creator-avatar">C</div>
-                <div class="player-info">
-                    <h3 id="creator-username">Creator</h3>
-                    <div class="player-status" id="creator-status">Waiting...</div>
-                </div>
-            </div>
 
-            <div class="vs-circle">VS</div>
-
-            <div class="player-card opponent">
-                <div class="player-avatar" id="opponent-avatar">O</div>
-                <div class="player-info">
-                    <h3 id="opponent-username">Opponent</h3>
-                    <div class="player-status" id="opponent-status">Waiting...</div>
-                </div>
-            </div>
-        </div>
 
         <div class="game-status" id="game-status-message">
             Game is starting...
         </div>
 
         <div class="game-board">
-            <div class="guess-input-container">
+          <div class="guess-history">
+            <table id="guess-history-table">
+                <thead>
+                    <tr>
+                        <th>Guess</th>
+                        <th>Number</th>
+                        <th>Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled dynamically -->
+                </tbody>
+            </table>
+            <div class="empty-state" id="history-empty-state">
+                <span class="material-icons">info</span>
+                <p>Your guesses will appear here</p>
+            </div>
+        </div> 
+          <div class="guess-input-container">
                 <input type="text" id="guess-input" placeholder="Enter 4-digit number" maxlength="4" inputmode="numeric" pattern="\d*">
                 <button id="submit-guess-btn">Submit Guess</button>
             </div>
 
-            <div class="guess-history">
-                <table id="guess-history-table">
-                    <thead>
-                        <tr>
-                            <th>Guess</th>
-                            <th>Number</th>
-                            <th>Order</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Filled dynamically -->
-                    </tbody>
-                </table>
-                <div class="empty-state" id="history-empty-state">
-                    <span class="material-icons">info</span>
-                    <p>Your guesses will appear here</p>
-                </div>
-            </div>
-        </div>
 
+        </div>
+        <div class="players-section">
+          <div class="player-card creator">
+              <div class="player-avatar" id="creator-avatar">C</div>
+              <div class="player-info">
+                  <h3 id="creator-username">Creator</h3>
+                  <div class="player-status" id="creator-status">Waiting...</div>
+              </div>
+          </div>
+
+          <div class="vs-circle">VS</div>
+
+          <div class="player-card opponent">
+              <div class="player-avatar" id="opponent-avatar">O</div>
+              <div class="player-info">
+                  <h3 id="opponent-username">Opponent</h3>
+                  <div class="player-status" id="opponent-status">Waiting...</div>
+              </div>
+          </div>
+      </div>
         <div class="game-actions">
             <button id="leave-game-btn" class="danger-btn">
                 <span class="material-icons">exit_to_app</span>
