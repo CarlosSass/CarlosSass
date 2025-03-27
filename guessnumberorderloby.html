@@ -2,19 +2,385 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guess Number Order Lobby</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="loby.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Guess Number Order Lobby | Habesha Games</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2E7D32; /* Dark green */
+            --primary-dark: #1B5E20; /* Darker green */
+            --accent-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --btn-hover: #1B5E20;
+            --highlight-color: #81C784; /* Light green for accents */
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --danger-color: #e53935;
+            --success-color: #43a047;
+            --warning-color: #fb8c00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            color: white;
+            padding: 16px;
+            position: relative;
+        }
+
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #back-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 16px;
+            border-radius: 24px;
+            width: fit-content;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: white;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .balance {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .material-icons {
+            font-size: 18px;
+        }
+
+        section {
+            background-color: var(--card-bg);
+            margin: 16px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary-dark);
+        }
+
+        .badge {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 4px;
+        }
+
+        .refresh-btn:hover {
+            background-color: rgba(46, 125, 50, 0.1);
+        }
+
+        .section-content {
+            padding: 16px;
+        }
+
+        .bet-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .bet-btn {
+            background-color: white;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .bet-btn:hover, .bet-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .private-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 16px 0;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .create-game-btn, .join-private-btn {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            font-size: 1rem;
+        }
+
+        .create-game-btn:hover, .join-private-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .status-message {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .games-list {
+            list-style: none;
+        }
+
+        .game-item {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .game-item:last-child {
+            border-bottom: none;
+        }
+
+        .game-info {
+            flex: 1;
+        }
+
+        .game-creator {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .game-bet {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.9rem;
+            color: var(--primary-dark);
+        }
+
+        .join-game-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 10px 16px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .join-game-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .no-games {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+
+        .join-private-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .private-game-input {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+
+        .private-game-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+        }
+
+        @media (min-width: 600px) {
+            .container {
+                max-width: 600px;
+                margin: 16px auto;
+            }
+
+            .header-content {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .join-private-form {
+                flex-direction: row;
+            }
+
+            .private-game-input {
+                flex: 1;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
                 <button id="back-btn" class="icon-btn" title="Go back">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">arrow_back</span>
                 </button>
     
                 <h1>
@@ -25,9 +391,7 @@
                     <div class="user-info">
                         <div class="user-name" id="username">Username</div>
                         <div class="balance" id="balance">
-                            <svg class="coin-icon" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                            </svg>
+                            <span class="material-icons">attach_money</span>
                             <span id="balance-amount">1,000 ETB</span>
                         </div>
                     </div>
@@ -38,14 +402,11 @@
         <section id="create-game-section">
             <div class="section-header">
                 <h2>
-                    <svg class="section-icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">add</span>
                     Create New Game
                 </h2>
             </div>
             <div class="section-content">
-                
                 <div class="bet-buttons" id="create-bet-buttons">
                     <!-- Bet buttons will be generated by JavaScript -->
                 </div>
@@ -57,9 +418,7 @@
                     <span>Private Game</span>
                 </div>
                 <button class="create-game-btn" id="create-game-btn">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">add</span>
                     Create Game
                 </button>
                 <p id="create-game-status" class="status-message"></p>
@@ -69,16 +428,12 @@
         <section id="available-games-section">
             <div class="section-header">
                 <h2>
-                    <svg class="section-icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">people</span>
                     Available Games
                     <span class="badge" id="games-count">0</span>
                 </h2>
                 <button class="refresh-btn" id="refresh-games-btn">
-                    <svg class="refresh-icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">refresh</span>
                     Refresh
                 </button>
             </div>
@@ -88,12 +443,11 @@
                 </ul>
             </div>
         </section>
+
         <section id="join-private-section">
             <div class="section-header">
                 <h2>
-                    <svg class="section-icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
-                    </svg>
+                    <span class="material-icons">lock</span>
                     Join Private Game
                 </h2>
             </div>
@@ -101,10 +455,8 @@
                 <div class="join-private-form">
                     <input type="text" id="private-game-code" placeholder="Enter game code" class="private-game-input">
                     <button class="join-private-btn" id="join-private-btn">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
-                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
-                        </svg>
-                        Join 
+                        <span class="material-icons">login</span>
+                        Join
                     </button>
                 </div>
                 <p id="join-private-status" class="status-message"></p>
