@@ -2,12 +2,12 @@
     --tg-theme-bg-color: #ffffff;
     --tg-theme-text-color: #000000;
     --tg-theme-hint-color: #707579;
-    --tg-theme-link-color: #3390ec;
-    --tg-theme-button-color: #3390ec;
+    --tg-theme-link-color: #2e7d32;
+    --tg-theme-button-color: #4caf50;
     --tg-theme-button-text-color: #ffffff;
-    --tg-theme-secondary-bg-color: #f4f4f5;
-    --tg-theme-accent-color: #3390ec;
-    --tg-theme-section-header-color: #f4f4f5;
+    --tg-theme-secondary-bg-color: #f1f8e9;
+    --tg-theme-accent-color: #4caf50;
+    --tg-theme-section-header-color: #e8f5e9;
 }
 
 * {
@@ -459,11 +459,11 @@ h2 {
 }
 
 input:checked + .slider {
-    background-color: #2196F3;
+    background-color: var(--tg-theme-button-color);
 }
 
 input:focus + .slider {
-    box-shadow: 0 0 1px #2196F3;
+    box-shadow: 0 0 1px var(--tg-theme-button-color);
 }
 
 input:checked + .slider:before {
@@ -504,7 +504,7 @@ input:checked + .slider:before {
 .private-game-input:focus {
     outline: none;
     border-color: var(--tg-theme-button-color);
-    box-shadow: 0 0 0 2px rgba(51, 144, 236, 0.2);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
 .join-private-btn {
@@ -590,17 +590,16 @@ input:checked + .slider:before {
 }
 
 input:checked ~ .toggle-text {
-    background-color: rgba(51, 144, 236, 0.1);
+    background-color: rgba(76, 175, 80, 0.1);
     color: var(--tg-theme-button-color);
 }
 
 input:checked ~ .toggle-text::after {
     content: "ON";
-    color: #4CAF50;
+    color: #2e7d32;
 }
 /* Black back button styles */
 #back-btn {
-
     left: 20px;
     top: 20px;
     background: none;
