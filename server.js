@@ -11,162 +11,7 @@ const cheatFlags = new Map(); // gameCode -> cheat counts
 // Add these at the top with other requires
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-//const { Checkers } = require('checkers.js');
-class Checkers {
-  constructor(state = 'start') {
-    if (state === 'start') {
-      this.board = this.createInitialBoard();
-      this.whiteTurn = true;
-      this.gameOver = false;
-      this.winner = null;
-    } else {
-      // Parse from saved state
-      const parsed = JSON.parse(state);
-      this.board = parsed.board;
-      this.whiteTurn = parsed.whiteTurn;
-      this.gameOver = parsed.gameOver;
-      this.winner = parsed.winner;
-    }
-  }
 
-  createInitialBoard() {
-    const board = Array(8).fill().map(() => Array(8).fill(null));
-    
-    // Set up black pieces (top 3 rows)
-    for (let row = 0; row < 3; row++) {
-      for (let col = (row % 2 === 0) ? 1 : 0; col < 8; col += 2) {
-        board[row][col] = { type: 'black', king: false };
-      }
-    }
-    
-    // Set up white pieces (bottom 3 rows)
-    for (let row = 5; row < 8; row++) {
-      for (let col = (row % 2 === 0) ? 1 : 0; col < 8; col += 2) {
-        board[row][col] = { type: 'white', king: false };
-      }
-    }
-    
-    return board;
-  }
-
-  getState() {
-    return JSON.stringify({
-      board: this.board,
-      whiteTurn: this.whiteTurn,
-      gameOver: this.gameOver,
-      winner: this.winner
-    });
-  }
-
-  isWhiteTurn() {
-    return this.whiteTurn;
-  }
-
-  move(from, to) {
-    const [fromX, fromY] = this.parsePosition(from);
-    const [toX, toY] = this.parsePosition(to);
-    const piece = this.board[fromX][fromY];
-
-    if (!piece) throw new Error('No piece at from position');
-    if (this.board[toX][toY]) throw new Error('To position is occupied');
-    if (piece.type === 'white' && !piece.king && toX >= fromX) throw new Error('White pieces can only move up');
-    if (piece.type === 'black' && !piece.king && toX <= fromX) throw new Error('Black pieces can only move down');
-
-    const dx = toX - fromX;
-    const dy = toY - fromY;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    // Check if move is valid
-    if (absDx !== absDy) throw new Error('Invalid diagonal move');
-    if (absDx > 2) throw new Error('Cannot move more than 2 spaces');
-    
-    let captured = null;
-    if (absDx === 2) { // Jump move
-      const midX = fromX + dx/2;
-      const midY = fromY + dy/2;
-      const midPiece = this.board[midX][midY];
-      
-      if (!midPiece || midPiece.type === piece.type) {
-        throw new Error('No opponent piece to capture');
-      }
-      
-      captured = { position: [midX, midY], piece: midPiece };
-      this.board[midX][midY] = null;
-    }
-
-    // Move the piece
-    this.board[fromX][fromY] = null;
-    this.board[toX][toY] = piece;
-
-    // Check for promotion to king
-    if ((piece.type === 'white' && toX === 0) || 
-        (piece.type === 'black' && toX === 7)) {
-      piece.king = true;
-    }
-
-    // Check for win condition
-    this.checkGameOver();
-
-    // Switch turns if no further jumps available
-    if (!this.canContinueJump(toX, toY)) {
-      this.whiteTurn = !this.whiteTurn;
-    }
-
-    return { from, to, captured, promoted: piece.king };
-  }
-
-  parsePosition(pos) {
-    if (pos.length !== 2) throw new Error('Invalid position format');
-    const col = pos.charCodeAt(0) - 'a'.charCodeAt(0);
-    const row = 8 - parseInt(pos[1]);
-    if (row < 0 || row >= 8 || col < 0 || col >= 8) throw new Error('Position out of bounds');
-    return [row, col];
-  }
-
-  canContinueJump(x, y) {
-    // Check if this piece can make another jump
-    // Implementation would check adjacent squares for captures
-    return false; // Simplified for now
-  }
-
-  checkGameOver() {
-    // Check if one side has no pieces left
-    let whiteCount = 0;
-    let blackCount = 0;
-    
-    for (let row of this.board) {
-      for (let piece of row) {
-        if (piece) {
-          if (piece.type === 'white') whiteCount++;
-          else blackCount++;
-        }
-      }
-    }
-    
-    if (whiteCount === 0) {
-      this.gameOver = true;
-      this.winner = 'black';
-    } else if (blackCount === 0) {
-      this.gameOver = true;
-      this.winner = 'white';
-    }
-  }
-
-  isGameOver() {
-    return this.gameOver;
-  }
-
-  getWinner() {
-    return this.winner;
-  }
-
-  getWinReason() {
-    return this.gameOver ? 'capture' : null;
-  }
-}
-// Add game type tracking
-const gameTypes = new Map(); // gameCode -> 'chess' | 'checkers'
 
 // Anti-cheat configuration
 const ANTI_CHEAT_CONFIG = {
@@ -291,11 +136,9 @@ io.on('connection', (socket) => {
     // Generate device fingerprint
     const fingerprint = generateFingerprint(socket.handshake.headers);
     socket.fingerprint = fingerprint;
-   
-    socket.on('joinGame', async (gameCode, gameType) => {  // Add gameType parameter
+    
+    socket.on('joinGame', async (gameCode) => {
       try {
-        gameTypes.set(gameCode, gameType);  // Now properly set
-
         // Store fingerprint for this player
         if (!deviceFingerprints.has(gameCode)) {
           deviceFingerprints.set(gameCode, { white: null, black: null });
@@ -803,225 +646,162 @@ async function getOrCreateGame(gameCode) {
 
 async function processMove(gameCode, from, to, player, promotion) {
   try {
-
-
     const game = activeGames.get(gameCode);
     if (!game) throw new Error('Game not found');
 
+    const chess = new Chess(game.fen);
+    
+     // Validate promotion piece if this is a promotion move
+     const movingPiece = chess.get(from);
+     const isPromotion = movingPiece?.type === 'p' && 
+                        ((player === 'white' && to[1] === '8') || 
+                         (player === 'black' && to[1] === '1'));
+ 
 
-    
-    const gameType = gameTypes.get(gameCode) || 'chess';
-    
-    if (gameType === 'chess') {
-        const chess = new Chess(game.fen);
-    
-        // Validate promotion piece if this is a promotion move
-        const movingPiece = chess.get(from);
-        const isPromotion = movingPiece?.type === 'p' && 
-                           ((player === 'white' && to[1] === '8') || 
-                            (player === 'black' && to[1] === '1'));
-    
-   
-       // Then use it in the move
-       const move = chess.move({ 
-         from, 
-         to, 
-         promotion: isPromotion ? promotion : undefined
-       });
-       // ... rest of the function
-   
-       if (!move) {
-         // Track failed move attempts
-         const socketId = player === 'white' ? gameRooms.get(gameCode)?.white : gameRooms.get(gameCode)?.black;
-         if (socketId) {
-           const behavior = playerBehavior.get(socketId) || {};
-           behavior.impossibleMoves = (behavior.impossibleMoves || 0) + 1;
-           
-           if (behavior.impossibleMoves >= ANTI_CHEAT_CONFIG.IMPOSSIBLE_MOVE_PENALTY) {
-             await handleCheatingViolation(gameCode, player, 'invalid_moves');
-           }
-         }
-         
-         throw new Error('Invalid move');
-       }
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-       // Handle bet deduction on first move (if applicable)
-       if ((player === 'white' || player === 'black') && (!game.moves || game.moves.length === (player === 'black' ? 1 : 0))) {
-         try {
-           const phone = player === 'white' ? game.white_phone : game.black_phone;
-           if (phone && game.bet) {
-             // Updated to include transaction tracking
-             const newBalance = await updatePlayerBalance(
-               phone,
-               -game.bet,
-               'bet',
-               gameCode,
-               `Game bet for match ${gameCode}`
-             );
-             
-             const room = gameRooms.get(gameCode);
-             const socketId = player === 'white' ? room?.white : room?.black;
-             
-             if (socketId) {
-               io.to(socketId).emit('balanceUpdate', {
-                 amount: -game.bet,
-                 newBalance: newBalance,
-                 message: `$${game.bet} deducted for game bet`,
-                 transaction: {
-                   type: 'bet',
-                   gameId: gameCode,
-                   timestamp: new Date().toISOString()
-                 }
-               });
-             }
-           }
-         } catch (error) {
-           console.error('Failed to deduct bet:', error);
-           throw new Error('Failed to process bet. Please try again.');
-         }
-       }
-   
-       // Validate turn
-       if ((chess.turn() === 'w' && player !== 'white') ||
-           (chess.turn() === 'b' && player !== 'black')) {
-           throw new Error("It's not your turn");
-       }
-   
-   
-       const validPromotions = ['q', 'r', 'b', 'n'];
-       if (isPromotion && (!promotion || !validPromotions.includes(promotion))) {
-         throw new Error('Invalid promotion piece. Choose q (queen), r (rook), b (bishop), or n (knight)');
-       }
-   
-       // Execute move
-   
-       if (!move) throw new Error('Invalid move');
-   
-       // Update move history
-       const moves = Array.isArray(game.moves) ? game.moves : [];
-       moves.push({ 
-         from, 
-         to, 
-         player,
-         promotion: isPromotion ? promotion : null,
-         timestamp: new Date().toISOString() 
-       });
-   
-       // Timer logic
-       if (moves.length === 1 && !gameTimers[gameCode]) {
-         startGameTimer(gameCode, game.time_control || 600);
-       } else if (gameTimers[gameCode]) {
-         gameTimers[gameCode].currentTurn = chess.turn() === 'w' ? 'white' : 'black';
-         gameTimers[gameCode].lastUpdate = Date.now();
-       }
-   
-       // Update game state
-       const updatedState = {
-         fen: chess.fen(),
-         turn: chess.turn() === 'w' ? 'white' : 'black',
-         moves,
-         white_time: gameTimers[gameCode]?.whiteTime || game.white_time,
-         black_time: gameTimers[gameCode]?.blackTime || game.black_time,
-         updated_at: new Date().toISOString(),
-         draw_offer: null
-       };
-   
-       // Save to database
-       const { data: updatedGame, error } = await supabase
-         .from('chess_games')
-         .update(updatedState)
-         .eq('code', gameCode)
-         .select()
-         .single();
-   
-       if (error) throw error;
-   
-       activeGames.set(gameCode, updatedGame);
-   
-       // Prepare response with transaction info if bet was deducted
-       const response = {
-         success: true,
-         gameState: updatedGame,
-         move,
-         whiteTime: gameTimers[gameCode]?.whiteTime,
-         blackTime: gameTimers[gameCode]?.blackTime
-       };
-   
-       // Add bet information if this was the first move
-       if ((player === 'white' && moves.length === 1) || (player === 'black' && moves.length === 2)) {
-         response.betDeducted = {
-           player,
-           amount: game.bet,
-           transactionType: 'bet'
-         };
-       }
-       return response;
-    } 
-    else if (gameType === 'checkers') {
-      const checkers = new Checkers(game.state);
-      
-      // Validate turn
-      const currentTurn = checkers.isWhiteTurn() ? 'white' : 'black';
-      if (currentTurn !== player) {
-        throw new Error("It's not your turn");
+    // Then use it in the move
+    const move = chess.move({ 
+      from, 
+      to, 
+      promotion: isPromotion ? promotion : undefined
+    });
+    // ... rest of the function
+
+    if (!move) {
+      // Track failed move attempts
+      const socketId = player === 'white' ? gameRooms.get(gameCode)?.white : gameRooms.get(gameCode)?.black;
+      if (socketId) {
+        const behavior = playerBehavior.get(socketId) || {};
+        behavior.impossibleMoves = (behavior.impossibleMoves || 0) + 1;
+        
+        if (behavior.impossibleMoves >= ANTI_CHEAT_CONFIG.IMPOSSIBLE_MOVE_PENALTY) {
+          await handleCheatingViolation(gameCode, player, 'invalid_moves');
+        }
       }
       
-      // Execute move
-      const move = checkers.move(from, to);
-      
-      // Update move history
-      const moves = Array.isArray(game.moves) ? game.moves : [];
-      moves.push({ 
-        from, 
-        to, 
+      throw new Error('Invalid move');
+    }
+
+
+
+
+
+
+
+
+
+
+    // Handle bet deduction on first move (if applicable)
+    if ((player === 'white' || player === 'black') && (!game.moves || game.moves.length === (player === 'black' ? 1 : 0))) {
+      try {
+        const phone = player === 'white' ? game.white_phone : game.black_phone;
+        if (phone && game.bet) {
+          // Updated to include transaction tracking
+          const newBalance = await updatePlayerBalance(
+            phone,
+            -game.bet,
+            'bet',
+            gameCode,
+            `Game bet for match ${gameCode}`
+          );
+          
+          const room = gameRooms.get(gameCode);
+          const socketId = player === 'white' ? room?.white : room?.black;
+          
+          if (socketId) {
+            io.to(socketId).emit('balanceUpdate', {
+              amount: -game.bet,
+              newBalance: newBalance,
+              message: `$${game.bet} deducted for game bet`,
+              transaction: {
+                type: 'bet',
+                gameId: gameCode,
+                timestamp: new Date().toISOString()
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to deduct bet:', error);
+        throw new Error('Failed to process bet. Please try again.');
+      }
+    }
+
+    // Validate turn
+    if ((chess.turn() === 'w' && player !== 'white') ||
+        (chess.turn() === 'b' && player !== 'black')) {
+        throw new Error("It's not your turn");
+    }
+
+
+    const validPromotions = ['q', 'r', 'b', 'n'];
+    if (isPromotion && (!promotion || !validPromotions.includes(promotion))) {
+      throw new Error('Invalid promotion piece. Choose q (queen), r (rook), b (bishop), or n (knight)');
+    }
+
+    // Execute move
+
+    if (!move) throw new Error('Invalid move');
+
+    // Update move history
+    const moves = Array.isArray(game.moves) ? game.moves : [];
+    moves.push({ 
+      from, 
+      to, 
+      player,
+      promotion: isPromotion ? promotion : null,
+      timestamp: new Date().toISOString() 
+    });
+
+    // Timer logic
+    if (moves.length === 1 && !gameTimers[gameCode]) {
+      startGameTimer(gameCode, game.time_control || 600);
+    } else if (gameTimers[gameCode]) {
+      gameTimers[gameCode].currentTurn = chess.turn() === 'w' ? 'white' : 'black';
+      gameTimers[gameCode].lastUpdate = Date.now();
+    }
+
+    // Update game state
+    const updatedState = {
+      fen: chess.fen(),
+      turn: chess.turn() === 'w' ? 'white' : 'black',
+      moves,
+      white_time: gameTimers[gameCode]?.whiteTime || game.white_time,
+      black_time: gameTimers[gameCode]?.blackTime || game.black_time,
+      updated_at: new Date().toISOString(),
+      draw_offer: null
+    };
+
+    // Save to database
+    const { data: updatedGame, error } = await supabase
+      .from('chess_games')
+      .update(updatedState)
+      .eq('code', gameCode)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    activeGames.set(gameCode, updatedGame);
+
+    // Prepare response with transaction info if bet was deducted
+    const response = {
+      success: true,
+      gameState: updatedGame,
+      move,
+      whiteTime: gameTimers[gameCode]?.whiteTime,
+      blackTime: gameTimers[gameCode]?.blackTime
+    };
+
+    // Add bet information if this was the first move
+    if ((player === 'white' && moves.length === 1) || (player === 'black' && moves.length === 2)) {
+      response.betDeducted = {
         player,
-        timestamp: new Date().toISOString(),
-        captured: move.captured,
-        promoted: move.promoted
-      });
-
-      // Update game state
-      const updatedState = {
-        state: checkers.getState(),
-        turn: checkers.isWhiteTurn() ? 'white' : 'black',
-        moves,
-        white_time: gameTimers[gameCode]?.whiteTime || game.white_time,
-        black_time: gameTimers[gameCode]?.blackTime || game.black_time,
-        updated_at: new Date().toISOString(),
-        draw_offer: null
-      };
-
-      // Save to database
-      const { data: updatedGame, error } = await supabase
-        .from('games')
-        .update(updatedState)
-        .eq('code', gameCode)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      activeGames.set(gameCode, updatedGame);
-
-      return {
-        success: true,
-        gameState: updatedGame,
-        move,
-        whiteTime: gameTimers[gameCode]?.whiteTime,
-        blackTime: gameTimers[gameCode]?.blackTime
+        amount: game.bet,
+        transactionType: 'bet'
       };
     }
 
-   
+    return response;
 
   } catch (error) {
     console.error('Move processing error:', error);
@@ -1431,59 +1211,40 @@ function startGameTimer(gameCode, initialTime = 100) {
   }
 
 function checkGameEndConditions(gameCode, gameState) {
-    if (gameType === 'chess') {
-        // Existing chess logic
-        const chess = new Chess(gameState.fen);
-        if (chess.isGameOver()) {
-            let result, winner;
-            
-            if (chess.isCheckmate()) {
-              winner = chess.turn() === 'w' ? 'black' : 'white';
-              result = 'checkmate';
-            } else if (chess.isDraw()) {
-              winner = null;
-              result = 'draw';
-            } else if (chess.isStalemate()) {
-              winner = null;
-              result = 'stalemate';
-            } else if (chess.isThreefoldRepetition()) {
-              winner = null;
-              result = 'repetition';
-            } else if (chess.isInsufficientMaterial()) {
-              winner = null;
-              result = 'insufficient material';
-            }
-        
-            if (result) {
-              console.log(`Game ${gameCode} over by ${result} - stopping timer`);
-              // Immediately stop timer
-              if (gameTimers[gameCode]) {
-                clearInterval(gameTimers[gameCode].interval);
-                delete gameTimers[gameCode];
-              }
-              
-              endGame(gameCode, winner, result);
-              io.to(gameCode).emit('gameOver', { winner, reason: result });
-            }
-          }
-      } 
-      else if (gameType === 'checkers') {
-        const checkers = new Checkers(gameState.state);
-        if (checkers.isGameOver()) {
-          const winner = checkers.getWinner();
-          const reason = checkers.getWinReason();
-          
-          // Stop timer
-          if (gameTimers[gameCode]) {
-            clearInterval(gameTimers[gameCode].interval);
-            delete gameTimers[gameCode];
-          }
-          
-          endGame(gameCode, winner, reason);
-          io.to(gameCode).emit('gameOver', { winner, reason });
-        }
+    const chess = new Chess(gameState.fen);
+    
+    if (chess.isGameOver()) {
+      let result, winner;
+      
+      if (chess.isCheckmate()) {
+        winner = chess.turn() === 'w' ? 'black' : 'white';
+        result = 'checkmate';
+      } else if (chess.isDraw()) {
+        winner = null;
+        result = 'draw';
+      } else if (chess.isStalemate()) {
+        winner = null;
+        result = 'stalemate';
+      } else if (chess.isThreefoldRepetition()) {
+        winner = null;
+        result = 'repetition';
+      } else if (chess.isInsufficientMaterial()) {
+        winner = null;
+        result = 'insufficient material';
       }
-   
+  
+      if (result) {
+        console.log(`Game ${gameCode} over by ${result} - stopping timer`);
+        // Immediately stop timer
+        if (gameTimers[gameCode]) {
+          clearInterval(gameTimers[gameCode].interval);
+          delete gameTimers[gameCode];
+        }
+        
+        endGame(gameCode, winner, result);
+        io.to(gameCode).emit('gameOver', { winner, reason: result });
+      }
+    }
   }
   
 
@@ -1519,53 +1280,6 @@ async function updateHouseBalance(amount) {
   }
 }
 
-// Add new API endpoint for game creation
-app.post('/api/create-game', async (req, res) => {
-    try {
-      const { gameType = 'chess', bet = 0, timeControl = 600 } = req.body;
-      
-      // Generate unique game code
-      const gameCode = crypto.randomBytes(4).toString('hex');
-      
-      const newGame = {
-        code: gameCode,
-        game_type: gameType,
-        status: 'waiting',
-        bet,
-        time_control: timeControl,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-  
-      // Store game type
-      gameTypes.set(gameCode, gameType);
-  
-      // Initialize appropriate game state
-      if (gameType === 'chess') {
-        newGame.fen = 'start';
-      } else if (gameType === 'checkers') {
-        newGame.state = 'start'; // Initial checkers state
-      }
-  
-      const { data: createdGame, error } = await supabase
-        .from('chess_games') // or separate table
-        .insert(newGame)
-        .select()
-        .single();
-  
-      if (error) throw error;
-  
-      res.json({ 
-        success: true, 
-        game: createdGame,
-        gameType
-      });
-  
-    } catch (error) {
-      console.error('Game creation error:', error);
-      res.status(400).json({ error: error.message });
-    }
-  });
 // REST API Endpoints
 app.get('/api/game-by-code/:code', async (req, res) => {
   try {
@@ -1955,6 +1669,15 @@ app.post('/api/accept-draw', async (req, res) => {
 });
 
 
+
+
+
+
+
+
+
+
+
 // Add rate limiting middleware
 const moveLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -2161,46 +1884,26 @@ async function handleCheatingViolation(gameCode, player, reason) {
 }
 
 
-// King promotion in checkers
-socket.on('promote', async ({ gameCode, square }) => {
-    try {
-      const game = activeGames.get(gameCode);
-      if (!game || gameTypes.get(gameCode) !== 'checkers') {
-        throw new Error('Not a checkers game');
-      }
-      
-      const checkers = new Checkers(game.state);
-      checkers.promote(square); // Promote to king
-      
-      // Update game state and notify players...
-      
-    } catch (error) {
-      // Error handling
-    }
-  });
-  
-  // Multiple jumps
-  socket.on('continueJump', async ({ gameCode, from, to }) => {
-    try {
-      const game = activeGames.get(gameCode);
-      if (!game || gameTypes.get(gameCode) !== 'checkers') {
-        throw new Error('Not a checkers game');
-      }
-      
-      const checkers = new Checkers(game.state);
-      const move = checkers.move(from, to);
-      
-      if (move.captured && checkers.canContinueJump()) {
-        // Notify player they must continue jumping
-        io.to(socket.id).emit('mustContinueJump', {
-          from: move.to,
-          possibleJumps: checkers.getPossibleJumps()
-        });
-      }
-      
-      // Update game state...
-      
-    } catch (error) {
-      // Error handling
-    }
-  });
+
+// Add these tables to your Supabase database:
+
+/*
+Table: cheat_detection
+Columns:
+- id (uuid, primary key)
+- game_code (text)
+- player (text)
+- reason (text)
+- detected_at (timestamp)
+- action_taken (text)
+
+Table: player_profiles
+Columns:
+- player_id (text, primary key)
+- games_played (int)
+- cheat_count (int)
+- last_cheat_detected (timestamp)
+- trust_score (float)
+- created_at (timestamp)
+- updated_at (timestamp)
+*/
