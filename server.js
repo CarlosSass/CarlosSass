@@ -4,24 +4,7 @@ const { Server } = require('socket.io');
 const { Chess } = require('chess.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-// Anti-cheat tracking
-const playerBehavior = new Map(); // socketId -> behavior data
-const deviceFingerprints = new Map(); // gameCode -> fingerprints
-const cheatFlags = new Map(); // gameCode -> cheat counts
-// Add these at the top with other requires
-const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
 
-
-// Anti-cheat configuration
-const ANTI_CHEAT_CONFIG = {
-  MOVE_TIME_THRESHOLD: 2000,
-  IMPOSSIBLE_MOVE_PENALTY: 3,
-  ENGINE_MOVE_PATTERN_WINDOW: 5,
-  MOVE_RATE_LIMIT: 15,
-  FINGERPRINT_HEADERS: ['user-agent', 'accept-language', 'connection', 'sec-ch-ua'],
-  MIN_HUMAN_MOVE_TIME: 300
-};
 // Error handling
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -133,50 +116,16 @@ const playerConnections = new Map(); // gameCode -> { white: socketId, black: so
 // Socket.IO Connection Handling
 io.on('connection', (socket) => {
   console.log(`New connection: ${socket.id}`);
-    // Generate device fingerprint
-    const fingerprint = generateFingerprint(socket.handshake.headers);
-    socket.fingerprint = fingerprint;
-    
-    socket.on('joinGame', async (gameCode) => {
-      try {
-        // Store fingerprint for this player
-        if (!deviceFingerprints.has(gameCode)) {
-          deviceFingerprints.set(gameCode, { white: null, black: null });
-        }
-        
-        const fingerprints = deviceFingerprints.get(gameCode);
-        const room = gameRooms.get(gameCode);
-        
-        if (!room.white) {
-          fingerprints.white = fingerprint;
-        } else if (!room.black) {
-          fingerprints.black = fingerprint;
-          
-          // Check if both players have the same fingerprint
-          if (fingerprints.white === fingerprints.black) {
-            console.warn(`Possible multi-accounting detected in game ${gameCode}`);
-            socket.emit('cheatWarning', {
-              type: 'multi-account',
-              message: 'Multiple devices detected from same player'
-            });
-          }
-        }
-        
-        // Initialize behavior tracking
-        if (!playerBehavior.has(socket.id)) {
-          playerBehavior.set(socket.id, {
-            moveTimes: [],
-            movePatterns: [],
-            lastMoveTime: null,
-            impossibleMoves: 0
-          });
-        }
+  // Handle joining a game room
+   socket.on('joinGame', async (gameCode) => {
+    try {
       socket.join(gameCode);
       socket.gameCode = gameCode;
   
       if (!gameRooms.has(gameCode)) {
         gameRooms.set(gameCode, { white: null, black: null });
       }
+      const room = gameRooms.get(gameCode);
   
       if (!room.white) {
         room.white = socket.id;
@@ -240,38 +189,27 @@ io.on('connection', (socket) => {
   // Handle move events
   socket.on('move', async (moveData) => {
     try {
-      const { gameCode, from, to, player, promotion } = moveData;
-      
-      // Basic validation
+      const { gameCode, from, to, player, promotion } = moveData; // ADD PROMOTION HERE
       if (!gameCode || !from || !to || !player) {
         throw new Error('Invalid move data');
       }
-      
-      // Anti-cheat checks
-      const cheatCheck = await checkForCheating(socket, gameCode, moveData);
-      if (cheatCheck.isCheating) {
-        console.warn(`Cheating detected from ${player} in game ${gameCode}: ${cheatCheck.reason}`);
-        
-        // Handle cheating - you might want to end the game or take other action
-        handleCheatingViolation(gameCode, player, cheatCheck.reason);
-        return;
+  
+      const room = gameRooms.get(gameCode);
+      if (!room?.white || !room?.black) {
+        throw new Error('Wait for the other player to join!');
       }
-      
-      // Process the move if no cheating detected
+  
+      // PASS PROMOTION TO processMove
       const result = await processMove(gameCode, from, to, player, promotion);
-      
-      // Update behavior tracking
-      updatePlayerBehavior(socket.id, moveData, result.move);
       
       io.to(gameCode).emit('gameUpdate', result);
       checkGameEndConditions(gameCode, result.gameState);
-      
+  
     } catch (error) {
       console.error('Move error:', error);
       socket.emit('moveError', error.message);
     }
   });
-
   socket.on('gameOver', async ({ winner, reason }) => {
     try {
       await endGame(socket.gameCode, winner, reason);
@@ -516,7 +454,7 @@ socket.on('disconnect', async () => {
       cleanupGameResources(socket.gameCode);
       return;
     }
-    playerBehavior.delete(socket.id);
+  
     // Set abandonment timer (increased to 2 minutes for reconnection)
     const RECONNECT_TIMEOUT = 120000; // 2 minutes
     const timerKey = `${socket.gameCode}_${disconnectedRole}`;
@@ -644,51 +582,12 @@ async function getOrCreateGame(gameCode) {
   return createdGame;
 }
 
-async function processMove(gameCode, from, to, player, promotion) {
+async function processMove(gameCode, from, to, player, promotion ) {
   try {
     const game = activeGames.get(gameCode);
     if (!game) throw new Error('Game not found');
 
     const chess = new Chess(game.fen);
-    
-     // Validate promotion piece if this is a promotion move
-     const movingPiece = chess.get(from);
-     const isPromotion = movingPiece?.type === 'p' && 
-                        ((player === 'white' && to[1] === '8') || 
-                         (player === 'black' && to[1] === '1'));
- 
-
-    // Then use it in the move
-    const move = chess.move({ 
-      from, 
-      to, 
-      promotion: isPromotion ? promotion : undefined
-    });
-    // ... rest of the function
-
-    if (!move) {
-      // Track failed move attempts
-      const socketId = player === 'white' ? gameRooms.get(gameCode)?.white : gameRooms.get(gameCode)?.black;
-      if (socketId) {
-        const behavior = playerBehavior.get(socketId) || {};
-        behavior.impossibleMoves = (behavior.impossibleMoves || 0) + 1;
-        
-        if (behavior.impossibleMoves >= ANTI_CHEAT_CONFIG.IMPOSSIBLE_MOVE_PENALTY) {
-          await handleCheatingViolation(gameCode, player, 'invalid_moves');
-        }
-      }
-      
-      throw new Error('Invalid move');
-    }
-
-
-
-
-
-
-
-
-
 
     // Handle bet deduction on first move (if applicable)
     if ((player === 'white' || player === 'black') && (!game.moves || game.moves.length === (player === 'black' ? 1 : 0))) {
@@ -732,6 +631,11 @@ async function processMove(gameCode, from, to, player, promotion) {
         throw new Error("It's not your turn");
     }
 
+    // Validate promotion piece if this is a promotion move
+    const movingPiece = chess.get(from);
+    const isPromotion = movingPiece?.type === 'p' && 
+                       ((player === 'white' && to[1] === '8') || 
+                        (player === 'black' && to[1] === '1'));
 
     const validPromotions = ['q', 'r', 'b', 'n'];
     if (isPromotion && (!promotion || !validPromotions.includes(promotion))) {
@@ -739,6 +643,11 @@ async function processMove(gameCode, from, to, player, promotion) {
     }
 
     // Execute move
+    const move = chess.move({ 
+      from, 
+      to, 
+      promotion: isPromotion ? promotion : undefined
+    });
 
     if (!move) throw new Error('Invalid move');
 
@@ -1667,243 +1576,3 @@ app.post('/api/accept-draw', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-
-
-
-
-
-
-
-
-
-
-
-// Add rate limiting middleware
-const moveLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: ANTI_CHEAT_CONFIG.MOVE_RATE_LIMIT,
-  message: 'Too many moves too quickly - possible bot detected',
-  skip: (req) => {
-    // Skip rate limiting for certain conditions if needed
-    return false;
-  }
-});
-
-app.use('/api/move', moveLimiter);
-
-
-// Enhanced socket connection handler with fingerprinting
-
-
-// Anti-Cheat Helper Functions
-
-function generateFingerprint(headers) {
-  const fingerprintData = ANTI_CHEAT_CONFIG.FINGERPRINT_HEADERS
-    .map(header => headers[header])
-    .join('|');
-  
-  return crypto.createHash('sha256').update(fingerprintData).digest('hex');
-}
-
-async function checkForCheating(socket, gameCode, moveData) {
-  const behavior = playerBehavior.get(socket.id) || {};
-  const { player } = moveData;
-  
-  // 1. Check for multiple devices
-  const fingerprints = deviceFingerprints.get(gameCode);
-  if (fingerprints && fingerprints[player] !== socket.fingerprint) {
-    return { isCheating: true, reason: 'device_switch' };
-  }
-  
-  // 2. Check move timing (too fast for human)
-  if (behavior.lastMoveTime) {
-    const moveTime = Date.now() - behavior.lastMoveTime;
-    if (moveTime < ANTI_CHEAT_CONFIG.MIN_HUMAN_MOVE_TIME) {
-      behavior.impossibleMoves += 1;
-      if (behavior.impossibleMoves >= ANTI_CHEAT_CONFIG.IMPOSSIBLE_MOVE_PENALTY) {
-        return { isCheating: true, reason: 'move_timing' };
-      }
-    }
-  }
-  
-  // 3. Check for engine-like move patterns
-  if (behavior.movePatterns.length >= ANTI_CHEAT_CONFIG.ENGINE_MOVE_PATTERN_WINDOW) {
-    const engineLikelihood = detectEnginePatterns(behavior.movePatterns);
-    if (engineLikelihood > 0.8) { // Threshold for engine-like moves
-      return { isCheating: true, reason: 'engine_patterns' };
-    }
-  }
-  
-  // 4. Check for impossible moves (validation happens in processMove)
-  
-  return { isCheating: false };
-}
-
-function updatePlayerBehavior(socketId, moveData, chessMove) {
-  if (!playerBehavior.has(socketId)) {
-    playerBehavior.set(socketId, {
-      moveTimes: [],
-      movePatterns: [],
-      lastMoveTime: Date.now(),
-      impossibleMoves: 0
-    });
-  }
-  
-  const behavior = playerBehavior.get(socketId);
-  
-  // Update move timing
-  const now = Date.now();
-  if (behavior.lastMoveTime) {
-    const moveTime = now - behavior.lastMoveTime;
-    behavior.moveTimes.push(moveTime);
-    
-    // Keep only last 10 move times
-    if (behavior.moveTimes.length > 10) {
-      behavior.moveTimes.shift();
-    }
-  }
-  behavior.lastMoveTime = now;
-  
-  // Update move patterns
-  behavior.movePatterns.push({
-    from: moveData.from,
-    to: moveData.to,
-    piece: chessMove.piece,
-    san: chessMove.san
-  });
-  
-  if (behavior.movePatterns.length > ANTI_CHEAT_CONFIG.ENGINE_MOVE_PATTERN_WINDOW) {
-    behavior.movePatterns.shift();
-  }
-}
-
-function detectEnginePatterns(movePatterns) {
-  // Simple engine detection - real implementation would be more sophisticated
-  let engineScore = 0;
-  
-  // 1. Check for always playing best move (would need a chess engine to compare)
-  // 2. Check for consistent move times (humans vary more)
-  // 3. Check for typical engine move patterns
-  
-  // This is a simplified version - real implementation would use:
-  // - Move scoring against stockfish
-  // - Statistical analysis of move times
-  // - Pattern recognition
-  
-  // For now, we'll just look for always capturing when possible (naive)
-  const captureMoves = movePatterns.filter(m => m.san.includes('x')).length;
-  const captureRatio = captureMoves / movePatterns.length;
-  
-  if (captureRatio > 0.8) { // Unusually high capture ratio
-    engineScore += 0.3;
-  }
-  
-  // Check move time consistency (engines are more consistent)
-  const moveTimes = movePatterns.map((_, i) => {
-    if (i > 0) return movePatterns[i].timestamp - movePatterns[i-1].timestamp;
-    return 0;
-  }).filter(t => t > 0);
-  
-  if (moveTimes.length > 2) {
-    const avg = moveTimes.reduce((a,b) => a + b, 0) / moveTimes.length;
-    const variance = moveTimes.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / moveTimes.length;
-    
-    if (variance < 10000) { // Very consistent move times
-      engineScore += 0.2;
-    }
-  }
-  
-  return engineScore;
-}
-
-async function handleCheatingViolation(gameCode, player, reason) {
-  // Record the cheating attempt
-  const { error } = await supabase
-    .from(CHEAT_DETECTION_DB)
-    .insert({
-      game_code: gameCode,
-      player,
-      reason,
-      detected_at: new Date().toISOString()
-    });
-  
-  if (error) console.error('Failed to record cheating:', error);
-  
-  // Update player profile with strike
-  await supabase
-    .from(PLAYER_PROFILES_DB)
-    .upsert({
-      player_id: player,
-      last_cheat_detected: new Date().toISOString(),
-      cheat_count: supabase.rpc('increment'),
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'player_id' });
-  
-  // Notify players
-  const room = gameRooms.get(gameCode);
-  if (room) {
-    const cheaterSocket = player === 'white' ? room.white : room.black;
-    const opponentSocket = player === 'white' ? room.black : room.white;
-    
-    if (cheaterSocket) {
-      io.to(cheaterSocket).emit('cheatWarning', {
-        type: reason,
-        message: 'Cheating detected! Further violations may result in penalties.'
-      });
-    }
-    
-    if (opponentSocket) {
-      io.to(opponentSocket).emit('cheatAlert', {
-        opponent: player,
-        reason,
-        message: 'Opponent suspected of cheating. Game will be monitored.'
-      });
-    }
-  }
-  
-  // After multiple violations, you might want to automatically forfeit the game
-  if (!cheatFlags.has(gameCode)) {
-    cheatFlags.set(gameCode, { white: { count: 0 }, black: { count: 0 } });
-  }
-  
-  const flags = cheatFlags.get(gameCode);
-  flags[player].count += 1;
-  flags[player].lastWarning = Date.now();
-  
-  if (flags[player].count >= 3) {
-    // Auto-forfeit after 3 violations
-    await endGame(gameCode, player === 'white' ? 'black' : 'white', 'cheating');
-    
-    if (room) {
-      io.to(gameCode).emit('gameOver', {
-        winner: player === 'white' ? 'black' : 'white',
-        reason: 'Cheating detected'
-      });
-    }
-  }
-}
-
-
-
-// Add these tables to your Supabase database:
-
-/*
-Table: cheat_detection
-Columns:
-- id (uuid, primary key)
-- game_code (text)
-- player (text)
-- reason (text)
-- detected_at (timestamp)
-- action_taken (text)
-
-Table: player_profiles
-Columns:
-- player_id (text, primary key)
-- games_played (int)
-- cheat_count (int)
-- last_cheat_detected (timestamp)
-- trust_score (float)
-- created_at (timestamp)
-- updated_at (timestamp)
-*/
