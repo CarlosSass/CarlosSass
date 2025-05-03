@@ -218,29 +218,30 @@ function generateGameCode() {
 
 // --- Game Listing ---
 async function fetchAvailableGames() {
-  try {
-      const { data, error } = await supabase
-          .from('guess_number_games')
-          .select(`
-              code, 
-              creator_username, 
-              bet,
-              created_at,
-              is_private
-          `)
-          .eq('status', 'waiting')
-          .eq('is_private', false)
-          .order('created_at', { ascending: true });
+    try {
+        const { data, error } = await supabase
+            .from('guess_number_games')  // Changed table name
+            .select(`
+                code, 
+                creator_username, 
+                bet,
+                created_at,
+                is_private
+            `)
+            .eq('status', 'waiting')
+            .eq('is_private', false)
+            .order('created_at', { ascending: true });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      displayAvailableGames(data || []);
-      updateGamesCount(data?.length || 0);
-  } catch (error) {
-      console.error("Error fetching available games:", error);
-      displayMessage(createGameStatusEl, 'Failed to load games', 'error');
-  }
+        displayAvailableGames(data || []);
+        updateGamesCount(data?.length || 0);
+    } catch (error) {
+        console.error("Error fetching available games:", error);
+        displayMessage(createGameStatusEl, 'Failed to load games', 'error');
+    }
 }
+
 
 function displayAvailableGames(games) {
   if (!availableGamesListEl) return;
