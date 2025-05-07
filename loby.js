@@ -230,59 +230,84 @@ async function fetchAvailableGames() {
 }
 
 function displayAvailableGames(games) {
-    if (!availableGamesListEl) return;
+  if (!availableGamesListEl) return;
 
-    availableGamesListEl.innerHTML = '';
+  availableGamesListEl.innerHTML = '';
 
-    if (!games.length) {
-        const emptyItem = document.createElement('li');
-        emptyItem.className = 'no-games';
-        emptyItem.textContent = 'No games available yet. Create one!';
-        availableGamesListEl.appendChild(emptyItem);
-        return;
-    }
+  if (!games.length) {
+      const emptyItem = document.createElement('li');
+      emptyItem.className = 'no-games';
+      emptyItem.textContent = 'No games available yet. Create one!';
+      availableGamesListEl.appendChild(emptyItem);
+      return;
+  }
 
-    games.forEach(game => {
-        const gameItem = document.createElement('li');
-        gameItem.className = 'game-item';
-        
-        gameItem.innerHTML = `
-            <div class="game-info">
-                <div class="game-creator">
-                    <div class="creator-avatar" style="background-color: ${generateAvatarColor(game.white_username)}">
-                        ${game.white_username?.charAt(0) || 'C'}
-                    </div>
-                    <span class="creator-name">${game.white_username || 'Anonymous'}</span>
-                </div>
-                <div class="game-details">
-                    <div class="game-detail">
-                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                        </svg>
-                        <span>${game.bet} ETB</span>
-                    </div>
-                </div>
-            </div>
-            <button class="join-btn" data-game-code="${game.code}" data-bet="${game.bet}">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
-                </svg>
-                Join
-            </button>
-        `;
+  games.forEach(game => {
+      const gameItem = document.createElement('li');
+      gameItem.className = 'game-item';
+      
+      gameItem.innerHTML = `
+          <div class="game-info">
+              <div class="game-creator">
+                  <div class="creator-avatar" style="background-color: ${generateAvatarColor(game.creator_username)}">
+                      ${game.creator_username?.charAt(0) || 'C'}
+                  </div>
+                  <span>${game.creator_username || 'Anonymous'}</span>
+              </div>
+              <div class="game-details">
+                  <div class="game-detail">
+                      <span class="material-icons" style="font-size: 16px;">attach_money</span>
+                      <span>${game.bet} ETB</span>
+                  </div>
+                  <div class="game-detail game-code">
+                      <span class="material-icons" style="font-size: 16px;">code</span>
+                      <span>${game.code}</span>
+                  </div>
+                  <div class="game-detail">
+                      <span class="material-icons" style="font-size: 16px;">schedule</span>
+                      <span class="time-ago">${formatTimeAgo(game.created_at)}</span>
+                  </div>
+              </div>
+          </div>
+          <button class="join-btn" data-game-code="${game.code}" data-bet="${game.bet}">
+              <span class="material-icons" style="font-size: 16px;">login</span>
+              Join
+          </button>
+      `;
 
-        availableGamesListEl.appendChild(gameItem);
-    });
+      availableGamesListEl.appendChild(gameItem);
+  });
 
-    document.querySelectorAll('.join-btn').forEach(button => {
-        button.addEventListener('click', async () => {
-            const gameCode = button.dataset.gameCode;
-            const gameBet = parseInt(button.dataset.bet);
-            await joinGame(gameCode, gameBet);
-        });
-    });
+  document.querySelectorAll('.join-btn').forEach(button => {
+      button.addEventListener('click', async () => {
+          const gameCode = button.dataset.gameCode;
+          const gameBet = parseInt(button.dataset.bet);
+          await joinGame(gameCode, gameBet);
+      });
+  });
 }
-
+const formatTimeAgo = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+  
+  let interval = Math.floor(seconds / 31536000);
+  if (interval >= 1) return `${interval}y ago`;
+  
+  interval = Math.floor(seconds / 2592000);
+  if (interval >= 1) return `${interval}mo ago`;
+  
+  interval = Math.floor(seconds / 86400);
+  if (interval >= 1) return `${interval}d ago`;
+  
+  interval = Math.floor(seconds / 3600);
+  if (interval >= 1) return `${interval}h ago`;
+  
+  interval = Math.floor(seconds / 60);
+  if (interval >= 1) return `${interval}m ago`;
+  
+  return 'Just now';
+};
 function updateGamesCount(count) {
     if (gamesCountEl) {
         gamesCountEl.textContent = count;
