@@ -248,12 +248,12 @@ function displayAvailableGames(games) {
       
       gameItem.innerHTML = `
           <div class="game-info">
-              <div class="game-creator">
-                  <div class="creator-avatar" style="background-color: ${generateAvatarColor(game.creator_username)}">
-                      ${game.creator_username?.charAt(0) || 'C'}
-                  </div>
-                  <span>${game.creator_username || 'Anonymous'}</span>
-              </div>
+                <div class="game-creator">
+                    <div class="creator-avatar" style="background-color: ${generateAvatarColor(game.white_username)}">
+                        ${game.white_username?.charAt(0) || 'C'}
+                    </div>
+                    <span class="creator-name">${game.white_username || 'Anonymous'}</span>
+                </div>
               <div class="game-details">
                   <div class="game-detail">
                       <span class="material-icons" style="font-size: 16px;">attach_money</span>
