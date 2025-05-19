@@ -7,104 +7,77 @@
     <link rel="stylesheet" href="chess.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header similar to Chess.com -->
-        <header class="app-header">
-            <button id="back-btn" title="Go back">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" fill="currentColor"/>
-                </svg>
-            </button>
-            <h1 class="app-title">Chess</h1>
-            <div class="header-actions">
-                <span class="balance-display">$<span id="current-bet">0</span></span>
-            </div>
-        </header>
-
-        <div class="main-content">
-            <!-- Player info at top -->
-            <div class="player-info top-player">
-                <div class="player-avatar"></div>
-                <div class="player-details">
-                    <span class="player-name" id="black-username">Black</span>
-                    <span class="player-rating">1800</span>
-                </div>
-                <div class="player-time" id="black-time">10:00</div>
-            </div>
-
-            <!-- Chess board -->
-            <div class="chess-board-container">
-                <div class="chess-board" id="board"></div>
-            </div>
-
-            <!-- Player info at bottom -->
-            <div class="player-info bottom-player">
-                <div class="player-avatar"></div>
-                <div class="player-details">
-                    <span class="player-name" id="white-username">White</span>
-                    <span class="player-rating">1800</span>
-                </div>
-                <div class="player-time" id="white-time">10:00</div>
-            </div>
-
-            <!-- Game controls -->
-            <div class="game-controls">
-                <div class="game-status" id="game-status">Your turn</div>
-                <div class="move-history" id="move-history"></div>
-                <div class="game-actions">
-                    <button class="game-btn draw-btn" id="offer-draw">Offer Draw</button>
-                    <button class="game-btn resign-btn" id="resign">Resign</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Game code display -->
-        <div class="game-code-container">
+    <!-- Back button with absolute positioning -->
+    <button id="back-btn" title="Go back">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" fill="currentColor"/>
+        </svg>
+    </button>
+    <div id="notifications-container"></div>
+    <div class="chess-container">
+        <div class="game-info">
+            <div id="animation-container"></div>
+            <div class="bet-info">Current Bet: $<span id="current-bet">0</span></div>
             <div id="game-code-display">
                 <span>Game Code: </span>
                 <strong id="game-code-text">Loading...</strong>
-                <button id="copy-code">📋</button>
+                <button id="copy-code" aria-label="Copy code">
+                    <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/>
+                    </svg>
+                </button>
             </div>
-        </div>
-
-        <!-- Modals and overlays -->
-        <div id="waiting-overlay">
-            <div class="waiting-content">
-                <div class="spinner"></div>
-                <p>Waiting for opponent...</p>
-            </div>
-        </div>
-
-        <div id="promotion-dialog" style="display: none;">
-            <div class="promotion-content">
-                <h3>Promote your pawn to:</h3>
-                <div class="promotion-options">
-                    <button class="promotion-option" data-piece="q">♕</button>
-                    <button class="promotion-option" data-piece="r">♖</button>
-                    <button class="promotion-option" data-piece="b">♗</button>
-                    <button class="promotion-option" data-piece="n">♘</button>
+            <div id="waiting-overlay">
+                <div class="waiting-content">
+                    <div class="spinner"></div>
+                    <p>Waiting for opponent...</p>
                 </div>
             </div>
-        </div>
-
-        <div class="modal" id="game-result-modal">
-            <div class="modal-content">
-                <h2 id="result-title">Game Over</h2>
-                <p id="result-message">You won the game!</p>
-                <div class="result-details">
-                    <div class="result-amount win">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                        </svg>
-                        <span id="result-amount">+250 ETB</span>
+            <div id="promotion-dialog" style="display: none;">
+                <div class="promotion-content">
+                    <h3>Promote your pawn to:</h3>
+                    <div class="promotion-options">
+                        <button class="promotion-option" data-piece="q" aria-label="Queen">♕</button>
+                        <button class="promotion-option" data-piece="r" aria-label="Rook">♖</button>
+                        <button class="promotion-option" data-piece="b" aria-label="Bishop">♗</button>
+                        <button class="promotion-option" data-piece="n" aria-label="Knight">♘</button>
                     </div>
                 </div>
-                <button id="result-close-btn" class="primary-btn">Continue</button>
             </div>
+            <div class="player white-player">
+                <span id="white-username">White</span>
+                <span id="white-time">10:00</span>
+            </div>
+            <div class="chess-board" id="board"></div>
+            <div class="player black-player">
+                <span id="black-username">Black</span>
+                <span id="black-time">10:00</span>
+            </div>
+        </div>
+        
+        <div class="game-controls">
+            <div class="game-status" id="game-status">Loading game...</div>
+            <div class="move-history" id="move-history"></div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script type="module" src="chess.js"></script>
+
+    <div class="modal" id="game-result-modal">
+        <div class="modal-content">
+            <h2 id="result-title">Game Over</h2>
+            <p id="result-message">You won the game!</p>
+            <div class="result-details">
+                <div class="result-amount">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
+                    </svg>
+                    <span id="result-amount">+250 ETB</span>
+                </div>
+            </div>
+            <button id="result-close-btn" class="primary-btn">Continue</button>
+        </div>
+    </div>
 </body>
 </html>
