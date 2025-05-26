@@ -1,58 +1,12 @@
-/* Chess Game CSS for Telegram Mini App - Green Theme */
-
-:root {
-  /* Green theme colors */
-  --primary-green: #388e3c; /* Main green color */
-  --primary-dark: #2e7d32; /* Darker green for contrast */
-  --primary-light: #81c784; /* Lighter green for highlights */
-  --accent-green: #4caf50; /* Accent green color */
-  
-  /* Board colors */
-  --light-square: #e8f5e9; /* Light green square */
-  --dark-square: #43a047; /* Dark green square */
-  --highlight-green: rgba(129, 199, 132, 0.6); /* For highlighting valid moves */
-  --highlight-red: rgba(239, 83, 80, 0.5); /* For capturing moves */
-  
-  /* UI colors */
-  --bg-color: #f1f8e9; /* Background color */
-  --card-bg: #ffffff; /* Card background */
-  --text-color: #212121; /* Main text color */
-  --text-light: #757575; /* Secondary text color */
-  --border-color: #c8e6c9; /* Border color */
-}
+/* Chess Game CSS with Green Theme - Inspired by Chess.com */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
+  background-color: #f5f5f5;
+  color: #212121;
   margin: 0;
   padding: 0;
   min-height: 100vh;
-}
-
-#back-btn {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  color: var(--primary-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  transition: transform 0.2s;
-}
-
-#back-btn:hover {
-  transform: scale(1.1);
-}
-
-#back-btn svg {
-  width: 24px;
-  height: 24px;
 }
 
 .chess-container {
@@ -63,7 +17,6 @@ body {
   width: 100%;
   padding: 16px;
   box-sizing: border-box;
-  margin-top: 20px;
 }
 
 .game-info {
@@ -72,17 +25,6 @@ body {
   align-items: center;
   gap: 12px;
   width: 100%;
-  position: relative;
-}
-
-.bet-info {
-  padding: 8px 16px;
-  background-color: var(--primary-green);
-  color: white;
-  border-radius: 20px;
-  font-weight: 500;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  margin-bottom: 5px;
 }
 
 .player {
@@ -92,36 +34,36 @@ body {
   width: 100%;
   max-width: 400px;
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-weight: 500;
-  background-color: var(--card-bg);
+  background-color: #ffffff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
 }
 
 .white-player {
-  background-color: var(--light-square);
-  color: var(--text-color);
-  border-left: 4px solid var(--primary-light);
+  background-color: #ffffff;
+  color: #333;
+  border-left: 4px solid #4CAF50;
 }
 
 .black-player {
-  background-color: var(--dark-square);
-  color: white;
-  border-left: 4px solid var(--primary-dark);
+  background-color: #ffffff;
+  color: #333;
+  border-left: 4px solid #2E7D32;
 }
 
 .chess-board {
   display: grid;
   grid-template-columns: repeat(8, min(12vw, 50px));
   grid-template-rows: repeat(8, min(12vw, 50px));
-  border: 3px solid var(--primary-dark);
+  border: 2px solid #4a6741;
   width: min(96vw, 400px);
   height: min(96vw, 400px);
   margin: 0 auto;
+  background-color: #4a6741;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   border-radius: 4px;
-  overflow: hidden;
 }
 
 .square {
@@ -131,26 +73,25 @@ body {
   justify-content: center;
   align-items: center;
   position: relative;
-  transition: background-color 0.2s;
 }
 
 .square.light {
-  background-color: var(--light-square);
+  background-color: #eeeed2;
 }
 
 .square.dark {
-  background-color: var(--dark-square);
+  background-color: #769656;
 }
 
 .square.highlight {
-  background-color: var(--highlight-green);
-  box-shadow: inset 0 0 10px rgba(76, 175, 80, 0.6);
+  background-color: rgba(104, 159, 56, 0.3);
+  box-shadow: inset 0 0 10px rgba(104, 159, 56, 0.5);
 }
 
 .square.highlight.capture {
-  background-color: var(--highlight-red);
+  background-color: rgba(255, 50, 50, 0.3);
   box-shadow: inset 0 0 10px rgba(200, 0, 0, 0.5);
-  border: 2px dashed #e53935;
+  border: 2px dashed #f44336;
 }
 
 .square.highlight.en-passant {
@@ -159,26 +100,26 @@ body {
 }
 
 .square.highlight.promotion {
-  background-color: rgba(156, 39, 176, 0.3);
-  box-shadow: inset 0 0 15px rgba(156, 39, 176, 0.5);
+  background-color: rgba(147, 112, 219, 0.3);
+  box-shadow: inset 0 0 15px rgba(147, 112, 219, 0.7);
 }
 
 .square.last-move-from {
-  background-color: rgba(255, 235, 59, 0.6) !important;
+  background-color: rgba(247, 247, 105, 0.7) !important;
 }
 
 .square.last-move-to {
-  background-color: rgba(255, 235, 59, 0.6) !important;
+  background-color: rgba(247, 247, 105, 0.7) !important;
 }
 
 .game-controls {
-  background-color: var(--card-bg);
+  background-color: #ffffff;
   padding: 16px;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
   box-sizing: border-box;
-  border-top: 4px solid var(--primary-green);
+  border: 1px solid #e0e0e0;
 }
 
 .game-status {
@@ -186,23 +127,19 @@ body {
   font-weight: 500;
   margin-bottom: 12px;
   text-align: center;
-  color: var(--primary-dark);
-  padding: 8px;
-  border-radius: 6px;
-  background-color: var(--border-color);
+  color: #2E7D32;
 }
 
 .move-history {
   height: 120px;
   overflow-y: auto;
-  border: 1px solid var(--border-color);
-  padding: 12px;
+  border: 1px solid #e0e0e0;
+  padding: 10px;
   margin-bottom: 12px;
-  background-color: var(--card-bg);
+  background-color: #f9f9f9;
   border-radius: 8px;
   font-size: 0.9em;
-  color: var(--text-color);
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  color: #333;
 }
 
 .actions {
@@ -219,77 +156,63 @@ body {
   font-weight: 500;
   font-size: 0.95em;
   flex: 1;
-  background-color: var(--primary-green);
+  background-color: #4CAF50;
   color: white;
   transition: all 0.2s;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.tg-button:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .tg-button.danger {
-  background-color: #e53935;
+  background-color: #f44336;
 }
 
 #offer-draw {
-  background-color: var(--primary-green);
+  background-color: #FFC107;
+  color: #333;
 }
 
 #resign {
-  background-color: #e53935;
+  background-color: #f44336;
   color: white;
 }
 
 button:hover {
   opacity: 0.9;
+  transform: translateY(-1px);
 }
 
-/* CHESS PIECES - COMPLETELY FIXED */
+/* CHESS PIECES */
 .piece {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  transition: transform 0.2s;
-}
-
-.piece:active {
-  cursor: grabbing;
-  transform: scale(1.1);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .piece svg {
-  width: 85%;
-  height: 85%;
-  pointer-events: none; /* Prevent SVG from blocking clicks */
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+    width: 80%;
+    height: 80%;
+    pointer-events: none;
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.3));
 }
 
-/* Explicitly set colors for pieces */
 .white-piece svg [fill="#ffffff"] {
-  fill: #ffffff !important;
+    fill: #ffffff !important;
 }
 
 .black-piece svg [fill="#333333"] {
-  fill: #333333 !important;
+    fill: #333333 !important;
 }
 
-/* Ensure strokes are visible */
 .white-piece svg [stroke="#000000"] {
-  stroke: #000000 !important;
+    stroke: #000000 !important;
 }
 
 .black-piece svg [stroke="#ffffff"] {
-  stroke: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
-/* PROMOTION DIALOG - IMPROVED */
+/* PROMOTION DIALOG */
 #promotion-dialog {
   position: fixed;
   top: 0;
@@ -301,28 +224,17 @@ button:hover {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.promotion-content {
-  background: var(--light-square);
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-  border: 2px solid var(--primary-green);
-}
-
-.promotion-content h3 {
-  margin-top: 0;
-  color: var(--primary-dark);
-  margin-bottom: 15px;
+  backdrop-filter: blur(3px);
 }
 
 .promotion-options {
   display: flex;
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 12px;
   gap: 15px;
-  justify-content: center;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  border: 1px solid #4CAF50;
 }
 
 .promotion-option {
@@ -332,21 +244,24 @@ button:hover {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border: 2px solid var(--primary-green);
+  border: 2px solid #4CAF50;
   border-radius: 8px;
   transition: all 0.2s ease;
-  background-color: white;
-  font-size: 2.5em;
-  color: var(--text-color);
+  background-color: #ffffff;
 }
 
 .promotion-option:hover {
   transform: scale(1.15);
-  background: var(--primary-light);
+  background: #e8f5e9;
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
-/* ANIMATIONS AND NOTIFICATIONS */
+.promotion-option svg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .piece.moved {
   animation: pop 0.3s ease-out;
 }
@@ -361,34 +276,27 @@ button:hover {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--primary-dark);
+  background: rgba(0,0,0,0.8);
   color: white;
   padding: 12px 24px;
   border-radius: 8px;
   z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, -20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
 .player-status {
   padding: 5px 10px;
-  border-radius: 5px;
+  border-radius: 3px;
   margin: 5px 0;
-  font-weight: 500;
 }
 
 .player-status.connected {
-  background: var(--accent-green);
+  background: #4CAF50;
   color: white;
 }
 
 .player-status.waiting {
-  background: #ffc107;
+  background: #FFC107;
   color: black;
 }
 
@@ -406,7 +314,7 @@ button:hover {
 }
 
 .game-active {
-  border: 2px solid var(--accent-green);
+  border: 2px solid #4CAF50;
 }
 
 .game-notification {
@@ -414,13 +322,12 @@ button:hover {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--primary-dark);
+  background: rgba(0,0,0,0.8);
   color: white;
   padding: 15px 25px;
-  border-radius: 8px;
+  border-radius: 5px;
   z-index: 1001;
   animation: slideIn 0.5s forwards;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 @keyframes slideIn {
@@ -444,7 +351,6 @@ button:hover {
   height: 20px;
   background-color: gold;
   border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
 }
 
 .coin-increase {
@@ -500,15 +406,17 @@ button:hover {
 .bet-display {
   position: fixed;
   top: 20px;
-  left: 20px;
-  background: var(--primary-dark);
+  right: 20px;
+  background: #4CAF50;
   color: white;
-  padding: 10px 16px;
+  padding: 10px 15px;
   border-radius: 20px;
   z-index: 1000;
   display: flex;
-  gap: 15px;
+  gap: 8px;
+  align-items: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  font-weight: 500;
 }
 
 .bet-amount {
@@ -527,27 +435,17 @@ button:hover {
 }
 
 #game-code-display {
-  padding: 12px;
-  background: var(--card-bg);
-  border-radius: 10px;
+  padding: 10px 15px;
+  background: #e8f5e9;
+  border-radius: 20px;
   text-align: center;
   margin-bottom: 10px;
   font-size: 1.1em;
-  color: var(--text-color);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  border: 1px solid var(--border-color);
-  display: flex;
+  color: #2E7D32;
+  border: 1px solid #c8e6c9;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-}
-
-#game-code-text {
-  font-family: monospace;
-  background: var(--bg-color);
-  padding: 4px 8px;
-  border-radius: 4px;
-  letter-spacing: 1px;
 }
 
 #copy-code {
@@ -555,23 +453,22 @@ button:hover {
   border: none;
   cursor: pointer;
   font-size: 1em;
-  color: var(--primary-green);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
+  color: #2E7D32;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background 0.2s;
 }
 
 #copy-code:hover {
-  transform: scale(1.2);
+  background: rgba(0,0,0,0.05);
 }
 
 .active-player {
   font-weight: bold;
-  color: var(--accent-green);
+  color: #4CAF50;
   background-color: rgba(76, 175, 80, 0.1);
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 2px 5px;
+  border-radius: 3px;
   transition: all 0.3s ease;
 }
 
@@ -611,27 +508,6 @@ button:hover {
   pointer-events: none;
   transition: opacity 0.5s ease;
   opacity: 1;
-  backdrop-filter: blur(3px);
-}
-
-.waiting-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: var(--primary-light);
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 #waiting-overlay.hidden {
@@ -639,9 +515,22 @@ button:hover {
   pointer-events: none;
 }
 
+#promotion-dialog button {
+  background: none;
+  border: 2px solid #555;
+  border-radius: 5px;
+  padding: 5px 15px;
+  transition: all 0.2s;
+}
+
+#promotion-dialog button:hover {
+  background: #f0f0f0;
+  transform: scale(1.1);
+}
+
 .primary-btn {
   padding: 0.75rem 1.5rem;
-  background-color: var(--primary-green);
+  background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 8px;
@@ -653,9 +542,8 @@ button:hover {
 }
 
 .primary-btn:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  background-color: #3d8b40;
+  transform: translateY(-1px);
 }
 
 .modal {
@@ -672,7 +560,6 @@ button:hover {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
-  backdrop-filter: blur(2px);
 }
 
 .modal.active {
@@ -690,7 +577,6 @@ button:hover {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   transform: translateY(-20px);
   transition: transform 0.3s;
-  border-top: 4px solid var(--primary-green);
 }
 
 .modal.active .modal-content {
@@ -699,20 +585,19 @@ button:hover {
 
 .modal-content h2 {
   margin-bottom: 1rem;
-  color: var(--primary-dark);
+  color: #2E7D32;
 }
 
 .modal-content p {
   margin-bottom: 1.5rem;
-  color: var(--text-light);
+  color: #757575;
 }
 
 .result-details {
   margin: 1.5rem 0;
   padding: 1rem;
-  background-color: var(--bg-color);
+  background-color: #f5f5f5;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
 }
 
 .result-amount {
@@ -722,15 +607,15 @@ button:hover {
   font-size: 1.25rem;
   font-weight: 600;
   gap: 0.5rem;
-  color: var(--text-color);
+  color: #212121;
 }
 
 .result-amount.win {
-  color: var(--accent-green);
+  color: #4CAF50;
 }
 
 .result-amount.lose {
-  color: #e53935;
+  color: #f44336;
 }
 
 .result-amount svg {
@@ -741,8 +626,8 @@ button:hover {
 .danger-btn {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: #e53935;
-  border: 1px solid #e53935;
+  color: #f44336;
+  border: 1px solid #f44336;
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
@@ -753,7 +638,7 @@ button:hover {
 }
 
 .danger-btn:hover {
-  background-color: #ffebee;
+  background-color: #fee2e2;
 }
 
 .danger-btn svg {
@@ -766,17 +651,43 @@ button:hover {
 }
 
 .move-history::-webkit-scrollbar-track {
-  background: var(--bg-color);
-  border-radius: 3px;
+  background: #f0f0f0;
 }
 
 .move-history::-webkit-scrollbar-thumb {
-  background: var(--primary-light);
+  background: #bdbdbd;
   border-radius: 3px;
 }
 
-.move-history::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-green);
+@media (max-width: 400px) {
+  .player {
+    padding: 8px 12px;
+    font-size: 0.9em;
+  }
+  
+  .game-status {
+    font-size: 1em;
+  }
+  
+  .tg-button {
+    padding: 8px 12px;
+    font-size: 0.85em;
+  }
+  
+  .move-history {
+    height: 100px;
+    font-size: 0.8em;
+  }
+  
+  .promotion-option {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .promotion-options {
+    padding: 15px;
+    gap: 10px;
+  }
 }
 
 .timeout-result {
@@ -822,157 +733,14 @@ button:hover {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 12px 20px;
-  border-radius: 8px;
-  background-color: #f44336;
+  padding: 10px 20px;
+  background: #ff6b6b;
   color: white;
+  border-radius: 5px;
   z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  animation: alertIn 0.3s forwards;
-  max-width: 80%;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-.alert.success {
-  background-color: var(--accent-green);
-}
-
-.alert.warning {
-  background-color: #ff9800;
-}
-
-@keyframes alertIn {
-  from { opacity: 0; transform: translate(-50%, -20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-.player-turn-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-right: 8px;
-  background-color: var(--accent-green);
-  animation: pulseTurn 1.5s infinite;
-}
-
-@keyframes pulseTurn {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.timer {
-  font-family: monospace;
-  font-size: 1.1em;
-  padding: 4px 8px;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-  margin-left: 8px;
-}
-
-.timer.low {
-  color: #e53935;
-  animation: timerPulse 1s infinite;
-}
-
-@keyframes timerPulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.6; }
-  100% { opacity: 1; }
-}
-
-.game-outcome {
-  font-size: 1.2em;
-  font-weight: bold;
-  text-align: center;
-  margin: 12px 0;
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.game-outcome.win {
-  background-color: rgba(76, 175, 80, 0.2);
-  color: var(--primary-dark);
-}
-
-.game-outcome.lose {
-  background-color: rgba(239, 83, 80, 0.2);
-  color: #d32f2f;
-}
-
-.game-outcome.draw {
-  background-color: rgba(255, 193, 7, 0.2);
-  color: #ff8f00;
-}
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-  .chess-board {
-    grid-template-columns: repeat(8, min(11vw, 40px));
-    grid-template-rows: repeat(8, min(11vw, 40px));
-  }
-  
-  .game-controls {
-    padding: 12px;
-  }
-  
-  .actions {
-    flex-direction: column;
-  }
-  
-  .promotion-option {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .modal-content {
-    padding: 1.5rem;
-    max-width: 90%;
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #1e2723;
-    --card-bg: #2e3b32;
-    --text-color: #e0e0e0;
-    --text-light: #bdbdbd;
-    --border-color: #3e5142;
-    --light-square: #3e5142;
-    --dark-square: #2d3a30;
-  }
-  
-  .white-player {
-    background-color: #3e5142;
-    color: #f1f1f1;
-  }
-  
-  .black-player {
-    background-color: #2d3a30;
-    color: #f1f1f1;
-  }
-  
-  .move-history {
-    background-color: #2e3b32;
-    border-color: #3e5142;
-    color: #e0e0e0;
-  }
-  
-  .modal-content {
-    background-color: #2e3b32;
-  }
-  
-  .promotion-content {
-    background: #3e5142;
-  }
-  
-  .promotion-option {
-    background-color: #2e3b32;
-    color: #e0e0e0;
-  }
-  
-  .game-status {
-    background-color: #3e5142;
-    color: #e0e0e0;
-  }
+.alert.info {
+  background: #4e9af1;
 }
