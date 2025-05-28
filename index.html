@@ -6,10 +6,11 @@
   <title>Habesha Games</title>
   <style>
     :root {
-      --primary-color: #1c92d2;
+      --primary-color: #2e7d32;
+      --secondary-color: #4caf50;
       --accent-color: #f2f2f2;
       --text-color: #2c3e50;
-      --btn-hover: #1565c0;
+      --btn-hover: #1b5e20;
     }
 
     body {
@@ -40,6 +41,30 @@
       margin-top: 40px;
       width: 90%;
       max-width: 400px;
+    }
+
+    .auth-toggle {
+      display: flex;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .auth-toggle button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background-color: white;
+      color: var(--text-color);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .auth-toggle button.active {
+      background-color: var(--primary-color);
+      color: white;
     }
 
     form {
@@ -81,17 +106,35 @@
       font-size: 0.9rem;
       text-align: center;
     }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <header>Habesha Games</header>
 
   <main>
-    <form id="registerForm">
+    <div class="auth-toggle">
+      <button id="loginBtn" class="active">Login</button>
+      <button id="registerBtn">Register</button>
+    </div>
+
+    <form id="loginForm">
+      <input type="tel" id="loginPhone" placeholder="Phone number" required />
+      <input type="password" id="loginPassword" placeholder="Password" required />
+      <button type="submit">Login</button>
+      <div class="error" id="loginError"></div>
+    </form>
+
+    <form id="registerForm" class="hidden">
       <input type="text" id="username" placeholder="Your name" required />
       <input type="tel" id="phone" placeholder="Phone number" required />
-      <button type="submit">Register / Login</button>
-      <div class="error" id="errorMsg"></div>
+      <input type="password" id="password" placeholder="Password" required />
+      <input type="password" id="confirmPassword" placeholder="Confirm Password" required />
+      <button type="submit">Register</button>
+      <div class="error" id="registerError"></div>
     </form>
   </main>
 
@@ -99,55 +142,122 @@
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
-     const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (localStorage.getItem("phone")) {
       window.location.href = "home.html";
     }
 
-    const form = document.getElementById("registerForm");
-    const errorMsg = document.getElementById("errorMsg");
+    // Toggle between login and register forms
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
 
-    form.addEventListener("submit", async (e) => {
+    loginBtn.addEventListener("click", () => {
+      loginBtn.classList.add("active");
+      registerBtn.classList.remove("active");
+      loginForm.classList.remove("hidden");
+      registerForm.classList.add("hidden");
+    });
+
+    registerBtn.addEventListener("click", () => {
+      registerBtn.classList.add("active");
+      loginBtn.classList.remove("active");
+      registerForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+    });
+
+    // Login form handling
+    const loginFormEl = document.getElementById("loginForm");
+    const loginError = document.getElementById("loginError");
+
+    loginFormEl.addEventListener("submit", async (e) => {
       e.preventDefault();
-      errorMsg.textContent = "";
+      loginError.textContent = "";
 
-      const username = document.getElementById("username").value.trim();
-      const phone = document.getElementById("phone").value.trim();
+      const phone = document.getElementById("loginPhone").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
 
-      if (!username || !phone) {
-        errorMsg.textContent = "Please enter both name and phone.";
+      if (!phone || !password) {
+        loginError.textContent = "Please enter both phone and password.";
         return;
       }
 
       try {
-        let { data: existingUser, error } = await supabase
+        const { data: user, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("phone", phone)
+          .eq("password", password)
+          .single();
+
+        if (error) throw error;
+        if (!user) {
+          loginError.textContent = "Invalid phone or password.";
+          return;
+        }
+
+        localStorage.setItem("phone", user.phone);
+        localStorage.setItem("user", JSON.stringify(user));
+        window.location.href = "home.html";
+      } catch (err) {
+        console.error(err);
+        loginError.textContent = "Something went wrong. Please try again.";
+      }
+    });
+
+    // Register form handling
+    const registerFormEl = document.getElementById("registerForm");
+    const registerError = document.getElementById("registerError");
+
+    registerFormEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      registerError.textContent = "";
+
+      const username = document.getElementById("username").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const confirmPassword = document.getElementById("confirmPassword").value.trim();
+
+      if (!username || !phone || !password || !confirmPassword) {
+        registerError.textContent = "Please fill all fields.";
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        registerError.textContent = "Passwords don't match.";
+        return;
+      }
+
+      try {
+        // Check if user already exists
+        const { data: existingUser, error: lookupError } = await supabase
           .from("users")
           .select("*")
           .eq("phone", phone)
           .single();
 
-        if (error && error.code !== "PGRST116") throw error;
-
-        if (!existingUser) {
-          const { data: newUser, error: insertError } = await supabase
-            .from("users")
-            .insert([{ username, phone, balance: 0 }])
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-          localStorage.setItem("phone", newUser.phone);
-          localStorage.setItem("user", JSON.stringify(newUser));
-        } else {
-          localStorage.setItem("phone", existingUser.phone);
-          localStorage.setItem("user", JSON.stringify(existingUser));
+        if (existingUser) {
+          registerError.textContent = "Phone number already registered.";
+          return;
         }
 
+        // Create new user
+        const { data: newUser, error: insertError } = await supabase
+          .from("users")
+          .insert([{ username, phone, password, balance: 0 }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        localStorage.setItem("phone", newUser.phone);
+        localStorage.setItem("user", JSON.stringify(newUser));
         window.location.href = "home.html";
       } catch (err) {
         console.error(err);
-        errorMsg.textContent = "Something went wrong. Please try again.";
+        registerError.textContent = "Something went wrong. Please try again.";
       }
     });
   </script>
