@@ -1,3 +1,4 @@
+when withdraw get the bank number and add it to the transaction detail
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
@@ -245,7 +246,8 @@ async function processDeposit() {
 async function processWithdrawal() {
     const amount = parseFloat(document.getElementById('withdraw-amount').value);
     const method = document.getElementById('withdraw-method').value;
-    
+    const bankAccount = document.getElementById('account-number').value.trim(); // Get bank account number
+
     if (!amount || amount <= 0) {
         showAlert('error', 'Please enter a valid amount');
         return;
@@ -301,7 +303,7 @@ async function processWithdrawal() {
                 amount: -amount,
                 balance_before: userData.balance,
                 balance_after: newBalance,
-                description: `Withdrawal via ${method}`,
+                description: `Withdrawal via ${method} (Account: ${bankAccount})`, // Include bank account in description
                 status: 'pending',
                 game_id: null,
                 created_at: new Date().toISOString()
