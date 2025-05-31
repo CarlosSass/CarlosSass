@@ -1,4 +1,3 @@
-when withdraw get the bank number and add it to the transaction detail
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
