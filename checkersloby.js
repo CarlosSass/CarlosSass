@@ -155,21 +155,49 @@ async function createGame(bet) {
 
     try {
         const gameCode = generateGameCode();
-        const initialCheckersState = 'start'; // Initial checkers state
+        const initialBoardState = {
+            pieces: [
+                {position: "A3", color: "black", isKing: false},
+                {position: "C3", color: "black", isKing: false},
+                {position: "E3", color: "black", isKing: false},
+                {position: "G3", color: "black", isKing: false},
+                {position: "B2", color: "black", isKing: false},
+                {position: "D2", color: "black", isKing: false},
+                {position: "F2", color: "black", isKing: false},
+                {position: "H2", color: "black", isKing: false},
+                {position: "A1", color: "black", isKing: false},
+                {position: "C1", color: "black", isKing: false},
+                {position: "E1", color: "black", isKing: false},
+                {position: "G1", color: "black", isKing: false},
+                {position: "B8", color: "red", isKing: false},
+                {position: "D8", color: "red", isKing: false},
+                {position: "F8", color: "red", isKing: false},
+                {position: "H8", color: "red", isKing: false},
+                {position: "A7", color: "red", isKing: false},
+                {position: "C7", color: "red", isKing: false},
+                {position: "E7", color: "red", isKing: false},
+                {position: "G7", color: "red", isKing: false},
+                {position: "B6", color: "red", isKing: false},
+                {position: "D6", color: "red", isKing: false},
+                {position: "F6", color: "red", isKing: false},
+                {position: "H6", color: "red", isKing: false}
+            ],
+            turn: "red",
+            capturedPieces: []
+        };
         const phone = localStorage.getItem('phone');
 
         const { data: createdGameData, error } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games')
             .insert([{
                 code: gameCode,
-                white_phone: phone,
-                white_username: user.username,
+                red_phone: phone,
+                red_username: user.username,
                 bet: bet,
-                state: initialCheckersState, // Changed from fen to state
-                turn: 'white',
+                board_state: initialBoardState,
+                turn: 'red',
                 status: 'waiting',
-                is_private: isPrivateGame,
-                game_type: 'checkers' // Added game type
+                is_private: isPrivateGame
             }])
             .select()
             .single();
@@ -177,9 +205,9 @@ async function createGame(bet) {
         if (error) throw error;
 
         const newBalance = user.balance - bet;
-        //await updateUserBalance(newBalance);
+        await updateUserBalance(newBalance);
 
-        window.location.href = `${BASE_URL}/checkers?code=${createdGameData.code}&color=white`; // Changed to checkers page
+        window.location.href = `${BASE_URL}/checkers?code=${createdGameData.code}&color=red`;
     } catch (error) {
         console.error('Error creating game:', error);
         displayMessage(createGameStatusEl, 'Failed to create game', 'error');
@@ -208,17 +236,16 @@ function generateGameCode() {
 async function fetchAvailableGames() {
     try {
         const { data, error } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games')
             .select(`
                 code, 
-                white_username, 
+                red_username, 
                 bet,
                 created_at,
                 is_private
             `)
             .eq('status', 'waiting')
             .eq('is_private', false)
-            .eq('game_type', 'checkers') // Only show checkers games
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -239,7 +266,7 @@ function displayAvailableGames(games) {
     if (!games.length) {
         const emptyItem = document.createElement('li');
         emptyItem.className = 'no-games';
-        emptyItem.textContent = 'No checkers games available yet. Create one!';
+        emptyItem.textContent = 'No games available yet. Create one!';
         availableGamesListEl.appendChild(emptyItem);
         return;
     }
@@ -251,30 +278,28 @@ function displayAvailableGames(games) {
         gameItem.innerHTML = `
             <div class="game-info">
                 <div class="game-creator">
-                    <div class="creator-avatar" style="background-color: ${generateAvatarColor(game.white_username)}">
-                        ${game.white_username?.charAt(0) || 'C'}
+                    <div class="creator-avatar" style="background-color: ${generateAvatarColor(game.red_username)}">
+                        ${game.red_username?.charAt(0) || 'C'}
                     </div>
-                    <span class="creator-name">${game.white_username || 'Anonymous'}</span>
+                    <span class="creator-name">${game.red_username || 'Anonymous'}</span>
                 </div>
                 <div class="game-details">
                     <div class="game-detail">
-                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                        </svg>
+                        <span class="material-icons" style="font-size: 16px;">attach_money</span>
                         <span>${game.bet} ETB</span>
                     </div>
+                    <div class="game-detail game-code">
+                        <span class="material-icons" style="font-size: 16px;">code</span>
+                        <span>${game.code}</span>
+                    </div>
                     <div class="game-detail">
-                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                        </svg>
-                        <span>Checkers</span>
+                        <span class="material-icons" style="font-size: 16px;">schedule</span>
+                        <span class="time-ago">${formatTimeAgo(game.created_at)}</span>
                     </div>
                 </div>
             </div>
             <button class="join-btn" data-game-code="${game.code}" data-bet="${game.bet}">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
-                </svg>
+                <span class="material-icons" style="font-size: 16px;">login</span>
                 Join
             </button>
         `;
@@ -290,6 +315,29 @@ function displayAvailableGames(games) {
         });
     });
 }
+
+const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) return `${interval}y ago`;
+    
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) return `${interval}mo ago`;
+    
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) return `${interval}d ago`;
+    
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) return `${interval}h ago`;
+    
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) return `${interval}m ago`;
+    
+    return 'Just now';
+};
 
 function updateGamesCount(count) {
     if (gamesCountEl) {
@@ -307,8 +355,8 @@ async function joinGame(gameCode, gameBet) {
     try {
         const phone = localStorage.getItem('phone');
         const { data: gameData, error: fetchError } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
-            .select('white_phone, black_phone, bet, is_private')
+            .from('checkers_games')
+            .select('red_phone, black_phone, bet, is_private')
             .eq('code', gameCode)
             .single();
 
@@ -316,15 +364,15 @@ async function joinGame(gameCode, gameBet) {
         if (!gameData) throw new Error('Game not found');
         if (gameData.black_phone) throw new Error('Game is already full');
         if (gameData.bet !== gameBet) throw new Error('Bet amount mismatch');
-        if (gameData.white_phone === phone) throw new Error('Cannot join your own game');
+        if (gameData.red_phone === phone) throw new Error('Cannot join your own game');
 
         const newBalance = user.balance - gameBet;
-        /*if (!await updateUserBalance(newBalance)) {
+        if (!await updateUserBalance(newBalance)) {
             throw new Error('Failed to update balance');
-        }*/
+        }
 
         const { error: joinError } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
+            .from('checkers_games')
             .update({
                 black_phone: phone,
                 black_username: user.username,
@@ -334,7 +382,7 @@ async function joinGame(gameCode, gameBet) {
 
         if (joinError) throw joinError;
 
-        window.location.href = `${BASE_URL}/checkers?code=${gameCode}&color=black`; // Changed to checkers page
+        window.location.href = `${BASE_URL}/checkers?code=${gameCode}&color=black`;
     } catch (error) {
         console.error('Error joining game:', error);
         displayMessage(createGameStatusEl, error.message || 'Failed to join game', 'error');
@@ -362,8 +410,8 @@ async function handleJoinPrivateGame() {
         displayMessage(joinPrivateStatus, 'Checking game...', 'info');
         
         const { data: gameData, error: fetchError } = await supabase
-            .from('chess_games') // Changed from chess_games to checkers_games
-            .select('white_phone, black_phone, bet, is_private, status, game_type')
+            .from('checkers_games')
+            .select('red_phone, black_phone, bet, is_private, status')
             .eq('code', gameCode)
             .single();
 
@@ -371,7 +419,6 @@ async function handleJoinPrivateGame() {
         if (!gameData) throw new Error('Game not found');
         if (!gameData.is_private) throw new Error('This is not a private game');
         if (gameData.status !== 'waiting') throw new Error('Game is not available');
-        if (gameData.game_type !== 'checkers') throw new Error('This is not a checkers game');
         
         await joinGame(gameCode, gameData.bet);
     } catch (error) {
@@ -387,13 +434,13 @@ function setupRealtimeUpdates() {
     }
 
     supabaseChannel = supabase
-        .channel('chess_games') // Changed channel name
+        .channel('checkers_games_changes')
         .on(
             'postgres_changes',
             {
                 event: '*',
                 schema: 'public',
-                table: 'checkers_games' // Changed table name
+                table: 'checkers_games'
             },
             () => {
                 fetchAvailableGames();
@@ -426,6 +473,6 @@ async function init() {
 init();
 
 // Back button functionality
-document.getElementById('back-btn')?.addEventListener('click', () => {
+document.getElementById('back-btn').addEventListener('click', () => {
     window.location.href = 'home.html';
 });
