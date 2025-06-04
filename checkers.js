@@ -95,6 +95,12 @@ async function initGame() {
     gameState.playerColor = params.get('color') || 'red';
     gameState.boardFlipped = gameState.playerColor === 'black';
 
+    // Display game code
+    const gameCodeElement = document.getElementById('game-code-text');
+    if (gameCodeElement) {
+        gameCodeElement.textContent = gameState.gameCode || 'Not set';
+    }
+
     if (!gameState.gameCode) {
         showError('No game code provided');
         return;
@@ -514,6 +520,9 @@ function updateConnectionStatus() {
 async function fetchInitialGameState() {
     try {
         const response = await fetch(`${gameState.apiBaseUrl}/api/game-by-code/${gameState.gameCode}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const gameData = await response.json();
         if (gameData) initializeGameUI(gameData);
     } catch (error) {
@@ -586,3 +595,36 @@ resultCloseBtn.addEventListener('click', () => {
     gameResultModal.classList.remove('active');
     window.location.href = '/';
 });
+
+// Copy game code
+document.getElementById('copy-code')?.addEventListener('click', () => {
+    if (!gameState.gameCode) return;
+    
+    navigator.clipboard.writeText(gameState.gameCode).then(() => {
+        const button = document.getElementById('copy-code');
+        button.textContent = '✓ Copied!';
+        setTimeout(() => {
+            button.textContent = '📋';
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+});
+
+// Notification function
+function showNotification(message, duration = 5000) {
+    const notification = document.createElement('div');
+    notification.className = 'game-notification';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), duration);
+}
+
+// Display alert
+function displayAlert(message, type = 'info') {
+    const alertBox = document.createElement('div');
+    alertBox.className = `alert ${type}`;
+    alertBox.textContent = message;
+    document.body.appendChild(alertBox);
+    setTimeout(() => alertBox.remove(), 3000);
+}
