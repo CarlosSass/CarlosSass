@@ -27,29 +27,63 @@ const config = {
 const allowedOrigins = [
   config.corsOrigin,
   'https://chessgame-git-main-kb-solutions-projects.vercel.app',
-  'https://chess-game-production-9494.up.railway.app'
+  'https://chess-game-production-9494.up.railway.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
 ];
 
-// Middleware
-app.use(cors({
+// CORS options with detailed logging
+const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    console.log('Incoming origin:', origin);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log('Allowing request with no origin');
+      return callback(null, true);
+    }
+    
+    // Flexible origin matching
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      const originMatches = origin === allowedOrigin || 
+                          origin.includes(allowedOrigin.replace(/https?:\/\//, ''));
+      if (originMatches) {
+        console.log(`Origin ${origin} matched allowed origin ${allowedOrigin}`);
+      }
+      return originMatches;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.error(`CORS blocked for origin: ${origin}`);
+      console.log('Allowed origins:', allowedOrigins);
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}`), false);
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for preflight requests
+app.options('*', cors(corsOptions));
 
 app.use(bodyParser.json());
 
-// Health check endpoints
+// Health check endpoints with CORS headers
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    allowedOrigins
+  });
 });
 
 app.get('/ready', async (req, res) => {
@@ -60,36 +94,118 @@ app.get('/ready', async (req, res) => {
       .limit(1);
     
     if (error) throw error;
-    res.status(200).json({ database: 'connected' });
+    
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(200).json({ 
+      database: 'connected',
+      supabase: true,
+      timestamp: new Date().toISOString()
+    });
   } catch (err) {
-    res.status(500).json({ database: 'disconnected' });
+    console.error('Database connection error:', err);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.status(500).json({ 
+      database: 'disconnected',
+      error: err.message
+    });
   }
 });
 
-// Initialize Supabase
-const supabase = createClient(config.supabaseUrl, config.supabaseKey);
+// Initialize Supabase with error handling
+let supabase;
+try {
+  supabase = createClient(config.supabaseUrl, config.supabaseKey, {
+    auth: {
+      persistSession: false
+    }
+  });
+  console.log('Supabase client initialized successfully');
+} catch (err) {
+  console.error('Failed to initialize Supabase:', err);
+  process.exit(1);
+}
 
-// Create HTTP server
+// Create HTTP server with enhanced error handling
 const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
+  console.log('Allowed CORS origins:', allowedOrigins);
 }).on('error', (err) => {
   console.error('Server failed to start:', err);
   process.exit(1);
 });
 
-// Initialize Socket.IO
+// Initialize Socket.IO with enhanced configuration
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
   },
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: true
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  cookie: false
+});
+
+// Socket.IO connection logging
+io.on('connection', (socket) => {
+  console.log(`Client connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`Client disconnected: ${socket.id}`);
+  });
+  
+  socket.on('error', (err) => {
+    console.error(`Socket error (${socket.id}):`, err);
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  
+  if (err.message.includes('Not allowed by CORS')) {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.status(403).json({ 
+      error: 'CORS blocked',
+      message: err.message,
+      yourOrigin: req.headers.origin,
+      allowedOrigins,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
+// Root endpoint with CORS headers
+app.get("/", (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.send("Checkers server is running 🚀");
+});
+
+// Add WebSocket health check
+app.get('/ws-health', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.json({
+    websockets: {
+      activeConnections: io.engine.clientsCount,
+      pingTimeout: io._pingTimeout,
+      pingInterval: io._pingInterval
+    },
+    timestamp: new Date().toISOString()
+  });
+});
 // Game state management
 const gameTimers = {};
 const activeGames = new Map();
