@@ -23,15 +23,14 @@ const config = {
   corsOrigin: process.env.CORS_ORIGIN || 'https://chessgame-git-main-kb-solutions-projects.vercel.app'
 };
 
-// Enhanced CORS configuration
 const allowedOrigins = [
-  config.corsOrigin,
-  'https://chessgame-git-main-kb-solutions-projects.vercel.app',
-  'https://chess-game-production-9494.up.railway.app',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-];
-
+    'http://localhost:1384',
+    'https://chessgame-git-main-kb-solutions-projects.vercel.app',
+    'https://chess-game-git-main-kb-solutions-projects.vercel.app', // Added this line
+    'https://chess-game-production-9494.up.railway.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ];
 // CORS options with detailed logging
 const corsOptions = {
   origin: function (origin, callback) {
