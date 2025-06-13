@@ -321,6 +321,69 @@
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Toggle switch for balance visibility */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--primary-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .toggle-label {
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    .hidden-balance {
+      filter: blur(5px);
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -340,6 +403,13 @@
       <div>
         <div style="font-size: 0.85rem; color: var(--text-light);">Your Balance</div>
         <div class="balance-amount" id="user-balance">Loading...</div>
+        <div class="toggle-container">
+          <label class="toggle-switch">
+            <input type="checkbox" id="balance-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Show Balance</span>
+        </div>
       </div>
       <button class="refresh-btn" onclick="fetchBalance()">
         <span class="material-icons" id="refresh-icon">refresh</span>
@@ -420,6 +490,28 @@
       localStorage.setItem('playerPhone', user.phone);
     }
 
+    // Initialize balance visibility toggle
+    const balanceToggle = document.getElementById('balance-toggle');
+    const balanceAmount = document.getElementById('user-balance');
+    
+    // Load saved preference or default to visible
+    const balanceVisible = localStorage.getItem('balanceVisible') !== 'false';
+    balanceToggle.checked = balanceVisible;
+    updateBalanceVisibility();
+    
+    balanceToggle.addEventListener('change', () => {
+      localStorage.setItem('balanceVisible', balanceToggle.checked);
+      updateBalanceVisibility();
+    });
+
+    function updateBalanceVisibility() {
+      if (balanceToggle.checked) {
+        balanceAmount.classList.remove('hidden-balance');
+      } else {
+        balanceAmount.classList.add('hidden-balance');
+      }
+    }
+
     // Fetch user balance with animation
     async function fetchBalance() {
       const refreshIcon = document.getElementById('refresh-icon');
@@ -433,11 +525,11 @@
           .single();
 
         if (!error && data) {
-          document.getElementById('user-balance').textContent = `${data.balance} ETB`;
-          document.getElementById('user-balance').style.color = data.balance > 0 ? 'var(--success-color)' : 'var(--primary-color)';
+          balanceAmount.textContent = `${data.balance} ETB`;
+          balanceAmount.style.color = data.balance > 0 ? 'var(--success-color)' : 'var(--primary-color)';
         } else {
-          document.getElementById('user-balance').textContent = 'Error loading';
-          document.getElementById('user-balance').style.color = 'var(--primary-color)';
+          balanceAmount.textContent = 'Error loading';
+          balanceAmount.style.color = 'var(--primary-color)';
         }
       } catch (err) {
         console.error('Balance fetch error:', err);
