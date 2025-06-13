@@ -1,264 +1,594 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Habesha Games</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Habesha Games - Home</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-color: #2e7d32;
-      --secondary-color: #4caf50;
-      --accent-color: #f2f2f2;
+      --primary-color: #2E7D32; /* Dark green */
+      --primary-dark: #1B5E20; /* Darker green */
+      --primary-light: #81C784; /* Light green */
+      --accent-color: #f8faf8; /* Very light green background */
+      --card-bg: #ffffff;
       --text-color: #2c3e50;
-      --btn-hover: #1b5e20;
+      --text-light: #7f8c8d;
+      --btn-hover: #1B5E20;
+      --highlight-color: #E8F5E9; /* Very light green for accents */
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
+      --border-radius: 12px;
+      --border-radius-sm: 8px;
+      --success-color: #43a047;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
       background-color: var(--accent-color);
-      margin: 0;
+      color: var(--text-color);
       padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
     }
 
     header {
-      background-color: var(--primary-color);
-      width: 100%;
-      padding: 20px 0;
-      text-align: center;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
       color: white;
-      font-size: 1.5rem;
-      font-weight: bold;
-      letter-spacing: 1px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    main {
-      margin-top: 40px;
-      width: 90%;
-      max-width: 400px;
-    }
-
-    .auth-toggle {
+      padding: 20px 16px;
       display: flex;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      width: 100%;
     }
 
-    .auth-toggle button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      background-color: white;
-      color: var(--text-color);
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .auth-toggle button.active {
-      background-color: var(--primary-color);
-      color: white;
-    }
-
-    form {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    .header-left {
       display: flex;
       flex-direction: column;
     }
 
-    input {
-      font-size: 1rem;
-      padding: 14px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      outline: none;
+    .header-left strong {
+      font-size: 1.2rem;
+      font-weight: 600;
     }
 
-    button {
-      padding: 14px;
-      font-size: 1rem;
-      background-color: var(--primary-color);
+    .header-left small {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .material-icons {
+      font-size: 24px;
+      cursor: pointer;
+      color: white;
+      transition: transform 0.2s;
+    }
+
+    .material-icons:active {
+      transform: scale(0.9);
+    }
+
+    main {
+      padding: 20px 16px;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+      color: white;
+      padding: 20px;
+      border-radius: var(--border-radius);
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .welcome-banner h1 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .welcome-banner p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .balance-display {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: var(--border-radius);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-left: 4px solid var(--primary-color);
+    }
+
+    .balance-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .balance-label {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      margin-bottom: 4px;
+    }
+
+    .balance-amount {
+      font-weight: 700;
+      color: var(--success-color);
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .refresh-btn {
+      background: var(--primary-color);
       color: white;
       border: none;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: var(--border-radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: background-color 0.2s;
     }
 
-    button:hover {
-      background-color: var(--btn-hover);
+    .refresh-btn:active {
+      background-color: var(--primary-dark);
     }
 
-    .error {
-      margin-top: 10px;
-      color: red;
-      font-size: 0.9rem;
-      text-align: center;
+    .section-title {
+      color: var(--primary-dark);
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin: 24px 0 16px;
+      position: relative;
+      padding-left: 12px;
     }
 
-    .hidden {
+    .section-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 4px;
+      background: var(--primary-color);
+      border-radius: 2px;
+    }
+
+    .game-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .game {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .game:active {
+      transform: translateY(2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .game-content {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .game-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .game-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .game-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-color);
+    }
+
+    .game-desc {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    .game-arrow {
+      color: var(--primary-color);
+      opacity: 0.7;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--primary-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .toggle-label {
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    .hidden-balance {
+      filter: blur(5px);
+      user-select: none;
+    }
+
+    /* Animation for balance refresh */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spinning {
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* Modal styles */
+    .modal {
       display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background-color: var(--card-bg);
+      margin: auto;
+      padding: 20px;
+      border-radius: var(--border-radius);
+      width: 100%;
+      max-width: 350px;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      animation: fadeIn 0.3s ease-in-out;
+      border-top: 4px solid var(--primary-light);
+    }
+
+    .modal h3 {
+      color: var(--primary-dark);
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .modal p {
+      text-align: center;
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-confirm, .btn-cancel {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: var(--border-radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .btn-confirm {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-confirm:active {
+      background-color: var(--primary-dark);
+    }
+
+    .btn-cancel {
+      background-color: white;
+      color: var(--text-color);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-cancel:active {
+      background-color: var(--highlight-color);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
-  <header>Habesha Games</header>
+  <header>
+    <div class="header-left">
+      <strong id="user-name">Welcome</strong>
+      <small id="user-status">Ready to play!</small>
+    </div>
+    <div class="header-right">
+      <span class="material-icons" onclick="location.href='profile.html'">account_circle</span>
+      <span class="material-icons" onclick="showLogoutConfirm()">logout</span>
+    </div>
+  </header>
 
   <main>
-    <div class="auth-toggle">
-      <button id="loginBtn" class="active">Login</button>
-      <button id="registerBtn">Register</button>
+    <div class="welcome-banner">
+      <h1>Start Playing Now!</h1>
+      <p>Join exciting games and win amazing prizes</p>
     </div>
 
-    <form id="loginForm">
-      <input type="tel" id="loginPhone" placeholder="Phone number" required />
-      <input type="password" id="loginPassword" placeholder="Password" required />
-      <button type="submit">Login</button>
-      <div class="error" id="loginError"></div>
-    </form>
+    <div class="balance-display">
+      <div class="balance-info">
+        <div class="balance-label">Your Balance</div>
+        <div class="balance-amount" id="user-balance">Loading...</div>
+        <div class="toggle-container">
+          <label class="toggle-switch">
+            <input type="checkbox" id="balance-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Show Balance</span>
+        </div>
+      </div>
+      <button class="refresh-btn" onclick="fetchBalance()">
+        <span class="material-icons" id="refresh-icon">refresh</span>
+        Refresh
+      </button>
+    </div>
 
-    <form id="registerForm" class="hidden">
-      <input type="text" id="username" placeholder="Your name" required />
-      <input type="tel" id="phone" placeholder="Phone number" required />
-      <input type="password" id="password" placeholder="Password" required />
-      <input type="password" id="confirmPassword" placeholder="Confirm Password" required />
-      <button type="submit">Register</button>
-      <div class="error" id="registerError"></div>
-    </form>
+    <h2 class="section-title">Featured Games</h2>
+    <div class="game-list">
+      <div class="game" onclick="location.href='guessnumberorderloby.html'">
+        <div class="game-content">
+          <div class="game-icon">
+            <span class="material-icons">psychology</span>
+          </div>
+          <div class="game-info">
+            <div class="game-title">Guess Number Order</div>
+            <div class="game-desc">Can you guess the number first?</div>
+          </div>
+        </div>
+        <span class="material-icons game-arrow">chevron_right</span>
+        <div class="notification-badge"></div>
+      </div>
+      
+      <div class="game" onclick="location.href='loby.html'">
+        <div class="game-content">
+          <div class="game-icon">
+            <span class="material-icons">sports_esports</span>
+          </div>
+          <div class="game-info">
+            <div class="game-title">Chess</div>
+            <div class="game-desc">Classic strategy game</div>
+          </div>
+        </div>
+        <span class="material-icons game-arrow">chevron_right</span>
+      </div>
+      
+      <div class="game" onclick="location.href='checkerslobby.html'">
+        <div class="game-content">
+          <div class="game-icon">
+            <span class="material-icons">casino</span>
+          </div>
+          <div class="game-info">
+            <div class="game-title">Checkers</div>
+            <div class="game-desc">Simple and fun board game</div>
+          </div>
+        </div>
+        <span class="material-icons game-arrow">chevron_right</span>
+      </div>
+    </div>
   </main>
 
+  <!-- Logout Confirmation Modal -->
+  <div class="modal" id="logout-modal">
+    <div class="modal-content">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('logout-modal')">Cancel</button>
+        <button class="btn-confirm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
     const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (localStorage.getItem("phone")) {
-      window.location.href = "home.html";
+    // Check authentication
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      window.location.href = 'index.html';
+    } else {
+      document.getElementById('user-name').textContent = `Hi, ${user.username || 'Player'}`;
+      fetchBalance();
+      localStorage.setItem('playerPhone', user.phone);
     }
 
-    // Toggle between login and register forms
-    const loginBtn = document.getElementById("loginBtn");
-    const registerBtn = document.getElementById("registerBtn");
-    const loginForm = document.getElementById("loginForm");
-    const registerForm = document.getElementById("registerForm");
-
-    loginBtn.addEventListener("click", () => {
-      loginBtn.classList.add("active");
-      registerBtn.classList.remove("active");
-      loginForm.classList.remove("hidden");
-      registerForm.classList.add("hidden");
+    // Initialize balance visibility toggle
+    const balanceToggle = document.getElementById('balance-toggle');
+    const balanceAmount = document.getElementById('user-balance');
+    
+    // Load saved preference or default to visible
+    const balanceVisible = localStorage.getItem('balanceVisible') !== 'false';
+    balanceToggle.checked = balanceVisible;
+    updateBalanceVisibility();
+    
+    balanceToggle.addEventListener('change', () => {
+      localStorage.setItem('balanceVisible', balanceToggle.checked);
+      updateBalanceVisibility();
     });
 
-    registerBtn.addEventListener("click", () => {
-      registerBtn.classList.add("active");
-      loginBtn.classList.remove("active");
-      registerForm.classList.remove("hidden");
-      loginForm.classList.add("hidden");
-    });
-
-    // Login form handling
-    const loginFormEl = document.getElementById("loginForm");
-    const loginError = document.getElementById("loginError");
-
-    loginFormEl.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      loginError.textContent = "";
-
-      const phone = document.getElementById("loginPhone").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
-
-      if (!phone || !password) {
-        loginError.textContent = "Please enter both phone and password.";
-        return;
+    function updateBalanceVisibility() {
+      if (balanceToggle.checked) {
+        balanceAmount.classList.remove('hidden-balance');
+      } else {
+        balanceAmount.classList.add('hidden-balance');
       }
+    }
 
+    // Fetch user balance with animation
+    async function fetchBalance() {
+      const refreshIcon = document.getElementById('refresh-icon');
+      refreshIcon.classList.add('spinning');
+      
       try {
-        const { data: user, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("phone", phone)
-          .eq("password", password)
+        const { data, error } = await supabase
+          .from('users')
+          .select('balance')
+          .eq('phone', user.phone)
           .single();
 
-        if (error) throw error;
-        if (!user) {
-          loginError.textContent = "Invalid phone or password.";
-          return;
+        if (!error && data) {
+          balanceAmount.textContent = `${data.balance} ETB`;
+          balanceAmount.style.color = data.balance > 0 ? 'var(--success-color)' : 'var(--primary-color)';
+        } else {
+          balanceAmount.textContent = 'Error loading';
+          balanceAmount.style.color = 'var(--primary-color)';
         }
-
-        localStorage.setItem("phone", user.phone);
-        localStorage.setItem("user", JSON.stringify(user));
-        window.location.href = "home.html";
       } catch (err) {
-        console.error(err);
-        loginError.textContent = "Something went wrong. Please try again.";
+        console.error('Balance fetch error:', err);
+      } finally {
+        setTimeout(() => {
+          refreshIcon.classList.remove('spinning');
+        }, 500);
       }
-    });
+    }
 
-    // Register form handling
-    const registerFormEl = document.getElementById("registerForm");
-    const registerError = document.getElementById("registerError");
+    // Enhanced logout confirmation
+    function showLogoutConfirm() {
+      document.getElementById('logout-modal').style.display = 'flex';
+    }
 
-    registerFormEl.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      registerError.textContent = "";
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
 
-      const username = document.getElementById("username").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const confirmPassword = document.getElementById("confirmPassword").value.trim();
+    function logout() {
+      // Add logout animation
+      document.body.style.opacity = '0.7';
+      setTimeout(() => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('playerPhone');
+        window.location.href = 'index.html';
+      }, 300);
+    }
 
-      if (!username || !phone || !password || !confirmPassword) {
-        registerError.textContent = "Please fill all fields.";
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        registerError.textContent = "Passwords don't match.";
-        return;
-      }
-
-      try {
-        // Check if user already exists
-        const { data: existingUser, error: lookupError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("phone", phone)
-          .single();
-
-        if (existingUser) {
-          registerError.textContent = "Phone number already registered.";
-          return;
+    // Add vibration feedback on mobile
+    document.querySelectorAll('.game, .refresh-btn').forEach(element => {
+      element.addEventListener('click', () => {
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
         }
-
-        // Create new user
-        const { data: newUser, error: insertError } = await supabase
-          .from("users")
-          .insert([{ username, phone, password, balance: 0 }])
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        localStorage.setItem("phone", newUser.phone);
-        localStorage.setItem("user", JSON.stringify(newUser));
-        window.location.href = "home.html";
-      } catch (err) {
-        console.error(err);
-        registerError.textContent = "Something went wrong. Please try again.";
-      }
+      });
     });
   </script>
 </body>
