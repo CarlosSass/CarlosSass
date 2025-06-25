@@ -143,10 +143,11 @@
     const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    if (localStorage.getItem("phone")) {
-      window.location.href = "home.html";
-    }
+// Check for any auth token
+const user = JSON.parse(localStorage.getItem('user'));
+if (user || localStorage.getItem('phone')) {
+  window.location.href = "home.html";
+}
 
     // Toggle between login and register forms
     const loginBtn = document.getElementById("loginBtn");
@@ -254,7 +255,7 @@
 
         localStorage.setItem("phone", newUser.phone);
         localStorage.setItem("user", JSON.stringify(newUser));
-       // window.location.href = "home.html";
+       window.location.href = "home.html";
       } catch (err) {
         console.error(err);
         registerError.textContent = "Something went wrong. Please try again.";
