@@ -110,6 +110,21 @@
     .hidden {
       display: none;
     }
+
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid var(--primary-color);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -124,7 +139,10 @@
     <form id="loginForm">
       <input type="tel" id="loginPhone" placeholder="Phone number" required />
       <input type="password" id="loginPassword" placeholder="Password" required />
-      <button type="submit">Login</button>
+      <button type="submit" id="loginSubmit">
+        <span id="loginText">Login</span>
+        <div id="loginLoader" class="loader hidden"></div>
+      </button>
       <div class="error" id="loginError"></div>
     </form>
 
@@ -133,7 +151,10 @@
       <input type="tel" id="phone" placeholder="Phone number" required />
       <input type="password" id="password" placeholder="Password" required />
       <input type="password" id="confirmPassword" placeholder="Confirm Password" required />
-      <button type="submit">Register</button>
+      <button type="submit" id="registerSubmit">
+        <span id="registerText">Register</span>
+        <div id="registerLoader" class="loader hidden"></div>
+      </button>
       <div class="error" id="registerError"></div>
     </form>
   </main>
@@ -143,11 +164,13 @@
     const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
     const supabase = createClient(supabaseUrl, supabaseKey);
-// Check for any auth token
-const user = JSON.parse(localStorage.getItem('user'));
-if (user || localStorage.getItem('phone')) {
-  window.location.href = "home.html";
-}
+
+    // Check authentication state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.location.href = "home.html";
+      }
+    });
 
     // Toggle between login and register forms
     const loginBtn = document.getElementById("loginBtn");
@@ -172,49 +195,77 @@ if (user || localStorage.getItem('phone')) {
     // Login form handling
     const loginFormEl = document.getElementById("loginForm");
     const loginError = document.getElementById("loginError");
+    const loginSubmit = document.getElementById("loginSubmit");
+    const loginText = document.getElementById("loginText");
+    const loginLoader = document.getElementById("loginLoader");
 
     loginFormEl.addEventListener("submit", async (e) => {
       e.preventDefault();
       loginError.textContent = "";
+      
+      // Show loading state
+      loginText.classList.add("hidden");
+      loginLoader.classList.remove("hidden");
+      loginSubmit.disabled = true;
 
       const phone = document.getElementById("loginPhone").value.trim();
       const password = document.getElementById("loginPassword").value.trim();
 
       if (!phone || !password) {
         loginError.textContent = "Please enter both phone and password.";
+        resetLoginButton();
         return;
       }
 
       try {
-        const { data: user, error } = await supabase
+        // Sign in with phone and password
+        const { data, error } = await supabase.auth.signInWithPassword({
+          phone: phone,
+          password: password
+        });
+
+        if (error) throw error;
+
+        // Get user data from your users table
+        const { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
           .eq("phone", phone)
-          .eq("password", password)
           .single();
 
-        if (error) throw error;
-        if (!user) {
-          loginError.textContent = "Invalid phone or password.";
-          return;
-        }
+        if (userError) throw userError;
 
-        localStorage.setItem("phone", user.phone);
-        localStorage.setItem("user", JSON.stringify(user));
+        // Store user data in localStorage
+        localStorage.setItem("user", JSON.stringify(userData));
         window.location.href = "home.html";
       } catch (err) {
-        console.error(err);
-        loginError.textContent = "Something went wrong. Please try again.";
+        console.error("Login error:", err);
+        loginError.textContent = err.message || "Invalid phone or password.";
+        resetLoginButton();
       }
     });
+
+    function resetLoginButton() {
+      loginText.classList.remove("hidden");
+      loginLoader.classList.add("hidden");
+      loginSubmit.disabled = false;
+    }
 
     // Register form handling
     const registerFormEl = document.getElementById("registerForm");
     const registerError = document.getElementById("registerError");
+    const registerSubmit = document.getElementById("registerSubmit");
+    const registerText = document.getElementById("registerText");
+    const registerLoader = document.getElementById("registerLoader");
 
     registerFormEl.addEventListener("submit", async (e) => {
       e.preventDefault();
       registerError.textContent = "";
+      
+      // Show loading state
+      registerText.classList.add("hidden");
+      registerLoader.classList.remove("hidden");
+      registerSubmit.disabled = true;
 
       const username = document.getElementById("username").value.trim();
       const phone = document.getElementById("phone").value.trim();
@@ -223,16 +274,18 @@ if (user || localStorage.getItem('phone')) {
 
       if (!username || !phone || !password || !confirmPassword) {
         registerError.textContent = "Please fill all fields.";
+        resetRegisterButton();
         return;
       }
 
       if (password !== confirmPassword) {
         registerError.textContent = "Passwords don't match.";
+        resetRegisterButton();
         return;
       }
 
       try {
-        // Check if user already exists
+        // First check if user exists in your users table
         const { data: existingUser, error: lookupError } = await supabase
           .from("users")
           .select("*")
@@ -241,26 +294,54 @@ if (user || localStorage.getItem('phone')) {
 
         if (existingUser) {
           registerError.textContent = "Phone number already registered.";
+          resetRegisterButton();
           return;
         }
 
-        // Create new user
+        // Sign up with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          phone: phone,
+          password: password,
+          options: {
+            data: {
+              username: username
+            }
+          }
+        });
+
+        if (authError) throw authError;
+
+        // Create user in your users table
         const { data: newUser, error: insertError } = await supabase
           .from("users")
-          .insert([{ username, phone, password, balance: 0 }])
+          .insert([{ 
+            username, 
+            phone, 
+            balance: 0,
+            auth_id: authData.user.id // Store the auth user ID
+          }])
           .select()
           .single();
 
         if (insertError) throw insertError;
 
-        localStorage.setItem("phone", newUser.phone);
+        // Store user data in localStorage
         localStorage.setItem("user", JSON.stringify(newUser));
-       window.location.href = "home.html";
+        
+        // Redirect to home page after successful registration
+        window.location.href = "home.html";
       } catch (err) {
-        console.error(err);
-        registerError.textContent = "Something went wrong. Please try again.";
+        console.error("Registration error:", err);
+        registerError.textContent = err.message || "Something went wrong. Please try again.";
+        resetRegisterButton();
       }
     });
+
+    function resetRegisterButton() {
+      registerText.classList.remove("hidden");
+      registerLoader.classList.add("hidden");
+      registerSubmit.disabled = false;
+    }
   </script>
 </body>
 </html>
