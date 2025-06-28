@@ -478,6 +478,8 @@
           // Add logout animation
           document.body.style.opacity = '0.7';
           setTimeout(() => {
+            const { error } =  supabase.auth.signOut();
+
             localStorage.removeItem('user');
             localStorage.removeItem('playerPhone');
              localStorage.removeItem('user');
@@ -485,6 +487,7 @@
             window.location.href = 'index.html';
           }, 300);
         }
+ 
     
       </script>
   <header>
