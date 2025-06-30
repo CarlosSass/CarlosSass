@@ -465,6 +465,12 @@
         });
       </script>
       <script>
+           import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    
+    const supabaseUrll = "https://evberyanshxxalxtwnnc.supabase.co";
+    const supabaseKeyy = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
+    const supabasee = createClient(supabaseUrll, supabaseKeyy);
+
          // Enhanced logout confirmation
          function showLogoutConfirm() {
           document.getElementById('logout-modal').style.display = 'flex';
