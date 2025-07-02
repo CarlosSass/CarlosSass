@@ -389,7 +389,7 @@
 <body>
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-    
+        
         const supabaseUrl = "https://evberyanshxxalxtwnnc.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -454,7 +454,6 @@
           }
         }
     
-       
         // Add vibration feedback on mobile
         document.querySelectorAll('.game, .refresh-btn').forEach(element => {
           element.addEventListener('click', () => {
@@ -463,38 +462,30 @@
             }
           });
         });
-      </script>
-      <script>
-           import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
     
-    const supabaseUrll = "https://evberyanshxxalxtwnnc.supabase.co";
-    const supabaseKeyy = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
-    const supabasee = createClient(supabaseUrll, supabaseKeyy);
-
-         // Enhanced logout confirmation
-         function showLogoutConfirm() {
+        // Enhanced logout confirmation
+        window.showLogoutConfirm = function() {
           document.getElementById('logout-modal').style.display = 'flex';
-        }
+        };
     
-        function closeModal(id) {
+        window.closeModal = function(id) {
           document.getElementById(id).style.display = 'none';
-        }
+        };
     
-        function logout() {
+        window.logout = async function() {
           // Add logout animation
           document.body.style.opacity = '0.7';
-          setTimeout(() => {
-            const { error } =  supabase.auth.signOut();
-
+          try {
+            await supabase.auth.signOut();
             localStorage.removeItem('user');
             localStorage.removeItem('playerPhone');
-             localStorage.removeItem('user');
-  localStorage.removeItem('phone');  // Add this line
+            localStorage.removeItem('phone');
             window.location.href = 'index.html';
-          }, 300);
-        }
- 
-    
+          } catch (error) {
+            console.error('Logout error:', error);
+            document.body.style.opacity = '1';
+          }
+        };
       </script>
   <header>
     <div class="header-left">
