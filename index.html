@@ -165,6 +165,25 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Function to format phone number
+    function formatPhoneNumber(phone) {
+      // Remove all non-digit characters
+      const cleaned = phone.replace(/\D/g, '');
+      
+      // Check if it's a 10-digit number starting with 0 (like 0961401822)
+      if (cleaned.length === 10 && cleaned.startsWith('0')) {
+        return `+251${cleaned.substring(1)}`;
+      }
+      
+      // Check if it's a 9-digit number (like 961401822)
+      if (cleaned.length === 9 && !cleaned.startsWith('0')) {
+        return `+251${cleaned}`;
+      }
+      
+      // If it's already in international format, return as is
+      return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+    }
+
     // Check authentication state
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -208,14 +227,17 @@
       loginLoader.classList.remove("hidden");
       loginSubmit.disabled = true;
 
-      const phone = document.getElementById("loginPhone").value.trim();
+      const phoneInput = document.getElementById("loginPhone").value.trim();
       const password = document.getElementById("loginPassword").value.trim();
 
-      if (!phone || !password) {
+      if (!phoneInput || !password) {
         loginError.textContent = "Please enter both phone and password.";
         resetLoginButton();
         return;
       }
+
+      // Format the phone number
+      const phone = formatPhoneNumber(phoneInput);
 
       try {
         // Sign in with phone and password
@@ -268,11 +290,11 @@
       registerSubmit.disabled = true;
 
       const username = document.getElementById("username").value.trim();
-      const phone = document.getElementById("phone").value.trim();
+      const phoneInput = document.getElementById("phone").value.trim();
       const password = document.getElementById("password").value.trim();
       const confirmPassword = document.getElementById("confirmPassword").value.trim();
 
-      if (!username || !phone || !password || !confirmPassword) {
+      if (!username || !phoneInput || !password || !confirmPassword) {
         registerError.textContent = "Please fill all fields.";
         resetRegisterButton();
         return;
@@ -283,6 +305,9 @@
         resetRegisterButton();
         return;
       }
+
+      // Format the phone number
+      const phone = formatPhoneNumber(phoneInput);
 
       try {
         // First check if user exists in your users table
