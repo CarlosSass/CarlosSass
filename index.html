@@ -11,7 +11,6 @@
       --accent-color: #f2f2f2;
       --text-color: #2c3e50;
       --btn-hover: #1b5e20;
-      --telegram-color: #0088cc;
     }
 
     body {
@@ -122,42 +121,6 @@
       margin: 0 auto;
     }
 
-    .divider {
-      display: flex;
-      align-items: center;
-      margin: 20px 0;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: "";
-      flex: 1;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .divider-text {
-      padding: 0 10px;
-      color: #777;
-      font-size: 0.9rem;
-    }
-
-    .telegram-btn {
-      background-color: var(--telegram-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .telegram-btn:hover {
-      background-color: #0077b3;
-    }
-
-    .telegram-icon {
-      width: 20px;
-      height: 20px;
-    }
-
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -181,17 +144,6 @@
         <div id="loginLoader" class="loader hidden"></div>
       </button>
       <div class="error" id="loginError"></div>
-      
-      <div class="divider">
-        <span class="divider-text">OR</span>
-      </div>
-      
-      <button type="button" id="telegramLoginBtn" class="telegram-btn">
-        <svg class="telegram-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.03-.09.06-.42-.08-.59-.14-.17-.42-.12-.6-.07-.26.08-4.39 2.79-6.21 3.92-.93.58-1.78.86-2.55.88-.54.01-1.56-.3-1.91-.58-.49-.37-.87-1.04-.67-1.05.2-.02.64-.12 1.03-.22.85-.28 2.84-.95 4.02-1.28 3.81-1.08 4.61-1.27 5.13-1.27.12 0 .28.02.4.12.1.08.13.19.12.31z"/>
-        </svg>
-        <span>Login with Telegram</span>
-      </button>
     </form>
 
     <form id="registerForm" class="hidden">
@@ -239,74 +191,6 @@
       registerForm.classList.remove("hidden");
       loginForm.classList.add("hidden");
     });
-
-    // Telegram Login Button
-    const telegramLoginBtn = document.getElementById("telegramLoginBtn");
-    
-    // Initialize Telegram Login Widget
-    function initTelegramLogin() {
-      // This script will be loaded from Telegram
-      const script = document.createElement('script');
-      script.src = "https://telegram.org/js/telegram-widget.js?22";
-      script.async = true;
-      script.setAttribute('data-telegram-login', 'habesha_games_bot'); // Replace with your bot username
-      script.setAttribute('data-size', 'large');
-      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-      script.setAttribute('data-request-access', 'write');
-      document.body.appendChild(script);
-    }
-
-    // This function will be called when Telegram authentication is complete
-    window.onTelegramAuth = async (user) => {
-      try {
-        // Show loading state
-        telegramLoginBtn.innerHTML = '<div class="loader"></div>';
-        telegramLoginBtn.disabled = true;
-        
-        // Send the Telegram user data to your backend
-        const { data, error } = await supabase.auth.signInWithPassword({
-          phone: '', // You might want to handle this differently
-          password: '' // Or use a different auth method
-        });
-
-        // Alternative: Create a user with Telegram data if they don't exist
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .upsert({
-            telegram_id: user.id,
-            username: user.first_name + (user.last_name ? ' ' + user.last_name : ''),
-            auth_provider: 'telegram'
-          })
-          .select()
-          .single();
-
-        if (userError) throw userError;
-
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify({
-          ...userData,
-          telegramData: user
-        }));
-
-        // Redirect to home page
-        window.location.href = "home.html";
-      } catch (err) {
-        console.error('Telegram login error:', err);
-        document.getElementById('loginError').textContent = 'Failed to login with Telegram. Please try again.';
-      } finally {
-        // Reset button state
-        telegramLoginBtn.innerHTML = `
-          <svg class="telegram-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.03-.09.06-.42-.08-.59-.14-.17-.42-.12-.6-.07-.26.08-4.39 2.79-6.21 3.92-.93.58-1.78.86-2.55.88-.54.01-1.56-.3-1.91-.58-.49-.37-.87-1.04-.67-1.05.2-.02.64-.12 1.03-.22.85-.28 2.84-.95 4.02-1.28 3.81-1.08 4.61-1.27 5.13-1.27.12 0 .28.02.4.12.1.08.13.19.12.31z"/>
-          </svg>
-          <span>Login with Telegram</span>
-        `;
-        telegramLoginBtn.disabled = false;
-      }
-    };
-
-    // Initialize Telegram Login when the page loads
-    initTelegramLogin();
 
     // Login form handling
     const loginFormEl = document.getElementById("loginForm");
