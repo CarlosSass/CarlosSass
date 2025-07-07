@@ -58,17 +58,14 @@ const generateAvatarColor = (username) => {
 
 // --- User Management ---
 async function loadUserDetails() {
-    const phone = localStorage.getItem('phone');
-    if (!phone) {
-        console.error('No user session found');
-        return;
-    }
+  const user = JSON.parse(localStorage.getItem('user'));
+
 
     try {
         const { data, error } = await supabase
             .from('users')
             .select('username, balance')
-            .eq('phone', phone)
+            .eq('phone', user.phone)
             .single();
 
         if (error) throw error;
