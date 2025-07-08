@@ -153,13 +153,13 @@ async function createGame(bet) {
     try {
         const gameCode = generateGameCode();
         const initialFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-        const phone = localStorage.getItem('phone');
+        const users = JSON.parse(localStorage.getItem('user'));
 
         const { data: createdGameData, error } = await supabase
             .from('chess_games')
             .insert([{
                 code: gameCode,
-                white_phone: phone,
+                white_phone: users.phone,
                 white_username: user.username,
                 bet: bet,
                 fen: initialFen,
@@ -319,8 +319,8 @@ async function joinGame(gameCode, gameBet) {
     displayMessage(createGameStatusEl, 'Joining game...', 'info');
 
     try {
-        const phone = localStorage.getItem('phone');
-        const { data: gameData, error: fetchError } = await supabase
+      const users = JSON.parse(localStorage.getItem('user'));
+      const { data: gameData, error: fetchError } = await supabase
             .from('chess_games')
             .select('white_phone, black_phone, bet, is_private')
             .eq('code', gameCode)
@@ -330,7 +330,7 @@ async function joinGame(gameCode, gameBet) {
         if (!gameData) throw new Error('Game not found');
         if (gameData.black_phone) throw new Error('Game is already full');
         if (gameData.bet !== gameBet) throw new Error('Bet amount mismatch');
-        if (gameData.white_phone === phone) throw new Error('Cannot join your own game');
+        if (gameData.white_phone === users.phone) throw new Error('Cannot join your own game');
         //if (gameData.is_private) throw new Error('Cannot join private game directly');
 
         const newBalance = user.balance - gameBet;
@@ -341,7 +341,7 @@ async function joinGame(gameCode, gameBet) {
         const { error: joinError } = await supabase
             .from('chess_games')
             .update({
-                black_phone: phone,
+                black_phone: users.phone,
                 black_username: user.username,
                 status: 'ongoing'
             })
@@ -385,7 +385,7 @@ async function handleJoinPrivateGame() {
 
         if (fetchError) throw fetchError;
         if (!gameData) throw new Error('Game not found');
-        if (!gameData.is_private) throw new Error('This is not a private game');
+        //if (!gameData.is_private) throw new Error('This is not a private game');
         if (gameData.status !== 'waiting') throw new Error('Game is not available');
         
         // If game is valid, proceed with joining
