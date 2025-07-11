@@ -398,7 +398,7 @@
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) {
             logout();
-          window.location.href = 'index.html';
+         // window.location.href = 'index.html';
           
         } else {
           document.getElementById('user-name').textContent = `Hi, ${user.username || 'Player'}`;
