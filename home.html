@@ -397,8 +397,11 @@
         // Check authentication
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) {
-            logout();
-         // window.location.href = 'index.html';
+            await supabase.auth.signOut();
+            localStorage.removeItem('user');
+            localStorage.removeItem('playerPhone');
+            localStorage.removeItem('phone');
+          window.location.href = 'index.html';
           
         } else {
           document.getElementById('user-name').textContent = `Hi, ${user.username || 'Player'}`;
