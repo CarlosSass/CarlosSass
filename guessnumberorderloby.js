@@ -58,17 +58,14 @@ const generateAvatarColor = (username) => {
 
 // --- User Management ---
 async function loadUserDetails() {
-    const phone = localStorage.getItem('phone');
-    if (!phone) {
-        console.error('No user session found');
-        return;
-    }
+  const users = JSON.parse(localStorage.getItem('user'));
+
 
     try {
         const { data, error } = await supabase
             .from('users')
             .select('username, balance')
-            .eq('phone', phone)
+            .eq('phone', users.phone)
             .single();
 
         if (error) throw error;
@@ -80,7 +77,6 @@ async function loadUserDetails() {
         displayMessage(createGameStatusEl, 'Failed to load user data', 'error');
     }
 }
-
 function updateUserUI() {
     if (usernameEl) usernameEl.textContent = user.username || 'Guest';
     if (balanceAmountEl) balanceAmountEl.textContent = formatBalance(user.balance);
@@ -155,13 +151,14 @@ async function createGame(bet) {
 
     try {
         const gameCode = generateGameCode();
-        const phone = localStorage.getItem('phone');
+        //const phone = localStorage.getItem('phone');
+        const users = JSON.parse(localStorage.getItem('user'));
 
         const { data: createdGameData, error } = await supabase
             .from('guess_number_games')  // Changed table name
             .insert([{
                 code: gameCode,
-                creator_phone: phone,
+                creator_phone: users.phone,
                 creator_username: user.username,
                 bet: bet,
                 status: 'waiting',
@@ -337,7 +334,9 @@ async function joinGame(gameCode, gameBet) {
     displayMessage(createGameStatusEl, 'Joining game...', 'info');
 
     try {
-        const phone = localStorage.getItem('phone');
+      const users = JSON.parse(localStorage.getItem('user'));
+
+      //  const phone = localStorage.getItem('phone');
         const { data: gameData, error: fetchError } = await supabase
             .from('guess_number_games')  // Changed table name
             .select('creator_phone, opponent_phone, bet, is_private, status')
@@ -348,7 +347,7 @@ async function joinGame(gameCode, gameBet) {
         if (!gameData) throw new Error('Game not found');
         if (gameData.opponent_phone) throw new Error('Game is already full');
         if (gameData.bet !== gameBet) throw new Error('Bet amount mismatch');
-        if (gameData.creator_phone === phone) throw new Error('Cannot join your own game');
+        if (gameData.creator_phone === users.phone) throw new Error('Cannot join your own game');
 
         const newBalance = user.balance - gameBet;
         /*if (!await updateUserBalance(newBalance)) {
@@ -358,7 +357,7 @@ async function joinGame(gameCode, gameBet) {
         const { error: joinError } = await supabase
             .from('guess_number_games')  // Changed table name
             .update({
-                opponent_phone: phone,
+                opponent_phone: users.phone,
                 opponent_username: user.username,
                 status: 'ongoing'
             })
