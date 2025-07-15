@@ -62,7 +62,13 @@
         .header-content {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 0 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
         }
 
         #back-btn {
@@ -87,6 +93,23 @@
             font-size: 1.15rem;
             font-weight: 600;
             color: var(--primary-dark);
+        }
+
+        #info-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        #info-btn:active {
+            background-color: rgba(0, 0, 0, 0.1);
         }
 
         section {
@@ -453,16 +476,127 @@
             font-size: 0.75rem;
             color: var(--text-light);
         }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-hover);
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .modal-close:active {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-content {
+            padding: 16px;
+        }
+
+        .modal-section {
+            margin-bottom: 16px;
+        }
+
+        .modal-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-section-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .modal-section-content ul {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+
+        .modal-section-content li {
+            margin-bottom: 6px;
+        }
+
+        .highlight {
+            background-color: var(--highlight-color);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <button id="back-btn" class="icon-btn" title="Go back">
-                    <span class="material-icons">arrow_back</span>
+                <div class="header-left">
+                    <button id="back-btn" class="icon-btn" title="Go back">
+                        <span class="material-icons">arrow_back</span>
+                    </button>
+                    <h1>Guess Number Order</h1>
+                </div>
+                <button id="info-btn" class="icon-btn" title="How to play">
+                    <span class="material-icons">info</span>
                 </button>
-                <h1>Guess Number Order</h1>
             </div>
         </header>
 
@@ -534,6 +668,100 @@
         </section>
     </div>
 
+    <!-- How to Play Modal -->
+    <div class="modal-overlay" id="how-to-play-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">How to Play Guess Number Order</div>
+                <button class="modal-close" id="modal-close-btn">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="modal-section">
+                    <div class="modal-section-title">
+                        <span class="material-icons">help_outline</span>
+                        Game Objective
+                    </div>
+                    <div class="modal-section-content">
+                        Guess the 4-digit number that the computer has selected before your opponent does. 
+                        The number will have all unique digits (no repeats) and may include any digit from 0-9.
+                    </div>
+                </div>
+                
+                <div class="modal-section">
+                    <div class="modal-section-title">
+                        <span class="material-icons">rule</span>
+                        Game Rules
+                    </div>
+                    <div class="modal-section-content">
+                        <ul>
+                            <li>The computer generates a random 4-digit number with no repeating digits</li>
+                            <li>Both players compete to guess the number first</li>
+                            <li>Each guess must be a 4-digit number with unique digits</li>
+                            <li>After each guess, you'll get feedback on how close your guess was</li>
+                            <li>The first player to guess the exact number wins the game</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="modal-section">
+                    <div class="modal-section-title">
+                        <span class="material-icons">feedback</span>
+                        Understanding Feedback
+                    </div>
+                    <div class="modal-section-content">
+                        After each guess, you'll receive feedback in this format: 
+                        <span class="highlight">X correct numbers, Y in correct position</span>
+                        <ul>
+                            <li><strong>Correct numbers</strong>: How many digits in your guess exist in the secret number</li>
+                            <li><strong>Correct position</strong>: How many digits are in the exact right position</li>
+                        </ul>
+                        Example: If the secret number is <span class="highlight">4278</span> and you guess <span class="highlight">4829</span>, 
+                        the feedback would be <span class="highlight">3 correct numbers (4,2,8), 1 in correct position (4)</span>
+                    </div>
+                </div>
+                
+                <div class="modal-section">
+                    <div class="modal-section-title">
+                        <span class="material-icons">tips_and_updates</span>
+                        Tips & Strategies
+                    </div>
+                    <div class="modal-section-content">
+                        <ul>
+                            <li>Start with a guess that includes a variety of digits to eliminate possibilities</li>
+                            <li>Use the feedback to systematically eliminate numbers that don't fit</li>
+                            <li>Pay attention to both correct numbers and their positions</li>
+                            <li>Try to determine which digits are in the number before focusing on their order</li>
+                            <li>Keep track of digits you've already tried</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="guessnumberorderloby.js"></script>
+    <script>
+        // Modal functionality
+        const infoBtn = document.getElementById('info-btn');
+        const modal = document.getElementById('how-to-play-modal');
+        const closeBtn = document.getElementById('modal-close-btn');
+        
+        infoBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+        
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
