@@ -542,7 +542,7 @@
         
             <div class="form-group">
                 <label for="deposit-method">Payment Method</label>
-                <select id="deposit-method">
+                <select id="deposit-method" onchange="updateDepositDetails()">
                     <option value="telebirr">Telebirr</option>
                     <option value="cbe">CBE Birr</option>
                     <option value="bank">Bank Transfer</option>
@@ -550,17 +550,17 @@
             </div>
         
             <div class="form-group deposit-instructions">
-                <p class="info-text">
+                <p class="info-text" id="account-info">
                     <span class="material-icons">info</span> Please send your deposit to:
-                    <strong style="color: var(--primary-dark);">0961401822</strong>
+                    <strong id="account-number" style="color: var(--primary-dark);">0961401822</strong>
                 </p>
                 <p class="info-text">
-                    <span class="material-icons">receipt</span> After sending, enter the <strong>Transaction ID</strong> below
+                    <span class="material-icons">receipt</span> After sending, enter the <strong id="transaction-id-label">Transaction ID</strong> below
                 </p>
             </div>
         
             <div class="form-group">
-                <label for="transaction-id">Transaction ID</label>
+                <label for="transaction-id" id="transaction-id-label-text">Transaction ID</label>
                 <input type="text" id="transaction-id" placeholder="e.g. T1234567890">
             </div>
         
@@ -593,6 +593,116 @@
         </div>
     </div>
 
-    <script src="profile.js" type="module"></script>
+    <script>
+        // Function to show deposit modal
+        function showDepositModal() {
+            document.getElementById('deposit-modal').style.display = 'flex';
+            updateDepositDetails(); // Initialize with default values
+        }
+
+        // Function to show withdraw modal
+        function showWithdrawModal() {
+            document.getElementById('withdraw-modal').style.display = 'flex';
+        }
+
+        // Function to close any modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Function to update deposit details based on selected payment method
+        function updateDepositDetails() {
+            const method = document.getElementById('deposit-method').value;
+            const accountNumberElement = document.getElementById('account-number');
+            const transactionIdInput = document.getElementById('transaction-id');
+            const transactionIdLabel = document.getElementById('transaction-id-label');
+            const transactionIdLabelText = document.getElementById('transaction-id-label-text');
+
+            switch(method) {
+                case 'telebirr':
+                    accountNumberElement.textContent = '0961401822';
+                    transactionIdInput.placeholder = 'e.g. T1234567890';
+                    transactionIdLabel.textContent = 'Transaction ID';
+                    transactionIdLabelText.textContent = 'Transaction ID';
+                    break;
+                case 'cbe':
+                    accountNumberElement.textContent = '1000575863678';
+                    transactionIdInput.placeholder = 'e.g. CBE123456789';
+                    transactionIdLabel.textContent = 'Reference Number';
+                    transactionIdLabelText.textContent = 'Reference Number';
+                    break;
+                case 'bank':
+                    accountNumberElement.textContent = 'ETB1000575863678 (Habesha Games)';
+                    transactionIdInput.placeholder = 'e.g. Bank transaction reference';
+                    transactionIdLabel.textContent = 'Bank Reference';
+                    transactionIdLabelText.textContent = 'Bank Reference';
+                    break;
+            }
+        }
+
+        // Close modals when clicking outside of them
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Back button functionality
+        document.getElementById('back-btn').addEventListener('click', function() {
+            window.history.back();
+        });
+
+        // Simulate loading transactions (replace with actual data loading)
+        setTimeout(function() {
+            const transactionsList = document.getElementById('transactions-list');
+            transactionsList.innerHTML = `
+                <div class="transaction-item">
+                    <div class="transaction-icon">
+                        <span class="material-icons">arrow_downward</span>
+                    </div>
+                    <div class="transaction-info">
+                        <span class="transaction-type">Deposit</span>
+                        <span class="transaction-description">Telebirr - T1234567890</span>
+                        <span class="transaction-date">Today, 10:30 AM</span>
+                    </div>
+                    <span class="transaction-amount positive">+500.00 ETB</span>
+                </div>
+                <div class="transaction-item">
+                    <div class="transaction-icon">
+                        <span class="material-icons">sports_esports</span>
+                    </div>
+                    <div class="transaction-info">
+                        <span class="transaction-type">Game Entry</span>
+                        <span class="transaction-description">Habesha Lottery</span>
+                        <span class="transaction-date">Yesterday, 4:15 PM</span>
+                    </div>
+                    <span class="transaction-amount negative">-50.00 ETB</span>
+                </div>
+                <div class="transaction-item">
+                    <div class="transaction-icon">
+                        <span class="material-icons">arrow_upward</span>
+                    </div>
+                    <div class="transaction-info">
+                        <span class="transaction-type">Withdrawal</span>
+                        <span class="transaction-description">CBE - 1000575863678</span>
+                        <span class="transaction-date">May 10, 2024</span>
+                    </div>
+                    <span class="transaction-amount negative">-1000.00 ETB</span>
+                </div>
+                <div class="transaction-item">
+                    <div class="transaction-icon">
+                        <span class="material-icons">arrow_downward</span>
+                    </div>
+                    <div class="transaction-info">
+                        <span class="transaction-type">Deposit</span>
+                        <span class="transaction-description">Bank Transfer</span>
+                        <span class="transaction-date">May 5, 2024</span>
+                    </div>
+                    <span class="transaction-amount positive">+2000.00 ETB</span>
+                </div>
+            `;
+        }, 1500);
+    </script>
+       <script src="profile.js" type="module"></script>
 </body>
 </html>
