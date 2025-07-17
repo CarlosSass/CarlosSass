@@ -19,8 +19,8 @@
             --highlight-color: #E8F5E9; /* Very light green for accents */
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
-            --border-radius: 12px; /* Reduced from 16px */
-            --border-radius-sm: 8px; /* Reduced from 10px */
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
             --danger-color: #e53935;
             --success-color: #43a047;
             --warning-color: #fb8c00;
@@ -37,14 +37,14 @@
         body {
             background-color: var(--accent-color);
             color: var(--text-color);
-            padding: 8px; /* Reduced from 16px */
-            font-size: 14px; /* Reduced from 15px */
+            padding: 8px;
+            font-size: 14px;
             line-height: 1.5;
         }
         
         .profile-container {
             width: 100%;
-            max-width: 100%; /* Changed from 480px to use full width */
+            max-width: 100%;
             margin: 0 auto;
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
@@ -55,7 +55,7 @@
         .profile-header {
             display: flex;
             align-items: center;
-            padding: 16px; /* Reduced from 20px */
+            padding: 16px;
             background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
             color: white;
             position: sticky;
@@ -69,8 +69,8 @@
             border: none;
             color: white;
             cursor: pointer;
-            margin-right: 10px; /* Reduced from 12px */
-            padding: 4px; /* Reduced from 6px */
+            margin-right: 10px;
+            padding: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -83,7 +83,7 @@
         }
         
         .profile-header h1 {
-            font-size: 1.1rem; /* Reduced from 1.25rem */
+            font-size: 1.1rem;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
@@ -93,8 +93,8 @@
         .balance-card {
             background: var(--card-bg);
             border-radius: var(--border-radius);
-            padding: 16px; /* Reduced from 20px */
-            margin: 12px; /* Reduced from 16px */
+            padding: 16px;
+            margin: 12px;
             box-shadow: var(--shadow);
             border-top: 4px solid var(--primary-light);
             position: relative;
@@ -113,35 +113,35 @@
         }
         
         .balance-info {
-            margin-bottom: 16px; /* Reduced from 20px */
+            margin-bottom: 16px;
             position: relative;
             z-index: 1;
         }
         
         .balance-label {
             display: block;
-            font-size: 0.85rem; /* Reduced from 0.9rem */
+            font-size: 0.85rem;
             color: var(--primary-dark);
-            margin-bottom: 4px; /* Reduced from 6px */
+            margin-bottom: 4px;
             font-weight: 500;
         }
         
         .balance-amount {
-            font-size: 1.6rem; /* Reduced from 1.9rem */
+            font-size: 1.6rem;
             font-weight: 700;
             color: var(--primary-dark);
         }
         
         .balance-actions {
             display: flex;
-            gap: 10px; /* Reduced from 12px */
+            gap: 10px;
             position: relative;
             z-index: 1;
         }
         
         .btn-deposit, .btn-withdraw {
             flex: 1;
-            padding: 12px; /* Reduced from 14px */
+            padding: 12px;
             border: none;
             border-radius: var(--border-radius-sm);
             font-weight: 600;
@@ -149,9 +149,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px; /* Reduced from 8px */
+            gap: 6px;
             transition: all 0.2s;
-            font-size: 0.9rem; /* Reduced from 0.95rem */
+            font-size: 0.9rem;
             box-shadow: var(--shadow);
         }
         
@@ -182,17 +182,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 16px 12px 12px; /* Reduced from 24px 16px 16px */
+            margin: 16px 12px 12px;
         }
         
         .section-header h2 {
-            font-size: 1.05rem; /* Reduced from 1.15rem */
+            font-size: 1.05rem;
             font-weight: 600;
             color: var(--primary-dark);
         }
         
         .view-all {
-            font-size: 0.8rem; /* Reduced from 0.85rem */
+            font-size: 0.8rem;
             color: var(--primary-color);
             font-weight: 500;
             text-decoration: none;
@@ -201,7 +201,7 @@
         .transactions-list {
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
-            margin: 0 12px 16px; /* Reduced from 0 16px 24px */
+            margin: 0 12px 16px;
             overflow: hidden;
             box-shadow: var(--shadow);
             max-height: 50vh;
@@ -212,7 +212,7 @@
         
         .transaction-item {
             display: flex;
-            padding: 14px; /* Reduced from 16px */
+            padding: 14px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             align-items: center;
             transition: all 0.2s;
@@ -227,13 +227,13 @@
         }
         
         .transaction-icon {
-            width: 36px; /* Reduced from 40px */
-            height: 36px; /* Reduced from 40px */
-            border-radius: 10px; /* Reduced from 12px */
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 12px; /* Reduced from 16px */
+            margin-right: 12px;
             background-color: var(--highlight-color);
             color: var(--primary-color);
             flex-shrink: 0;
@@ -247,32 +247,32 @@
         .transaction-type {
             font-weight: 600;
             display: block;
-            margin-bottom: 2px; /* Reduced from 4px */
-            font-size: 0.9rem; /* Reduced from 0.95rem */
+            margin-bottom: 2px;
+            font-size: 0.9rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
         .transaction-description {
-            font-size: 0.75rem; /* Reduced from 0.8rem */
+            font-size: 0.75rem;
             color: var(--text-light);
             display: block;
-            margin-bottom: 2px; /* Reduced from 4px */
+            margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
         .transaction-date {
-            font-size: 0.7rem; /* Reduced from 0.75rem */
+            font-size: 0.7rem;
             color: var(--text-light);
         }
         
         .transaction-amount {
             font-weight: 700;
-            font-size: 0.9rem; /* Reduced from 1rem */
-            margin-left: 6px; /* Reduced from 8px */
+            font-size: 0.9rem;
+            margin-left: 6px;
             white-space: nowrap;
         }
         
@@ -281,23 +281,23 @@
         
         .no-transactions {
             text-align: center;
-            padding: 32px 12px; /* Reduced from 40px 16px */
+            padding: 32px 12px;
             color: var(--text-light);
         }
         
         .no-transactions .material-icons {
-            font-size: 40px; /* Reduced from 48px */
-            margin-bottom: 10px; /* Reduced from 12px */
+            font-size: 40px;
+            margin-bottom: 10px;
             opacity: 0.3;
         }
 
         .no-transactions p {
-            font-size: 0.85rem; /* Reduced from 0.9rem */
+            font-size: 0.85rem;
         }
 
         .loading-spinner {
             text-align: center;
-            padding: 24px 12px; /* Reduced from 32px 16px */
+            padding: 24px 12px;
             color: var(--text-light);
         }
 
@@ -323,17 +323,17 @@
             background-color: rgba(0,0,0,0.5);
             justify-content: center;
             align-items: center;
-            padding: 8px; /* Reduced from 16px */
+            padding: 8px;
             backdrop-filter: blur(5px);
         }
 
         .modal-content {
             background-color: var(--card-bg);
             margin: auto;
-            padding: 20px; /* Reduced from 24px */
+            padding: 20px;
             border-radius: var(--border-radius);
             width: 100%;
-            max-width: 100%; /* Changed from 420px to use full width */
+            max-width: 100%;
             position: relative;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             animation: fadeIn 0.3s ease-in-out;
@@ -344,17 +344,17 @@
 
         .modal h3 {
             color: var(--primary-dark);
-            margin-bottom: 16px; /* Reduced from 20px */
-            font-size: 1.1rem; /* Reduced from 1.25rem */
+            margin-bottom: 16px;
+            font-size: 1.1rem;
             text-align: center;
             font-weight: 600;
         }
 
         .close-modal {
             position: absolute;
-            top: 12px; /* Reduced from 16px */
-            right: 12px; /* Reduced from 16px */
-            font-size: 20px; /* Reduced from 24px */
+            top: 12px;
+            right: 12px;
+            font-size: 20px;
             cursor: pointer;
             color: var(--text-light);
             padding: 4px;
@@ -367,24 +367,24 @@
         }
 
         .form-group {
-            margin-bottom: 1rem; /* Reduced from 1.2rem */
+            margin-bottom: 1rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem; /* Reduced from 0.6rem */
+            margin-bottom: 0.5rem;
             font-weight: 500;
             color: var(--primary-dark);
-            font-size: 0.85rem; /* Reduced from 0.9rem */
+            font-size: 0.85rem;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 12px; /* Reduced from 14px */
+            padding: 12px;
             border-radius: var(--border-radius-sm);
             border: 1px solid rgba(0, 0, 0, 0.1);
-            font-size: 0.9rem; /* Reduced from 0.95rem */
+            font-size: 0.9rem;
             transition: all 0.2s;
             background-color: var(--card-bg);
         }
@@ -398,32 +398,77 @@
 
         .deposit-instructions {
             background: var(--highlight-color);
-            padding: 12px; /* Reduced from 16px */
+            padding: 12px;
             border-radius: var(--border-radius-sm);
-            margin-bottom: 1rem; /* Reduced from 1.2rem */
-            font-size: 0.8rem; /* Reduced from 0.85rem */
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
         }
 
         .deposit-instructions .info-text {
-            margin: 6px 0; /* Reduced from 8px 0 */
+            margin: 6px 0;
             color: var(--text-color);
             display: flex;
             align-items: flex-start;
-            gap: 6px; /* Reduced from 8px */
+            gap: 6px;
+        }
+
+        .account-number {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .account-number:hover {
+            background-color: var(--highlight-color);
+        }
+
+        .account-number:active {
+            transform: translateY(1px);
+        }
+
+        .account-number span {
+            font-weight: 600;
+            color: var(--primary-dark);
+            flex: 1;
+        }
+
+        .copy-btn {
+            color: var(--primary-color);
+            font-size: 18px;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .copy-btn:active {
+            background-color: rgba(46, 125, 50, 0.1);
+        }
+
+        .method-instructions {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            line-height: 1.4;
         }
 
         .btn-submit {
             background-color: var(--primary-color);
             color: white;
-            padding: 14px; /* Reduced from 16px */
+            padding: 14px;
             width: 100%;
             border: none;
             border-radius: var(--border-radius-sm);
-            font-size: 0.95rem; /* Reduced from 1rem */
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            margin-top: 6px; /* Reduced from 8px */
+            margin-top: 6px;
             box-shadow: var(--shadow);
         }
 
@@ -441,22 +486,22 @@
         /* Alert styles */
         .alert {
             position: fixed;
-            bottom: 16px; /* Reduced from 24px */
+            bottom: 16px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 12px 20px; /* Reduced from 14px 24px */
+            padding: 12px 20px;
             border-radius: var(--border-radius-sm);
             color: white;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 8px; /* Reduced from 10px */
+            gap: 8px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
             z-index: 1100;
             opacity: 1;
             transition: all 0.3s ease;
             max-width: calc(100% - 32px);
-            font-size: 0.9rem; /* Reduced from 0.95rem */
+            font-size: 0.9rem;
         }
         
         .alert-success {
@@ -479,11 +524,11 @@
             }
             
             .balance-card {
-                padding: 14px; /* Reduced from 18px */
+                padding: 14px;
             }
             
             body {
-                padding: 8px; /* Reduced from 12px */
+                padding: 8px;
             }
         }
     </style>
@@ -542,7 +587,7 @@
         
             <div class="form-group">
                 <label for="deposit-method">Payment Method</label>
-                <select id="deposit-method" onchange="updateDepositDetails()">
+                <select id="deposit-method" onchange="updateDepositInstructions()">
                     <option value="telebirr">Telebirr</option>
                     <option value="cbe">CBE Birr</option>
                     <option value="bank">Bank Transfer</option>
@@ -550,18 +595,58 @@
             </div>
         
             <div class="form-group deposit-instructions">
-                <p class="info-text" id="account-info">
-                    <span class="material-icons">info</span> Please send your deposit to:
-                    <strong id="account-number" style="color: var(--primary-dark);">0961401822</strong>
-                </p>
+                <div id="telebirr-instructions" class="method-instructions">
+                    <p class="info-text">
+                        <span class="material-icons">info</span> Please send your deposit to:
+                    </p>
+                    <div class="account-number" onclick="copyToClipboard('0961401822')">
+                        <span>0961401822</span>
+                        <span class="material-icons copy-btn">content_copy</span>
+                    </div>
+                    <p class="method-instructions">
+                        Use the recipient name: <strong>Habesha Games</strong><br>
+                        Include your username in the reference/note
+                    </p>
+                </div>
+                
+                <div id="cbe-instructions" class="method-instructions" style="display: none;">
+                    <p class="info-text">
+                        <span class="material-icons">info</span> Please send your deposit to:
+                    </p>
+                    <div class="account-number" onclick="copyToClipboard('1000575863678')">
+                        <span>1000575863678</span>
+                        <span class="material-icons copy-btn">content_copy</span>
+                    </div>
+                    <p class="method-instructions">
+                        Use the recipient name: <strong>Habesha Games Inc</strong><br>
+                        Include your username in the reference/note
+                    </p>
+                </div>
+                
+                <div id="bank-instructions" class="method-instructions" style="display: none;">
+                    <p class="info-text">
+                        <span class="material-icons">info</span> Please send your deposit to:
+                    </p>
+                    <div class="account-number" onclick="copyToClipboard('ETB1234567890123')">
+                        <span>ETB1234567890123</span>
+                        <span class="material-icons copy-btn">content_copy</span>
+                    </div>
+                    <p class="method-instructions">
+                        Bank: <strong>Commercial Bank of Ethiopia</strong><br>
+                        Branch: <strong>Main Branch</strong><br>
+                        Account Name: <strong>Habesha Games PLC</strong><br>
+                        Include your username in the reference
+                    </p>
+                </div>
+                
                 <p class="info-text">
-                    <span class="material-icons">receipt</span> After sending, enter the <strong id="transaction-id-label">Transaction ID</strong> below
+                    <span class="material-icons">receipt</span> After sending, enter the <strong>Transaction ID</strong> below
                 </p>
             </div>
         
             <div class="form-group">
-                <label for="transaction-id" id="transaction-id-label-text">Transaction ID</label>
-                <input type="text" id="transaction-id" placeholder="e.g. T1234567890">
+                <label for="transaction-id">Transaction ID</label>
+                <input type="text" id="transaction-id" placeholder="e.g. T1234567890 (for Telebirr) or CBE123456 (for CBE)">
             </div>
         
             <button class="btn-submit">Confirm Deposit</button>
@@ -594,115 +679,77 @@
     </div>
 
     <script>
-        // Function to show deposit modal
+        // Modal functions
         function showDepositModal() {
             document.getElementById('deposit-modal').style.display = 'flex';
-            updateDepositDetails(); // Initialize with default values
+            updateDepositInstructions();
         }
 
-        // Function to show withdraw modal
         function showWithdrawModal() {
             document.getElementById('withdraw-modal').style.display = 'flex';
         }
 
-        // Function to close any modal
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
 
-        // Function to update deposit details based on selected payment method
-        function updateDepositDetails() {
+        // Update deposit instructions based on selected method
+        function updateDepositInstructions() {
             const method = document.getElementById('deposit-method').value;
-            const accountNumberElement = document.getElementById('account-number');
+            
+            // Hide all instructions first
+            document.getElementById('telebirr-instructions').style.display = 'none';
+            document.getElementById('cbe-instructions').style.display = 'none';
+            document.getElementById('bank-instructions').style.display = 'none';
+            
+            // Show the selected method's instructions
+            document.getElementById(`${method}-instructions`).style.display = 'block';
+            
+            // Update transaction ID placeholder
             const transactionIdInput = document.getElementById('transaction-id');
-            const transactionIdLabel = document.getElementById('transaction-id-label');
-            const transactionIdLabelText = document.getElementById('transaction-id-label-text');
-
-            switch(method) {
-                case 'telebirr':
-                    accountNumberElement.textContent = '0961401822';
-                    transactionIdInput.placeholder = 'e.g. T1234567890';
-                    transactionIdLabel.textContent = 'Transaction ID';
-                    transactionIdLabelText.textContent = 'Transaction ID';
-                    break;
-                case 'cbe':
-                    accountNumberElement.textContent = '1000575863678';
-                    transactionIdInput.placeholder = 'e.g. CBE123456789';
-                    transactionIdLabel.textContent = 'Reference Number';
-                    transactionIdLabelText.textContent = 'Reference Number';
-                    break;
-                case 'bank':
-                    accountNumberElement.textContent = 'ETB1000575863678 (Habesha Games)';
-                    transactionIdInput.placeholder = 'e.g. Bank transaction reference';
-                    transactionIdLabel.textContent = 'Bank Reference';
-                    transactionIdLabelText.textContent = 'Bank Reference';
-                    break;
+            if (method === 'telebirr') {
+                transactionIdInput.placeholder = 'e.g. T1234567890';
+            } else if (method === 'cbe') {
+                transactionIdInput.placeholder = 'e.g. CBE123456';
+            } else {
+                transactionIdInput.placeholder = 'e.g. Bank reference number';
             }
         }
 
-        // Close modals when clicking outside of them
+        // Copy to clipboard function
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('Account number copied!', 'success');
+            }).catch(err => {
+                showAlert('Failed to copy', 'error');
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        // Show alert message
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = `
+                <span class="material-icons">${type === 'success' ? 'check_circle' : 'error'}</span>
+                ${message}
+            `;
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.classList.add('fade-out');
+                setTimeout(() => alert.remove(), 300);
+            }, 3000);
+        }
+
+        // Close modals when clicking outside
         window.onclick = function(event) {
             if (event.target.className === 'modal') {
                 event.target.style.display = 'none';
             }
         }
-
-        // Back button functionality
-        document.getElementById('back-btn').addEventListener('click', function() {
-            window.history.back();
-        });
-
-        // Simulate loading transactions (replace with actual data loading)
-        setTimeout(function() {
-            const transactionsList = document.getElementById('transactions-list');
-            transactionsList.innerHTML = `
-                <div class="transaction-item">
-                    <div class="transaction-icon">
-                        <span class="material-icons">arrow_downward</span>
-                    </div>
-                    <div class="transaction-info">
-                        <span class="transaction-type">Deposit</span>
-                        <span class="transaction-description">Telebirr - T1234567890</span>
-                        <span class="transaction-date">Today, 10:30 AM</span>
-                    </div>
-                    <span class="transaction-amount positive">+500.00 ETB</span>
-                </div>
-                <div class="transaction-item">
-                    <div class="transaction-icon">
-                        <span class="material-icons">sports_esports</span>
-                    </div>
-                    <div class="transaction-info">
-                        <span class="transaction-type">Game Entry</span>
-                        <span class="transaction-description">Habesha Lottery</span>
-                        <span class="transaction-date">Yesterday, 4:15 PM</span>
-                    </div>
-                    <span class="transaction-amount negative">-50.00 ETB</span>
-                </div>
-                <div class="transaction-item">
-                    <div class="transaction-icon">
-                        <span class="material-icons">arrow_upward</span>
-                    </div>
-                    <div class="transaction-info">
-                        <span class="transaction-type">Withdrawal</span>
-                        <span class="transaction-description">CBE - 1000575863678</span>
-                        <span class="transaction-date">May 10, 2024</span>
-                    </div>
-                    <span class="transaction-amount negative">-1000.00 ETB</span>
-                </div>
-                <div class="transaction-item">
-                    <div class="transaction-icon">
-                        <span class="material-icons">arrow_downward</span>
-                    </div>
-                    <div class="transaction-info">
-                        <span class="transaction-type">Deposit</span>
-                        <span class="transaction-description">Bank Transfer</span>
-                        <span class="transaction-date">May 5, 2024</span>
-                    </div>
-                    <span class="transaction-amount positive">+2000.00 ETB</span>
-                </div>
-            `;
-        }, 1500);
     </script>
-       <script src="profile.js" type="module"></script>
+    <script src="profile.js" type="module"></script>
 </body>
 </html>
