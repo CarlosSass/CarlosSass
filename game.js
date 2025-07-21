@@ -444,50 +444,7 @@ async function updateGameInDatabase() {
 }
 
 // --- Result Handling ---
-async function showFinalResult(gameData) {
-    const phone = localStorage.getItem('phone');
-    const isWinner = gameData.winner === phone;
 
-    gameResultModal.classList.add('active');
-    disableGuessInput();
-
-    resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-    
-    if (gameData.result === 'number_guessed') {
-        resultMessage.textContent = isWinner
-        
-            ? `You guessed the number correctly (${gameData.secret_number}) and won ${formatBalance(gameState.betAmount *1.8)}!`
-            : `The opponent guessed the number! The secret number was ${gameData.secret_number}.`;
-        
-        resultAmount.textContent = isWinner 
-            ? `+${formatBalance(gameState.betAmount *1.8)}` 
-            : `-${formatBalance(gameState.betAmount)}`;
-        
-        resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-if(!isWinner){
-    if(gameState.didwelose){
-        await recordTransaction({
-            player_phone: phone,
-            transaction_type: 'loss',
-            amount: - gameState.betAmount,
-            game_id: gameState.gameCode,
-            description: `Lost guessing game (${gameState.secretNumber}) `,
-            status: 'completed'
-        });
-        gameState.didwelose=false;
-    }
- 
-}
-
-
-
-    } else if (gameData.result === 'no_guesses') {
-        resultTitle.textContent = 'Game Ended';
-        resultMessage.textContent = `The game ended without a correct guess. The secret number was ${gameData.secret_number}.`;
-        resultAmount.textContent = `-${formatBalance(gameState.betAmount)}`;
-        resultAmount.className = 'result-amount lose';
-    }
-}
 
 function handleGameCancellation(gameData) {
     gameState.gameStatus = 'cancelled';
@@ -658,8 +615,24 @@ function setupEventListeners() {
         gameResultModal.classList.remove('active');
         window.location.href = '/';
     });
+
+        modalCloseBtn.addEventListener('click', () => {
+        gameResultModal.classList.remove('active');
+    });
+    
+    watchGameBtn.addEventListener('click', () => {
+        gameResultModal.classList.remove('active');
+        // Enable viewing the game history
+        displayMessage(gameStatusMessage, 'Viewing completed game', 'info');
+    });
+    
+    // Update back button behavior
     backBtn.addEventListener('click', async () => {
-        await leaveGame(gameState.playerRole === 'creator');
+        if (gameState.gameStatus === 'finished') {
+            window.location.href = '/';
+        } else {
+            await leaveGame(gameState.playerRole === 'creator');
+        }
     });
 }
 
@@ -942,4 +915,74 @@ async function loadGameData() {
     }
 }
 
-// ... (rest of the code remains the same)
+// Add these new variables at the top with other DOM elements
+const modalCloseBtn = document.getElementById('modal-close-btn');
+const watchGameBtn = document.getElementById('watch-game-btn');
+
+// Update the showFinalResult function
+async function showFinalResult(gameData) {
+    const phone = localStorage.getItem('phone');
+    const isWinner = gameData.winner === phone;
+
+    gameResultModal.classList.add('active');
+    disableGuessInput();
+
+    resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+    
+    if (gameData.result === 'number_guessed') {
+        resultMessage.textContent = isWinner
+            ? `You guessed the number correctly (${gameData.secret_number}) and won ${formatBalance(gameState.betAmount *1.8)}!`
+            : `The opponent guessed the number! The secret number was ${gameData.secret_number}.`;
+        
+        resultAmount.textContent = isWinner 
+            ? `+${formatBalance(gameState.betAmount *1.8)}` 
+            : `-${formatBalance(gameState.betAmount)}`;
+        
+        resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+        
+        if(!isWinner){
+            if(gameState.didwelose){
+                await recordTransaction({
+                    player_phone: phone,
+                    transaction_type: 'loss',
+                    amount: - gameState.betAmount,
+                    game_id: gameState.gameCode,
+                    description: `Lost guessing game (${gameState.secretNumber})`,
+                    status: 'completed'
+                });
+                gameState.didwelose=false;
+            }
+        }
+    } else if (gameData.result === 'no_guesses') {
+        resultTitle.textContent = 'Game Ended';
+        resultMessage.textContent = `The game ended without a correct guess. The secret number was ${gameData.secret_number}.`;
+        resultAmount.textContent = `-${formatBalance(gameState.betAmount)}`;
+        resultAmount.className = 'result-amount lose';
+    }
+    
+    // Show watch game button only if you lost
+    watchGameBtn.style.display = isWinner ? 'none' : 'block';
+}
+
+
+
+
+
+// Update the beforeunload handler to not warn for finished games
+window.addEventListener('beforeunload', async (e) => {
+    if (gameState.gameStatus === 'finished') return;
+    
+    if (gameState.playerRole === 'creator' && !gameState.opponent.phone) {
+        try {
+            await supabase
+                .from('guess_number_games')
+                .update({
+                    status: 'cancelled',
+                    result: 'creator_left_early'
+                })
+                .eq('code', gameState.gameCode);
+        } catch (error) {
+            console.error('Error cancelling game on page unload:', error);
+        }
+    }
+});
