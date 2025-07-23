@@ -90,7 +90,7 @@ async function recordTransaction(transactionData) {
         
         // Fallback: Store transaction data in local storage if Supabase fails
         try {
-            const failedTransactions = JSON.parse(localStorage.getItem('failedTransactions') || [];
+            const failedTransactions = JSON.parse(localStorage.getItem('failedTransactions') || []);
             failedTransactions.push({
                 ...transactionData,
                 timestamp: new Date().toISOString()
