@@ -836,13 +836,7 @@ function setupEventListeners() {
         gameResultModal.classList.remove('active');
         window.location.href = '/';
     });
-    modalCloseBtn.addEventListener('click', () => {
-        gameResultModal.classList.remove('active');
-    });
-    watchGameBtn.addEventListener('click', () => {
-        gameResultModal.classList.remove('active');
-        displayMessage(gameStatusMessage, 'Viewing completed game', 'info');
-    });
+    
     backBtn.addEventListener('click', async () => {
         if (gameState.gameStatus === 'finished') {
             window.location.href = '/';
