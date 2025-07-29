@@ -27,6 +27,8 @@ const resultTitle = document.getElementById('result-title');
 const resultMessage = document.getElementById('result-message');
 const resultAmount = document.getElementById('result-amount');
 const resultCloseBtn = document.getElementById('result-close-btn');
+const modalCloseBtn = document.getElementById('modal-close-btn');
+const watchGameBtn = document.getElementById('watch-game-btn');
 
 // --- Game State ---
 let gameState = {
@@ -40,22 +42,9 @@ let gameState = {
     guesses: [],
     betDeducted: false,
     didwelose: true
-
 };
 
-
-
-
-
-
-
-
-
-
-// --- Updated handleGameWin function with transaction recording ---
-
-
-// --- New function to record transactions ---
+// --- Transaction Handling ---
 async function recordTransaction(transactionData) {
     try {
         // 1. First handle the user balance update
@@ -82,15 +71,19 @@ async function recordTransaction(transactionData) {
                 description: transactionData.description,
                 status: transactionData.status,
                 created_at: new Date().toISOString()
-                // Explicitly omitting game_id to avoid foreign key constraint
             });
 
         if (error) throw error;
 
         // 3. Update user balance
-        
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ balance: balance_after })
+            .eq('phone', transactionData.player_phone);
 
-        console.log('Transaction recorded successfully (without game_id):', transactionData);
+        if (updateError) throw updateError;
+
+        console.log('Transaction recorded successfully:', transactionData);
 
     } catch (error) {
         console.error('Failed to record transaction:', error);
@@ -100,8 +93,6 @@ async function recordTransaction(transactionData) {
             const failedTransactions = JSON.parse(localStorage.getItem('failedTransactions') || []);
             failedTransactions.push({
                 ...transactionData,
-                balance_before: balance_before,
-                balance_after: balance_after,
                 timestamp: new Date().toISOString()
             });
             localStorage.setItem('failedTransactions', JSON.stringify(failedTransactions));
@@ -111,87 +102,6 @@ async function recordTransaction(transactionData) {
         }
         
         throw error;
-    }
-}
-// --- Update showFinalResult to reflect transaction changes ---
-
-
-async function handleGameWin(winningPlayer) {
-    if (gameState.gameStatus === 'finished') return;
-    
-    gameState.gameStatus = 'finished';
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    try {
-        // Calculate amounts with 10% house cut
-        const totalPrizePool = gameState.betAmount * 2; // Both players' bets
-        const winnerPrize = Math.floor(totalPrizePool * 0.9); // 90% to winner
-        const houseCut = totalPrizePool - winnerPrize; // 10% to house
-
-
-        // Update database with winner
-        const { error } = await supabase
-            .from('guess_number_games')
-            .update({ 
-                status: 'finished',
-                winner: winningPlayer.phone,
-                result: 'number_guessed',
-                //house_cut: houseCut // Store house cut
-            })
-            .eq('code', gameState.gameCode);
-        
-        if (error) throw error;
-
-        // Award prize to winner (90% of total pool)
-        const { data: winnerData } = await supabase
-            .from('users')
-            .select('balance')
-            .eq('phone', winningPlayer.phone)
-            .single();
-
-        if (winnerData) {
-            const newBalance = winnerData.balance + winnerPrize;
-            await supabase
-                .from('users')
-                .update({ balance: newBalance })
-                .eq('phone', winningPlayer.phone);
-            
-            showNotification(`You won ${ gameState.betAmount *1.8} ETB!`, 'success');
-        }
-        await recordTransaction({
-            player_phone: winningPlayer.phone,
-            transaction_type: 'win',
-            amount: winnerPrize,
-            game_id: gameState.gameCode,
-            description: `Won guessing game (${gameState.secretNumber}) `,
-            status: 'completed'
-        });
-        // Add house cut to house account (assuming a house account exists)
-        updateHouseBalance(houseCut);
-
-        // Show result
-        showFinalResult({
-            winner: winningPlayer.phone,
-            result: 'number_guessed',
-            secret_number: gameState.secretNumber,
-            prize_amount: winnerPrize,
-            house_cut: houseCut
-        });
-    } catch (error) {
-        console.error('Error handling game win:', error);
     }
 }
 
@@ -230,7 +140,70 @@ function evaluateGuess(guess, secret) {
 }
 
 // --- Game Flow Functions ---
+async function handleGameWin(winningPlayer) {
+    if (gameState.gameStatus === 'finished') return;
+    
+    gameState.gameStatus = 'finished';
 
+    try {
+        // Calculate amounts with 10% house cut
+        const totalPrizePool = gameState.betAmount * 2; // Both players' bets
+        const winnerPrize = Math.floor(totalPrizePool * 0.9); // 90% to winner
+        const houseCut = totalPrizePool - winnerPrize; // 10% to house
+
+        // Update database with winner
+        const { error } = await supabase
+            .from('guess_number_games')
+            .update({ 
+                status: 'finished',
+                winner: winningPlayer.phone,
+                result: 'number_guessed',
+                house_cut: houseCut
+            })
+            .eq('code', gameState.gameCode);
+        
+        if (error) throw error;
+
+        // Award prize to winner (90% of total pool)
+        const { data: winnerData } = await supabase
+            .from('users')
+            .select('balance')
+            .eq('phone', winningPlayer.phone)
+            .single();
+
+        if (winnerData) {
+            const newBalance = winnerData.balance + winnerPrize;
+            await supabase
+                .from('users')
+                .update({ balance: newBalance })
+                .eq('phone', winningPlayer.phone);
+            
+            showNotification(`You won ${gameState.betAmount * 1.8} ETB!`, 'success');
+        }
+
+        await recordTransaction({
+            player_phone: winningPlayer.phone,
+            transaction_type: 'win',
+            amount: winnerPrize,
+            description: `Won guessing game (${gameState.secretNumber})`,
+            status: 'completed'
+        });
+
+        // Add house cut to house account
+        updateHouseBalance(houseCut);
+
+        // Show result
+        showFinalResult({
+            winner: winningPlayer.phone,
+            result: 'number_guessed',
+            secret_number: gameState.secretNumber,
+            prize_amount: winnerPrize,
+            house_cut: houseCut
+        });
+    } catch (error) {
+        console.error('Error handling game win:', error);
+    }
+}
 
 // --- UI Functions ---
 function updateGameUI() {
@@ -333,12 +306,10 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-    // Auto-remove after 5 seconds
     setTimeout(() => {
       notification.remove();
     }, 5000);
 }
-
 
 function updatePlayerUI(avatarEl, nameEl, statusEl, player, defaultName) {
     if (player && player.phone) {
@@ -378,8 +349,6 @@ function copyGameCode() {
 }
 
 // --- Game Management Functions ---
-
-
 async function deductBetAmount() {
     if (gameState.betDeducted) return;
 
@@ -454,38 +423,34 @@ async function showFinalResult(gameData) {
     
     if (gameData.result === 'number_guessed') {
         resultMessage.textContent = isWinner
-        
-            ? `You guessed the number correctly (${gameData.secret_number}) and won ${formatBalance(gameState.betAmount *1.8)}!`
+            ? `You guessed the number correctly (${gameData.secret_number}) and won ${formatBalance(gameState.betAmount * 1.8)}!`
             : `The opponent guessed the number! The secret number was ${gameData.secret_number}.`;
         
         resultAmount.textContent = isWinner 
-            ? `+${formatBalance(gameState.betAmount *1.8)}` 
+            ? `+${formatBalance(gameState.betAmount * 1.8)}` 
             : `-${formatBalance(gameState.betAmount)}`;
         
         resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-if(!isWinner){
-    if(gameState.didwelose){
-        await recordTransaction({
-            player_phone: phone,
-            transaction_type: 'loss',
-            amount: - gameState.betAmount,
-            game_id: gameState.gameCode,
-            description: `Lost guessing game (${gameState.secretNumber}) `,
-            status: 'completed'
-        });
-        gameState.didwelose=false;
-    }
- 
-}
-
-
-
+        
+        if(!isWinner && gameState.didwelose){
+            await recordTransaction({
+                player_phone: phone,
+                transaction_type: 'loss',
+                amount: -gameState.betAmount,
+                description: `Lost guessing game (${gameData.secret_number})`,
+                status: 'completed'
+            });
+            gameState.didwelose = false;
+        }
     } else if (gameData.result === 'no_guesses') {
         resultTitle.textContent = 'Game Ended';
         resultMessage.textContent = `The game ended without a correct guess. The secret number was ${gameData.secret_number}.`;
         resultAmount.textContent = `-${formatBalance(gameState.betAmount)}`;
         resultAmount.className = 'result-amount lose';
     }
+    
+    // Show watch game button only if you lost
+    watchGameBtn.style.display = isWinner ? 'none' : 'block';
 }
 
 function handleGameCancellation(gameData) {
@@ -522,19 +487,17 @@ function setupRealtimeUpdates() {
                     handleGameCancellation();
                     return;
                 }
-                // Update game state
+                
                 gameState.attempts = payload.new.attempts_left;
                 gameState.gameStatus = payload.new.status;
                 gameState.guesses = payload.new.guesses || [];
 
-                // Handle opponent joining
                 if (payload.new.opponent_phone && !gameState.opponent.phone) {
                     gameState.opponent = {
                         username: payload.new.opponent_username,
                         phone: payload.new.opponent_phone
                     };
 
-                    // Start game if not already started
                     if (gameState.gameStatus === 'waiting') {
                         gameState.gameStatus = 'ongoing';
                         updateGameInDatabase();
@@ -543,10 +506,8 @@ function setupRealtimeUpdates() {
                     showNotification('Opponent has joined!', 'success');
                 }
 
-                // Update UI
                 updateGameUI();
 
-                // Handle game completion
                 if (payload.new.status === 'finished') {
                     showFinalResult(payload.new);
                 }
@@ -561,19 +522,20 @@ function setupRealtimeUpdates() {
 }
 
 // --- Game Exit Handling ---
-// --- Updated Game Exit Handling ---
-// --- Updated Game Exit Handling ---
 async function leaveGame() {
     const phone = localStorage.getItem('phone');
     const isCreator = gameState.playerRole === 'creator';
     const opponentJoined = !!gameState.opponent.phone;
     
+    if (gameState.gameStatus === 'finished') {
+        window.location.href = '/';
+        return;
+    }
+
     if (confirm('Are you sure you want to leave this game?')) {
         try {
             if (isCreator) {
                 if (!opponentJoined) {
-                    // Creator leaves before opponent joins - mark as cancelled
-                    console.log(`Creator leaving - no opponent - cancelling game ${gameState.gameCode}`);
                     await supabase
                         .from('guess_number_games')
                         .update({
@@ -584,13 +546,11 @@ async function leaveGame() {
                     
                     showNotification('Game cancelled', 'info');
                 } else {
-                    // Creator leaves after opponent joined - mark as creator left
-                    console.log(`Creator leaving - opponent present - marking as abandoned`);
                     await supabase
                         .from('guess_number_games')
                         .update({
                             creator_left: true,
-                            status: 'ongoing' // Keep game ongoing for opponent
+                            status: 'ongoing'
                         })
                         .eq('code', gameState.gameCode);
                     
@@ -599,22 +559,19 @@ async function leaveGame() {
                         await recordTransaction({
                             player_phone: phone,
                             transaction_type: 'loss',
-                            amount: - gameState.betAmount,
-                            game_id: gameState.gameCode,
-                            description: `You abounded the game of GNO `,
+                            amount: -gameState.betAmount,
+                            description: `You abandoned the game of GNO`,
                             status: 'completed'
                         });
-                        gameState.didwelose=false;
+                        gameState.didwelose = false;
                     }
                 }
             } else {
-                // Opponent leaves - mark as opponent left
-                console.log(`Opponent leaving - marking as abandoned`);
                 await supabase
                     .from('guess_number_games')
                     .update({
                         opponent_left: true,
-                        status: 'ongoing' // Keep game ongoing for creator
+                        status: 'ongoing'
                     })
                     .eq('code', gameState.gameCode);
                 
@@ -629,95 +586,37 @@ async function leaveGame() {
     }
 }
 
-// Update beforeunload handler
-window.addEventListener('beforeunload', async (e) => {
-    if (gameState.playerRole === 'creator' && !gameState.opponent.phone) {
-        try {
-            await supabase
-                .from('guess_number_games')
-                .update({
-                    status: 'cancelled',
-                    result: 'creator_left_early'
-                })
-                .eq('code', gameState.gameCode);
-        } catch (error) {
-            console.error('Error cancelling game on page unload:', error);
-        }
-    }
-});
-// --- Event Listeners ---
-function setupEventListeners() {
-    copyCodeBtn.addEventListener('click', copyGameCode);
-    submitGuessBtn.addEventListener('click', submitGuess);
-    guessInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') submitGuess();
-    });
-    leaveGameBtn.addEventListener('click', () => leaveGame());
-    resultCloseBtn.addEventListener('click', () => {
-        gameResultModal.classList.remove('active');
-        window.location.href = '/';
-    });
-    backBtn.addEventListener('click', async () => {
-        await leaveGame(gameState.playerRole === 'creator');
-    });
-}
-
-// --- Initialize Game ---
-async function initializeGame() {
-    const params = new URLSearchParams(window.location.search);
-    gameState.gameCode = params.get('code');
-
-    if (!gameState.gameCode) {
-        displayMessage(gameStatusMessage, 'No game code provided', 'error');
-        disableGuessInput();
-        return;
-    }
-
-    gameCodeDisplay.textContent = gameState.gameCode;
-    setupEventListeners();
-
-    await loadGameData();
-    setupRealtimeUpdates();
-}
-
-document.addEventListener('DOMContentLoaded', initializeGame);
-
+// --- House Balance Management ---
 async function updateHouseBalance(amount) {
     try {
-      // Get current house balance
-      const { data: house, error } = await supabase
-        .from('house_balance')
-        .select('balance')
-        .eq('id', 1) // Assuming you have a row with id=1 for house balance
-        .single();
+        const { data: house, error } = await supabase
+            .from('house_balance')
+            .select('balance')
+            .eq('id', 1)
+            .single();
   
-      if (error) throw error;
+        if (error) throw error;
   
-      // Calculate new balance
-      const newBalance = (house?.balance || 0) + amount;
+        const newBalance = (house?.balance || 0) + amount;
   
-      // Update house balance
-      const { error: updateError } = await supabase
-        .from('house_balance')
-        .update({ balance: newBalance })
-        .eq('id', 1);
+        const { error: updateError } = await supabase
+            .from('house_balance')
+            .update({ balance: newBalance })
+            .eq('id', 1);
   
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
   
-      return newBalance;
+        return newBalance;
     } catch (error) {
-      console.error('House balance update error:', error);
-      throw error;
+        console.error('House balance update error:', error);
+        throw error;
     }
-  }
+}
 
-
-  // ... (previous code remains the same until the submitGuess function)
-
+// --- Guess Handling ---
 async function submitGuess() {
     const guess = guessInput.value.trim();
 
-    // Validate input
     if (!/^\d{4}$/.test(guess)) {
         displayMessage(gameStatusMessage, 'Please enter a valid 4-digit number', 'error');
         return;
@@ -732,9 +631,10 @@ async function submitGuess() {
         displayMessage(gameStatusMessage, 'Game is not currently accepting guesses.', 'info');
         return;
     }
+      const userss = JSON.parse(localStorage.getItem('user'));
 
     const phone = localStorage.getItem('phone');
-    const currentPlayer = (gameState.creator.phone === phone) ? gameState.creator : gameState.opponent;
+    const currentPlayer = (gameState.creator.phone === userss.phone) ? gameState.creator : gameState.opponent;
 
     if (!currentPlayer || !currentPlayer.phone) {
         console.error("Current player not found in game state.");
@@ -775,16 +675,13 @@ async function submitGuess() {
             timestamp: new Date().toISOString()
         };
 
-        // Store guess in local storage as backup
         storeGuessLocally(guessData);
-
         gameState.guesses.push(guessData);
         
         if (correctPositions === 4) {
             await handleGameWin(currentPlayer);
         } else {
-            // Only show message for the current player's guess
-            if (currentPlayer.phone === phone) {
+            if (currentPlayer.phone === userss.phone) {
                 displayMessage(gameStatusMessage, 
                     `Correct numbers: ${correctNumbers}, Correct positions: ${correctPositions}`, 
                     'info');
@@ -799,11 +696,7 @@ async function submitGuess() {
             })
             .eq('code', gameState.gameCode);
 
-        if (updateError) {
-            console.error('Error updating game with guess:', updateError);
-            // If Supabase update fails, we already have the guess stored locally
-            throw updateError;
-        }
+        if (updateError) throw updateError;
 
         guessInput.value = '';
         renderGuessHistory();
@@ -814,7 +707,6 @@ async function submitGuess() {
     }
 }
 
-// New function to store guesses locally
 function storeGuessLocally(guessData) {
     try {
         const gameCode = gameState.gameCode;
@@ -831,14 +723,12 @@ function storeGuessLocally(guessData) {
     }
 }
 
-// New function to recover guesses from local storage
 async function recoverLocalGuesses() {
     try {
         const gameCode = gameState.gameCode;
         const localGuesses = JSON.parse(localStorage.getItem('guessNumberGameGuesses') || '{}');
         
         if (localGuesses[gameCode] && localGuesses[gameCode].length > 0) {
-            // Check if these guesses are already in the game state
             const newGuesses = localGuesses[gameCode].filter(localGuess => 
                 !gameState.guesses.some(g => 
                     g.guess === localGuess.guess && 
@@ -849,17 +739,14 @@ async function recoverLocalGuesses() {
             if (newGuesses.length > 0) {
                 console.log('Recovering', newGuesses.length, 'guesses from local storage');
                 
-                // Add to game state
                 gameState.guesses = [...gameState.guesses, ...newGuesses];
                 
-                // Try to update database
                 const { error } = await supabase
                     .from('guess_number_games')
                     .update({ guesses: gameState.guesses })
                     .eq('code', gameCode);
                 
                 if (!error) {
-                    // If successful, remove from local storage
                     delete localGuesses[gameCode];
                     localStorage.setItem('guessNumberGameGuesses', JSON.stringify(localGuesses));
                 }
@@ -873,9 +760,7 @@ async function recoverLocalGuesses() {
     return [];
 }
 
-// ... (rest of the code remains the same)
-
-// Update the loadGameData function to include local guess recovery
+// --- Game Initialization ---
 async function loadGameData() {
     try {
         const { data: gameData, error } = await supabase
@@ -907,7 +792,6 @@ async function loadGameData() {
             secretNumber: gameData.secret_number
         });
 
-        // Recover any locally stored guesses
         const recoveredGuesses = await recoverLocalGuesses();
         if (recoveredGuesses.length > 0) {
             gameState.guesses = [...gameState.guesses, ...recoveredGuesses];
@@ -940,3 +824,70 @@ async function loadGameData() {
         setTimeout(() => window.location.href = '/', 3000);
     }
 }
+
+// --- Event Listeners ---
+function setupEventListeners() {
+    copyCodeBtn.addEventListener('click', copyGameCode);
+    submitGuessBtn.addEventListener('click', submitGuess);
+    guessInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') submitGuess();
+    });
+    leaveGameBtn.addEventListener('click', () => leaveGame());
+    resultCloseBtn.addEventListener('click', () => {
+        gameResultModal.classList.remove('active');
+        window.location.href = '/';
+    });
+    modalCloseBtn.addEventListener('click', () => {
+        gameResultModal.classList.remove('active');
+    });
+    watchGameBtn.addEventListener('click', () => {
+        gameResultModal.classList.remove('active');
+        displayMessage(gameStatusMessage, 'Viewing completed game', 'info');
+    });
+    backBtn.addEventListener('click', async () => {
+        if (gameState.gameStatus === 'finished') {
+            window.location.href = '/';
+        } else {
+            await leaveGame(gameState.playerRole === 'creator');
+        }
+    });
+}
+
+// --- Initialize Game ---
+async function initializeGame() {
+    const params = new URLSearchParams(window.location.search);
+    gameState.gameCode = params.get('code');
+
+    if (!gameState.gameCode) {
+        displayMessage(gameStatusMessage, 'No game code provided', 'error');
+        disableGuessInput();
+        return;
+    }
+
+    gameCodeDisplay.textContent = gameState.gameCode;
+    setupEventListeners();
+
+    await loadGameData();
+    setupRealtimeUpdates();
+}
+
+// --- Page Unload Handling ---
+window.addEventListener('beforeunload', async (e) => {
+    if (gameState.gameStatus === 'finished') return;
+    
+    if (gameState.playerRole === 'creator' && !gameState.opponent.phone) {
+        try {
+            await supabase
+                .from('guess_number_games')
+                .update({
+                    status: 'cancelled',
+                    result: 'creator_left_early'
+                })
+                .eq('code', gameState.gameCode);
+        } catch (error) {
+            console.error('Error cancelling game on page unload:', error);
+        }
+    }
+});
+
+document.addEventListener('DOMContentLoaded', initializeGame);
