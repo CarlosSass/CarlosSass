@@ -240,9 +240,10 @@ function updateGameUI() {
 
 function renderGuessHistory() {
     guessHistoryTable.innerHTML = '';
+      const userss = JSON.parse(localStorage.getItem('user'));
 
     const phone = localStorage.getItem('phone');
-    const currentPlayerGuesses = gameState.guesses.filter(guess => guess.player.phone === phone);
+    const currentPlayerGuesses = gameState.guesses.filter(guess => guess.player.phone === userss.phone);
 
     if (currentPlayerGuesses.length === 0) {
         historyEmptyState.style.display = 'flex';
@@ -524,6 +525,8 @@ function setupRealtimeUpdates() {
 // --- Game Exit Handling ---
 async function leaveGame() {
     const phone = localStorage.getItem('phone');
+          const userss = JSON.parse(localStorage.getItem('user'));
+
     const isCreator = gameState.playerRole === 'creator';
     const opponentJoined = !!gameState.opponent.phone;
     
@@ -557,7 +560,7 @@ async function leaveGame() {
                     showNotification('You left the game - opponent can still play', 'info');
                     if(gameState.didwelose){
                         await recordTransaction({
-                            player_phone: phone,
+                            player_phone: userss.phone,
                             transaction_type: 'loss',
                             amount: -gameState.betAmount,
                             description: `You abandoned the game of GNO`,
@@ -796,9 +799,10 @@ async function loadGameData() {
         if (recoveredGuesses.length > 0) {
             gameState.guesses = [...gameState.guesses, ...recoveredGuesses];
         }
+      const userss = JSON.parse(localStorage.getItem('user'));
 
         const phone = localStorage.getItem('phone');
-        gameState.playerRole = gameData.creator_phone === phone ? 'creator' : 'opponent';
+        gameState.playerRole = gameData.creator_phone === userss.phone ? 'creator' : 'opponent';
 
         if (gameState.opponent.phone && gameState.gameStatus === 'waiting') {
             gameState.gameStatus = 'ongoing';
