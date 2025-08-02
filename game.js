@@ -242,7 +242,7 @@ function renderGuessHistory() {
     guessHistoryTable.innerHTML = '';
       const userss = JSON.parse(localStorage.getItem('user'));
 
-    const phone = localStorage.getItem('phone');
+    //const phone = localStorage.getItem('phone');
     const currentPlayerGuesses = gameState.guesses.filter(guess => guess.player.phone === userss.phone);
 
     if (currentPlayerGuesses.length === 0) {
@@ -354,6 +354,8 @@ async function deductBetAmount() {
     if (gameState.betDeducted) return;
 
     try {
+            const userss = JSON.parse(localStorage.getItem('user'));
+
         const phone = localStorage.getItem('phone');
         const { data: gameData } = await supabase
             .from('guess_number_games')
@@ -371,7 +373,7 @@ async function deductBetAmount() {
         const { data: userData, error: userError } = await supabase
             .from('users')
             .select('balance')
-            .eq('phone', phone)
+            .eq('phone', userss.phone)
             .single();
 
         if (userError) throw userError;
@@ -381,7 +383,7 @@ async function deductBetAmount() {
             const { error: updateError } = await supabase
                 .from('users')
                 .update({ balance: newBalance })
-                .eq('phone', phone);
+                .eq('phone', userss.phone);
 
             if (updateError) throw updateError;
 
@@ -415,7 +417,9 @@ async function updateGameInDatabase() {
 // --- Result Handling ---
 async function showFinalResult(gameData) {
     const phone = localStorage.getItem('phone');
-    const isWinner = gameData.winner === phone;
+          const userss = JSON.parse(localStorage.getItem('user'));
+
+    const isWinner = gameData.winner === userss.phone;
 
     gameResultModal.classList.add('active');
     disableGuessInput();
@@ -435,7 +439,7 @@ async function showFinalResult(gameData) {
         
         if(!isWinner && gameState.didwelose){
             await recordTransaction({
-                player_phone: phone,
+                player_phone: userss.phone,
                 transaction_type: 'loss',
                 amount: -gameState.betAmount,
                 description: `Lost guessing game (${gameData.secret_number})`,
