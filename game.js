@@ -686,7 +686,7 @@ async function submitGuess() {
         gameState.guesses.push(guessData);
         
         if (correctPositions === 4) {
-            await handleGameWin(currentPlayer);
+            await handleGameWin(userss.phone);
         } else {
             if (currentPlayer.phone === userss.phone) {
                 displayMessage(gameStatusMessage, 
