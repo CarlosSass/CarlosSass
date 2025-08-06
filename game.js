@@ -240,10 +240,9 @@ function updateGameUI() {
 
 function renderGuessHistory() {
     guessHistoryTable.innerHTML = '';
-      const userss = JSON.parse(localStorage.getItem('user'));
 
-    //const phone = localStorage.getItem('phone');
-    const currentPlayerGuesses = gameState.guesses.filter(guess => guess.player.phone === userss.phone);
+    const phone = localStorage.getItem('phone');
+    const currentPlayerGuesses = gameState.guesses.filter(guess => guess.player.phone === phone);
 
     if (currentPlayerGuesses.length === 0) {
         historyEmptyState.style.display = 'flex';
@@ -354,8 +353,6 @@ async function deductBetAmount() {
     if (gameState.betDeducted) return;
 
     try {
-            const userss = JSON.parse(localStorage.getItem('user'));
-
         const phone = localStorage.getItem('phone');
         const { data: gameData } = await supabase
             .from('guess_number_games')
@@ -373,7 +370,7 @@ async function deductBetAmount() {
         const { data: userData, error: userError } = await supabase
             .from('users')
             .select('balance')
-            .eq('phone', userss.phone)
+            .eq('phone', phone)
             .single();
 
         if (userError) throw userError;
@@ -383,7 +380,7 @@ async function deductBetAmount() {
             const { error: updateError } = await supabase
                 .from('users')
                 .update({ balance: newBalance })
-                .eq('phone', userss.phone);
+                .eq('phone', phone);
 
             if (updateError) throw updateError;
 
@@ -417,9 +414,7 @@ async function updateGameInDatabase() {
 // --- Result Handling ---
 async function showFinalResult(gameData) {
     const phone = localStorage.getItem('phone');
-          const userss = JSON.parse(localStorage.getItem('user'));
-
-    const isWinner = gameData.winner === userss.phone;
+    const isWinner = gameData.winner === phone;
 
     gameResultModal.classList.add('active');
     disableGuessInput();
@@ -439,7 +434,7 @@ async function showFinalResult(gameData) {
         
         if(!isWinner && gameState.didwelose){
             await recordTransaction({
-                player_phone: userss.phone,
+                player_phone: phone,
                 transaction_type: 'loss',
                 amount: -gameState.betAmount,
                 description: `Lost guessing game (${gameData.secret_number})`,
@@ -529,8 +524,6 @@ function setupRealtimeUpdates() {
 // --- Game Exit Handling ---
 async function leaveGame() {
     const phone = localStorage.getItem('phone');
-          const userss = JSON.parse(localStorage.getItem('user'));
-
     const isCreator = gameState.playerRole === 'creator';
     const opponentJoined = !!gameState.opponent.phone;
     
@@ -564,7 +557,7 @@ async function leaveGame() {
                     showNotification('You left the game - opponent can still play', 'info');
                     if(gameState.didwelose){
                         await recordTransaction({
-                            player_phone: userss.phone,
+                            player_phone: phone,
                             transaction_type: 'loss',
                             amount: -gameState.betAmount,
                             description: `You abandoned the game of GNO`,
@@ -638,10 +631,9 @@ async function submitGuess() {
         displayMessage(gameStatusMessage, 'Game is not currently accepting guesses.', 'info');
         return;
     }
-      const userss = JSON.parse(localStorage.getItem('user'));
 
     const phone = localStorage.getItem('phone');
-    const currentPlayer = (gameState.creator.phone === userss.phone) ? gameState.creator : gameState.opponent;
+    const currentPlayer = (gameState.creator.phone === phone) ? gameState.creator : gameState.opponent;
 
     if (!currentPlayer || !currentPlayer.phone) {
         console.error("Current player not found in game state.");
@@ -686,9 +678,9 @@ async function submitGuess() {
         gameState.guesses.push(guessData);
         
         if (correctPositions === 4) {
-            await handleGameWin(userss.phone);
+            await handleGameWin(currentPlayer);
         } else {
-            if (currentPlayer.phone === userss.phone) {
+            if (currentPlayer.phone === phone) {
                 displayMessage(gameStatusMessage, 
                     `Correct numbers: ${correctNumbers}, Correct positions: ${correctPositions}`, 
                     'info');
@@ -803,10 +795,9 @@ async function loadGameData() {
         if (recoveredGuesses.length > 0) {
             gameState.guesses = [...gameState.guesses, ...recoveredGuesses];
         }
-      const userss = JSON.parse(localStorage.getItem('user'));
 
         const phone = localStorage.getItem('phone');
-        gameState.playerRole = gameData.creator_phone === userss.phone ? 'creator' : 'opponent';
+        gameState.playerRole = gameData.creator_phone === phone ? 'creator' : 'opponent';
 
         if (gameState.opponent.phone && gameState.gameStatus === 'waiting') {
             gameState.gameStatus = 'ongoing';
