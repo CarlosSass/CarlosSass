@@ -352,7 +352,7 @@
 
         // Store user data in localStorage
         localStorage.setItem("user", JSON.stringify(newUser));
-        
+        localStorage.setItem("phone", phone);
         // Redirect to home page after successful registration
         window.location.href = "home.html";
       } catch (err) {
