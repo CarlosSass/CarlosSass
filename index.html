@@ -259,6 +259,8 @@
 
         // Store user data in localStorage
         localStorage.setItem("user", JSON.stringify(userData));
+                localStorage.setItem("phone", phone);
+
         window.location.href = "home.html";
       } catch (err) {
         console.error("Login error:", err);
