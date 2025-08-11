@@ -142,6 +142,8 @@ function evaluateGuess(guess, secret) {
 // --- Game Flow Functions ---
 async function handleGameWin(winningPlayer) {
     if (gameState.gameStatus === 'finished') return;
+            console.error('Error handling game win:', winningPlayer.phone);
+
         try {
         // Calculate amounts with 10% house cut
         const totalPrizePool = gameState.betAmount * 2; // Both players' bets
