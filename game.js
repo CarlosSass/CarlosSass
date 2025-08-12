@@ -156,8 +156,8 @@ async function handleGameWin(winningPlayer) {
             .update({ 
                 status: 'finished',
                 winner: winningPlayer.phone,
-                result: 'number_guessed',
-                house_cut: houseCut
+                result: 'number_guessed'
+                
             })
             .eq('code', gameState.gameCode);
         
