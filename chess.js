@@ -789,13 +789,12 @@ function handleDrawOffer(offer) {
 
 // Handle game over
 function handleGameOver(result) {
+  gameState.currentGame.status = 'finished'; // Ensure status is marked as finished
   let message = `Game over - ${result.winner} wins by ${result.reason}`;
   if (result.reason === 'draw') {
     message = 'Game ended in a draw';
   }
   showFinalResult(result);
-  
-  //alert(message);
   gameStatus.textContent = message;
 }
 // Add this listener in initGame():
@@ -981,22 +980,28 @@ setTimeout(fetchInitialBet, 1000);
 document.addEventListener('DOMContentLoaded', function() {
   // Get the back button
   const backBtn = document.getElementById('back-btn');
+  
+  // Update the result close button handler
   resultCloseBtn.addEventListener('click', () => {
     gameResultModal.classList.remove('active');
     window.location.href = '/';
-});
+  });
+
   if (backBtn) {
-      backBtn.addEventListener('click', function() {
-         
-          if (confirm('Are you sure you want to leave the game?')) {
-             
-            window.history.back();
-          }
-        
-      });
+    backBtn.addEventListener('click', function() {
+      // Check if game is over
+      if (gameState.currentGame && gameState.currentGame.status === 'finished') {
+        // No warning if game is over
+        window.history.back();
+      } else {
+        // Show warning for ongoing games
+        if (confirm('Are you sure you want to leave the game?')) {
+          window.history.back();
+        }
+      }
+    });
   }
 });
-
 function formatBalance(amount) {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
@@ -1013,22 +1018,29 @@ function showFinalResult(result) {
   resultMessage.textContent = result.reason || 
     (isWinner ? 'You won the game!' : 'You lost the game');
 
-  
-    if (isWinner) {
-      const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-      resultAmount.textContent = `+${formatBalance(winnings)}`;
-    } else {
-      resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
-    }
-  
+  if (isWinner) {
+    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
+    resultAmount.textContent = `+${formatBalance(winnings)}`;
+  } else {
+    resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
+  }
 
   resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
+  
+  // Ensure the modal can be closed
+  resultCloseBtn.style.display = 'block';
 }
 
 
-
-
-
+function handleGameOver(result) {
+  gameState.currentGame.status = 'finished'; // Ensure status is marked as finished
+  let message = `Game over - ${result.winner} wins by ${result.reason}`;
+  if (result.reason === 'draw') {
+    message = 'Game ended in a draw';
+  }
+  showFinalResult(result);
+  gameStatus.textContent = message;
+}
 
 
 
