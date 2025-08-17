@@ -1032,15 +1032,6 @@ function showFinalResult(result) {
 }
 
 
-function handleGameOver(result) {
-  gameState.currentGame.status = 'finished'; // Ensure status is marked as finished
-  let message = `Game over - ${result.winner} wins by ${result.reason}`;
-  if (result.reason === 'draw') {
-    message = 'Game ended in a draw';
-  }
-  showFinalResult(result);
-  gameStatus.textContent = message;
-}
 
 
 
