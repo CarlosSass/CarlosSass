@@ -980,7 +980,18 @@ setTimeout(fetchInitialBet, 1000);
 document.addEventListener('DOMContentLoaded', function() {
   // Get the back button
   const backBtn = document.getElementById('back-btn');
-  
+  // Close button (×)
+    document.querySelector('.close-modal')?.addEventListener('click', closeResultModal);
+    
+    // Continue button
+    document.getElementById('result-close-btn')?.addEventListener('click', closeResultModal);
+    
+    // Also close when clicking outside modal content
+    document.getElementById('game-result-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeResultModal();
+        }
+    });
   // Update the result close button handler
   resultCloseBtn.addEventListener('click', () => {
     gameResultModal.classList.remove('active');
@@ -1007,31 +1018,26 @@ function formatBalance(amount) {
   return numericAmount.toLocaleString() + ' ETB' || '0 ETB';
 }
 function showFinalResult(result) {
-  if (!result) return;
+    if (!result) return;
 
-  const isWinner = result.winner === gameState.playerColor;
-  const betAmount = Number(result.bet) || 0;
-  
-  gameResultModal.classList.add('active');
-  
-  resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-  resultMessage.textContent = result.reason || 
-    (isWinner ? 'You won the game!' : 'You lost the game');
+    const modal = document.getElementById('game-result-modal');
+    const isWinner = result.winner === gameState.playerColor;
+    
+    modal.classList.add('active');
+    
+    resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
+    resultMessage.textContent = result.reason || 
+        (isWinner ? 'Congradulations you have won the game!' : 'You lost the game');
 
-  if (isWinner) {
-    const winnings = gameState.betam * 1.8; // 1.8x payout for winner
-    resultAmount.textContent = `+${formatBalance(winnings)}`;
-  } else {
-    resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
-  }
+    if (isWinner) {
+        const winnings = gameState.betam * 1.8;
+        resultAmount.textContent = `+${formatBalance(winnings)}`;
+    } else {
+        resultAmount.textContent = `-${formatBalance(gameState.betam)}`;
+    }
 
-  resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
-  
-  // Ensure the modal can be closed
-  resultCloseBtn.style.display = 'block';
+    resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
 }
-
-
 
 
 
@@ -1092,3 +1098,14 @@ function setupReconnectionUI() {
     reconnectBtn.style.display = 'block';
   });
 }
+
+// Function to close the modal
+function closeResultModal() {
+    const modal = document.getElementById('game-result-modal');
+    modal.classList.remove('active');
+    
+    // Optional: Redirect after closing if desired
+    // window.location.href = '/';
+}
+
+
