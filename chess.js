@@ -1026,8 +1026,8 @@ function showFinalResult(result) {
     modal.classList.add('active');
     
     resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-    resultMessage.textContent = result.reason || 
-        (isWinner ? 'Congradulations you have won the game!' : 'You lost the game');
+    resultMessage.textContent =  
+        (isWinner ? 'Congradulations you have won the game by '+result.reason : 'You lost the game');
 
     if (isWinner) {
         const winnings = gameState.betam * 1.8;
