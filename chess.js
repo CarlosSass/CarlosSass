@@ -1022,12 +1022,29 @@ function showFinalResult(result) {
 
     const modal = document.getElementById('game-result-modal');
     const isWinner = result.winner === gameState.playerColor;
-    
+
+    // Arrays of messages
+    const winnerMessages = [
+        "Checkmate. Well played—your victory is well deserved.",
+        "Your mind was a blade, and the board your battlefield. You reign supreme.",
+        "Nice! You crushed it—great game!"
+    ];
+
+    const loserMessages = [
+        "Checkmate. A hard-fought game—better luck next time.",
+        "Your king has fallen. A noble effort, but fate favored your opponent.",
+        "Game over! That was close—you’ll get ‘em next time!"
+    ];
+
+    // Select random message
+    const randomMessage = isWinner
+        ? winnerMessages[Math.floor(Math.random() * winnerMessages.length)]
+        : loserMessages[Math.floor(Math.random() * loserMessages.length)];
+
     modal.classList.add('active');
-    
+
     resultTitle.textContent = isWinner ? 'You Won!' : 'You Lost!';
-    resultMessage.textContent =  
-        (isWinner ? 'Congradulations you have won the game by '+result.reason : 'You lost the game');
+    resultMessage.textContent = randomMessage;
 
     if (isWinner) {
         const winnings = gameState.betam * 1.8;
@@ -1038,7 +1055,6 @@ function showFinalResult(result) {
 
     resultAmount.className = isWinner ? 'result-amount win' : 'result-amount lose';
 }
-
 
 
 
