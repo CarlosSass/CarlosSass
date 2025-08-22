@@ -54,6 +54,32 @@
 .close-modal:hover {
     color: #333;
 }
+.captured-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+    min-height: 30px;
+    align-items: center;
+    justify-content: center;
+}
+
+.captured-piece {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.white-player .captured-piece {
+    color: #333;
+}
+
+.black-player .captured-piece {
+    color: #fff;
+}
     </style>
 </head>
 <body>
@@ -87,15 +113,17 @@
                     </div>
                 </div>
             </div>
-            <div class="player white-player">
-                <span id="white-username">White</span>
-                <span id="white-time">10:00</span>
-            </div>
+<div class="player white-player">
+            <span id="white-username">White</span>
+            <span id="white-time">10:00</span>
+            <div class="captured-pieces" id="white-captured"></div>
+        </div>
             <div class="chess-board" id="board"></div>
-            <div class="player black-player">
-                <span id="black-username">Black</span>
-                <span id="black-time">10:00</span>
-            </div>
+<div class="player black-player">
+            <span id="black-username">Black</span>
+            <span id="black-time">10:00</span>
+            <div class="captured-pieces" id="black-captured"></div>
+        </div>
         </div>
         
         <div class="game-controls">
