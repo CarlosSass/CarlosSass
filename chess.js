@@ -140,9 +140,42 @@ function handleGameUpdate(update) {
         // Sound is now handled in renderBoard()
         addMoveToHistory(update.move);
     }
+        // Track captured pieces
+    if (update.move && update.move.captured) {
+        const capturingColor = update.move.color === 'w' ? 'white' : 'black';
+        gameState.capturedPieces[capturingColor].push(update.move.captured);
+        updateCapturedPiecesDisplay();
+    }
     
     updateGameState(update.gameState);
   }
+  
+// Add this new function to update the display
+function updateCapturedPiecesDisplay() {
+    const whiteCaptured = document.getElementById('white-captured');
+    const blackCaptured = document.getElementById('black-captured');
+    
+    // Clear existing displays
+    whiteCaptured.innerHTML = '';
+    blackCaptured.innerHTML = '';
+    
+    // Add white's captured pieces (black pieces)
+    gameState.capturedPieces.white.forEach(piece => {
+        const pieceElement = document.createElement('div');
+        pieceElement.className = 'captured-piece';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toLowerCase()] || '';
+        whiteCaptured.appendChild(pieceElement);
+    });
+    
+    // Add black's captured pieces (white pieces)
+    gameState.capturedPieces.black.forEach(piece => {
+        const pieceElement = document.createElement('div');
+        pieceElement.className = 'captured-piece';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toUpperCase()] || '';
+        blackCaptured.appendChild(pieceElement);
+    });
+}
+
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
     const dialog = document.getElementById('promotion-dialog');
@@ -538,6 +571,7 @@ function initializeGameUI(gameData) {
 
   // Update player info based on current player color
   updatePlayerInfo(gameData);
+    updateCapturedPiecesDisplay();
 
   // Create and render board
   createBoard();
