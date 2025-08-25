@@ -34,7 +34,14 @@ const socket = io('https://chess-game-production-9494.up.railway.app', {
 });
 
 // Game State
+
 const gameState = {
+    // ... your existing properties ...
+  capturedPieces: {
+    white: [],
+    black: []
+  },
+
   playerColor: 'white', // This will be set from URL params
   boardFlipped: false ,// Add this new property
   chess: new Chess(),
