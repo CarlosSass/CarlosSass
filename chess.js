@@ -159,6 +159,9 @@ function handleGameUpdate(update) {
   
 // Add this new function to update the display
 function updateCapturedPiecesDisplay() {
+
+
+  
     const whiteCaptured = document.getElementById('white-captured');
     const blackCaptured = document.getElementById('black-captured');
     
@@ -166,7 +169,14 @@ function updateCapturedPiecesDisplay() {
     whiteCaptured.innerHTML = '';
     blackCaptured.innerHTML = '';
     
-    // Add white's captured pieces (black pieces)
+
+
+
+
+
+
+  if (gameState.playerColor === 'black') {
+       // Add white's captured pieces (black pieces)
     gameState.capturedPieces.white.forEach(piece => {
         const pieceElement = document.createElement('div');
         pieceElement.className = 'captured-piece';
@@ -181,6 +191,26 @@ function updateCapturedPiecesDisplay() {
         pieceElement.innerHTML = PIECE_SYMBOLS[piece.toUpperCase()] || '';
         blackCaptured.appendChild(pieceElement);
     });
+    } else {
+       // Add white's captured pieces (black pieces)
+    gameState.capturedPieces.black.forEach(piece => {
+        const pieceElement = document.createElement('div');
+        pieceElement.className = 'captured-piece';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toLowerCase()] || '';
+        whiteCaptured.appendChild(pieceElement);
+    });
+    
+    // Add black's captured pieces (white pieces)
+    gameState.capturedPieces.white.forEach(piece => {
+        const pieceElement = document.createElement('div');
+        pieceElement.className = 'captured-piece';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toUpperCase()] || '';
+        blackCaptured.appendChild(pieceElement);
+    });
+    }
+  
+
+  
 }
 
   // Update the showPromotionDialog function
