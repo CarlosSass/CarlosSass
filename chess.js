@@ -180,7 +180,7 @@ function updateCapturedPiecesDisplay() {
     gameState.capturedPieces.white.forEach(piece => {
         const pieceElement = document.createElement('div');
         pieceElement.className = 'captured-piece';
-        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toLowerCase()] || '';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toUpperCase()] || '';
         whiteCaptured.appendChild(pieceElement);
     });
     
@@ -188,7 +188,7 @@ function updateCapturedPiecesDisplay() {
     gameState.capturedPieces.black.forEach(piece => {
         const pieceElement = document.createElement('div');
         pieceElement.className = 'captured-piece';
-        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toUpperCase()] || '';
+        pieceElement.innerHTML = PIECE_SYMBOLS[piece.toLowerCase()] || '';
         blackCaptured.appendChild(pieceElement);
     });
     } else {
