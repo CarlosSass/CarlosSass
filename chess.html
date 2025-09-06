@@ -80,32 +80,7 @@
 .black-player .captured-piece {
     color: #fff;
 }
-  .status {
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    margin: 5px 0;
-  }
-  
-  .connected {
-    background-color: #4CAF50;
-    color: white;
-  }
-  
-  .disconnected {
-    background-color: #f44336;
-    color: white;
-  }
-  
-  .reconnecting {
-    background-color: #FFC107;
-    color: black;
-  }
-  
-  .error {
-    background-color: #9E9E9E;
-    color: white;
-  }
+
     </style>
 </head>
 <body>
@@ -125,14 +100,6 @@
                 <strong id="game-code-text">Loading...</strong>
                 <button id="copy-code">📋</button>
             </div>
-            <div id="connection-status" class="status connected">
-  Connection: Stable
-</div>
-
-<div class="player-status">
-  <div id="white-status" class="status connected">White: Connected</div>
-  <div id="black-status" class="status connected">Black: Connected</div>
-</div>
 
 
             <div id="waiting-overlay">
