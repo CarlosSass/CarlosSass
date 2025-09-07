@@ -212,7 +212,49 @@ function updateCapturedPiecesDisplay() {
 
   
 }
-
+// Replace current sound system with this more robust version
+const soundManager = {
+  sounds: {
+    move: { url: 'move-self.mp3', audio: null, loaded: false },
+    capture: { url: 'capture.mp3', audio: null, loaded: false },
+    check: { url: 'notify.mp3', audio: null, loaded: false },
+    join: { url: 'join.mp3', audio: null, loaded: false }
+  },
+  
+  init: function() {
+    Object.keys(this.sounds).forEach(key => {
+      this.sounds[key].audio = new Audio(this.sounds[key].url);
+      this.sounds[key].audio.preload = 'auto';
+      this.sounds[key].audio.load();
+      
+      this.sounds[key].audio.addEventListener('canplaythrough', () => {
+        this.sounds[key].loaded = true;
+      });
+    });
+    
+    // Add user interaction requirement
+    document.addEventListener('click', this.unlockAudio.bind(this), { once: true });
+  },
+  
+  unlockAudio: function() {
+    // Play silent sound to unlock audio on mobile
+    const silentSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU...');
+    silentSound.volume = 0;
+    silentSound.play().catch(e => console.log('Audio unlock failed:', e));
+  },
+  
+  play: function(type) {
+    if (!this.sounds[type]?.loaded) return;
+    
+    try {
+      const sound = this.sounds[type].audio.cloneNode();
+      sound.currentTime = 0;
+      sound.play().catch(e => console.log('Play failed:', e));
+    } catch (e) {
+      console.log('Audio error:', e);
+    }
+  }
+};
   // Update the showPromotionDialog function
   function showPromotionDialog(color) {
     const dialog = document.getElementById('promotion-dialog');
@@ -323,16 +365,12 @@ function updateCapturedPiecesDisplay() {
 
   // ... rest of your existing code ...
 // Sound Effects
-const sounds = {
-  move: new Audio('move-self.mp3'),
-  capture: new Audio('capture.mp3'),
-  check: new Audio('notify.mp3'),
-  join: new Audio('join.mp3')
-};
+
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   initGame();
+  soundManager.init();
   board.addEventListener('click', handleBoardClick);
   
   // Setup connection status indicator
@@ -757,27 +795,7 @@ function playSound(type) {
   }
 }
 
-function addMoveToHistory(move) {
-  if (!moveHistory) return;
-  
-  const moveNumber = Math.ceil(moveHistory.children.length / 2) + 1;
-  const isWhiteMove = moveHistory.children.length % 2 === 0;
-  
-  if (isWhiteMove) {
-    const moveElement = document.createElement('div');
-    moveElement.className = 'move-number';
-    moveElement.textContent = `${moveNumber}.`;
-    moveHistory.appendChild(moveElement);
-  }
-  
-  const moveElement = document.createElement('div');
-  moveElement.className = 'move';
-  moveElement.textContent = `${move.from}-${move.to}`;
-  moveHistory.appendChild(moveElement);
-  
-  // Auto-scroll to bottom
-  moveHistory.scrollTop = moveHistory.scrollHeight;
-}
+
 
 function showError(message) {
   if (!errorDisplay) {
@@ -1196,3 +1214,38 @@ function closeResultModal() {
 }
 
 
+// Enhanced move history function
+function addMoveToHistory(move) {
+  if (!moveHistory) return;
+
+  const moveElement = document.createElement('div');
+  moveElement.className = 'move-entry';
+  
+  // Add move number for white moves
+  if (move.color === 'w') {
+    const moveNumber = Math.floor(moveHistory.children.length / 2) + 1;
+    const numberElement = document.createElement('span');
+    numberElement.className = 'move-number';
+    numberElement.textContent = `${moveNumber}.`;
+    moveHistory.appendChild(numberElement);
+  }
+
+  // Create move display
+  moveElement.innerHTML = `
+    <span class="move-from">${move.from}</span>
+    <span class="move-separator">→</span>
+    <span class="move-to">${move.to}</span>
+    ${move.captured ? `<span class="move-capture">(x${move.captured})</span>` : ''}
+    ${move.promotion ? `<span class="move-promotion">[=${move.promotion}]</span>` : ''}
+    ${move.san ? `<span class="move-san">${move.san}</span>` : ''}
+  `;
+
+  // Highlight last move
+  document.querySelectorAll('.move-entry').forEach(el => {
+    el.classList.remove('last-move');
+  });
+  moveElement.classList.add('last-move');
+
+  moveHistory.appendChild(moveElement);
+  moveHistory.scrollTop = moveHistory.scrollHeight;
+}
