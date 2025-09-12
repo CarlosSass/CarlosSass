@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Game</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --accent-color: #4fc3f7;
+            --background-color: #f5f7fa;
+            --card-back-color: #e0e0e0;
+            --text-color: #333;
+            --success-color: #4caf50;
+            --error-color: #f44336;
+            --info-color: #2196f3;
+            --warning-color: #ff9800;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .game-code {
+            background-color: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        main {
+            flex: 1;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .status-message {
+            padding: 0.8rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .status-message.info {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+        .status-message.success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-message.error {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .opponent-area, .play-area, .player-area {
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .opponent-area {
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .play-area {
+            min-height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .player-area {
+            min-height: 180px;
+        }
+
+        .hand {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+
+        .card {
+            width: 80px;
+            height: 120px;
+            background-color: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            transition: transform 0.2s;
+            cursor: default;
+        }
+
+        .card.playable {
+            cursor: pointer;
+        }
+
+        .card.playable:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .card-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .card-suit {
+            font-size: 1.5rem;
+            align-self: center;
+        }
+
+        .hearts, .diamonds {
+            color: red;
+        }
+
+        .clubs, .spades {
+            color: black;
+        }
+
+        .played-card {
+            position: absolute;
+        }
+
+        .played-card.player-card {
+            left: 50%;
+            transform: translateX(-120%) rotate(-5deg);
+        }
+
+        .played-card.opponent-card {
+            left: 50%;
+            transform: translateX(20%) rotate(5deg);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .bet-amount {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                width: 60px;
+                height: 90px;
+            }
+            
+            .card-value {
+                font-size: 1rem;
+            }
+            
+            .card-suit {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <button class="back-btn" id="back-btn">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div class="user-avatar" id="user-avatar">U</div>
+            <div id="username">Username</div>
+        </div>
+        <div class="game-code" id="game-code">GAME123</div>
+    </header>
+
+    <main>
+        <div class="game-container">
+            <div id="game-status" class="status-message info">Loading game...</div>
+            
+            <div class="game-area">
+                <div class="opponent-area">
+                    <div class="game-info">
+                        <div>Opponent</div>
+                        <div id="opponent-hand">0 cards</div>
+                    </div>
+                    <div class="hand" id="opponent-hand-display">
+                        <!-- Opponent's cards will be shown as card backs -->
+                    </div>
+                </div>
+                
+                <div class="play-area" id="play-area">
+                    <!-- Played cards will appear here -->
+                </div>
+                
+                <div class="player-area">
+                    <div class="game-info">
+                        <div>Your Hand</div>
+                        <div class="bet-amount" id="bet-amount">100 ETB</div>
+                    </div>
+                    <div class="hand" id="player-hand">
+                        <!-- Player's cards will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="card-game.js"></script>
+</body>
+</html>
