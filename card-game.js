@@ -10,7 +10,21 @@ const opponentHandEl = document.getElementById('opponent-hand');
 const playAreaEl = document.getElementById('play-area');
 const playCardBtn = document.getElementById('play-card-btn');
 const gameCodeEl = document.getElementById('game-code');
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+// Initialize Supabase
+const supabase = createClient(
+  'https://evberyanshxxalxtwnnc.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2YmVyeWFuc2h4eGFseHR3bm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwODMwOTcsImV4cCI6MjA1OTY1OTA5N30.pEoPiIi78Tvl5URw0Xy_vAxsd-3XqRlC8FTnX9HpgMw'
+);
+
+// Utility function for displaying messages
+function displayMessage(element, message, type = 'info') {
+  element.textContent = message;
+  element.className = `status-message ${type}`;
+}
+
+// Rest of your existing code...
 let gameData = {};
 let playerHand = [];
 let opponentHandCount = 0;
