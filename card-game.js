@@ -10,7 +10,6 @@ const opponentHandEl = document.getElementById('opponent-hand');
 const playAreaEl = document.getElementById('play-area');
 const playCardBtn = document.getElementById('play-card-btn');
 const gameCodeEl = document.getElementById('game-code');
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 // Initialize Supabase
 const supabase = createClient(
