@@ -25,7 +25,111 @@
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+/* Card styles */
+.card {
+    width: 80px;
+    height: 120px;
+    border-radius: 8px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px;
+    margin: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: relative;
+    cursor: default;
+}
 
+.card.playable {
+    cursor: pointer;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.card.hearts, .card.diamonds {
+    color: red;
+}
+
+.card.clubs, .card.spades {
+    color: black;
+}
+
+.card-suit {
+    font-size: 24px;
+    text-align: center;
+}
+
+/* Suit display */
+.suit-hearts { color: red; }
+.suit-diamonds { color: red; }
+.suit-clubs { color: black; }
+.suit-spades { color: black; }
+
+/* Modals */
+.suit-selector-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.suit-selector {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 300px;
+}
+
+.suit-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.suit-option {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.game-result-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.result-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Status indicators */
+.status-your-turn {
+    color: green;
+    font-weight: bold;
+}
+
+.status-opponent-turn {
+    color: #666;
+}
         body {
             background-color: var(--background-color);
             color: var(--text-color);
