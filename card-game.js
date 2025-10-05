@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    gameCodeDisplay.textContent = gameState.gameCode;
+    //gameCodeDisplay.textContent = gameState.gameCode;
     
     // Load game data
     await loadGameData();
