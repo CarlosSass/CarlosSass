@@ -17,6 +17,7 @@ const playerNameEl = document.getElementById('player-name');
 const opponentNameEl = document.getElementById('opponent-name');
 const playerAvatarEl = document.getElementById('player-avatar');
 const opponentAvatarEl = document.getElementById('opponent-avatar');
+const drawCardBtn = document.getElementById('draw-card-btn');
 
 // --- Game Constants ---
 const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -27,14 +28,14 @@ const SPECIAL_CARDS = {
     '5': 'skip_turn',
     '7': 'skip_turn',
     '2': 'draw_two',
-    'A': 'spade_ace' // Special rule for A of spades
+    'A': 'spade_ace'
 };
 
 // --- Game State ---
 let gameState = {
     gameCode: '',
-    playerRole: '', // 'creator' or 'opponent'
-    status: 'waiting', // 'waiting', 'ongoing', 'finished'
+    playerRole: '',
+    status: 'waiting',
     currentPlayer: '',
     currentSuit: '',
     lastCard: null,
@@ -42,14 +43,21 @@ let gameState = {
     opponentHandCount: 0,
     creator: {},
     opponent: {},
-    pendingAction: null, // 'draw_two', 'change_suit', etc.
+    pendingAction: null,
     pendingActionData: null,
-    betAmount: 0
+    betAmount: 0,
+    mustPlayHearts: false
 };
 
 // --- Initialize Game ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // Get game code from URL
+    if (!backBtn || !gameCodeDisplay || !currentSuitDisplay || !playerHandEl || 
+        !opponentHandCountEl || !discardPileEl || !gameStatusEl || !playerNameEl || 
+        !opponentNameEl || !playerAvatarEl || !opponentAvatarEl || !drawCardBtn) {
+        console.error('Missing DOM elements');
+        return;
+    }
+
     const params = new URLSearchParams(window.location.search);
     gameState.gameCode = params.get('code');
     
@@ -58,14 +66,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    //gameCodeDisplay.textContent = gameState.gameCode;
+    gameCodeDisplay.textContent = gameState.gameCode;
     
-    // Load game data
     await loadGameData();
     setupEventListeners();
     setupRealtimeUpdates();
     
-    // Back button handler
     backBtn.addEventListener('click', () => {
         window.location.href = 'home.html';
     });
@@ -83,8 +89,7 @@ async function loadGameData() {
         if (error) throw error;
         if (!gameData) throw new Error('Game not found');
         
-        // Get current user
-        const users = JSON.parse(localStorage.getItem('user'));
+        const users = JSON.parse(localStorage.getItem('user')) || {};
         gameState.playerRole = gameData.creator_phone === users.phone ? 'creator' : 'opponent';
         
         // Update game state
@@ -93,6 +98,7 @@ async function loadGameData() {
         gameState.currentSuit = gameData.current_suit;
         gameState.lastCard = gameData.last_card ? JSON.parse(gameData.last_card) : null;
         gameState.betAmount = gameData.bet;
+        gameState.mustPlayHearts = gameData.current_suit === 'hearts';
         
         // Set player hands
         if (gameState.playerRole === 'creator') {
@@ -122,59 +128,67 @@ async function loadGameData() {
             gameState.pendingActionData = gameData.pending_action_data;
         }
         
-        // Update UI
         updateGameUI();
         
     } catch (error) {
         console.error('Error loading game:', error);
-        gameStatusEl.textContent = 'Error loading game';
+        if (gameStatusEl) {
+            gameStatusEl.textContent = 'Error loading game';
+        }
         setTimeout(() => window.location.href = '/', 3000);
     }
 }
 
 function updateGameUI() {
-    // Update player info
-    const users = JSON.parse(localStorage.getItem('user'));
-    playerNameEl.textContent = users.username || 'You';
-    opponentNameEl.textContent = gameState.opponent.username || 'Waiting...';
+    const users = JSON.parse(localStorage.getItem('user')) || {};
     
-    // Generate avatar colors
-    playerAvatarEl.style.backgroundColor = generateAvatarColor(users.username);
-    opponentAvatarEl.style.backgroundColor = generateAvatarColor(gameState.opponent.username);
+    if (playerNameEl) playerNameEl.textContent = users.username || 'You';
+    if (opponentNameEl) opponentNameEl.textContent = gameState.opponent.username || 'Waiting...';
     
-    // Update current suit display
-    currentSuitDisplay.textContent = gameState.currentSuit 
-        ? `${gameState.currentSuit.toUpperCase()}` 
-        : 'Not set';
-    currentSuitDisplay.className = `suit-${gameState.currentSuit}`;
+    if (playerAvatarEl) {
+        playerAvatarEl.style.backgroundColor = generateAvatarColor(users.username);
+        playerAvatarEl.textContent = users.username ? users.username.charAt(0).toUpperCase() : 'Y';
+    }
     
-    // Update opponent hand count
-    opponentHandCountEl.textContent = `${gameState.opponentHandCount} cards`;
+    if (opponentAvatarEl) {
+        opponentAvatarEl.style.backgroundColor = generateAvatarColor(gameState.opponent.username);
+        opponentAvatarEl.textContent = gameState.opponent.username ? 
+            gameState.opponent.username.charAt(0).toUpperCase() : 'O';
+    }
     
-    // Update discard pile
+    if (currentSuitDisplay) {
+        currentSuitDisplay.textContent = gameState.currentSuit 
+            ? `${gameState.currentSuit.toUpperCase()}` 
+            : 'Not set';
+        currentSuitDisplay.className = `suit-${gameState.currentSuit}`;
+    }
+    
+    if (opponentHandCountEl) {
+        opponentHandCountEl.textContent = `${gameState.opponentHandCount} cards`;
+    }
+    
     renderDiscardPile();
-    
-    // Update player hand
     renderPlayerHand();
     
-    // Update game status
-    if (gameState.status === 'waiting') {
-        gameStatusEl.textContent = 'Waiting for opponent...';
-    } else {
-        const isMyTurn = users.phone === gameState.currentPlayer;
-        gameStatusEl.textContent = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
-        gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
-        
-        // Handle pending actions
-        if (isMyTurn && gameState.pendingAction) {
-            handlePendingAction();
+    if (gameStatusEl) {
+        if (gameState.status === 'waiting') {
+            gameStatusEl.textContent = 'Waiting for opponent...';
+        } else {
+            const isMyTurn = users.phone === gameState.currentPlayer;
+            gameStatusEl.textContent = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
+            gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
+            
+            if (isMyTurn && gameState.pendingAction) {
+                handlePendingAction();
+            }
         }
     }
 }
 
 function renderPlayerHand() {
-    playerHandEl.innerHTML = '';
+    if (!playerHandEl) return;
     
+    playerHandEl.innerHTML = '';
     const isMyTurn = gameState.currentPlayer === JSON.parse(localStorage.getItem('user')).phone;
     
     gameState.playerHand.forEach((card, index) => {
@@ -197,13 +211,14 @@ function canPlayCard(card) {
     // If no last card played, any card can be played
     if (!gameState.lastCard) return true;
     
-    // If there's a pending action, only specific cards can be played
+    // If there's a pending action, handle special cases
     if (gameState.pendingAction === 'draw_two') {
         return card.value === '2';
     }
     
-    if (gameState.pendingAction === 'change_suit') {
-        return true; // Can play any card when changing suit
+    // Heart cards rule - must play hearts if possible
+    if (gameState.mustPlayHearts && hasHeartsInHand()) {
+        return card.suit === 'hearts';
     }
     
     // Normal play rules
@@ -212,7 +227,13 @@ function canPlayCard(card) {
            (card.value in SPECIAL_CARDS);
 }
 
+function hasHeartsInHand() {
+    return gameState.playerHand.some(card => card.suit === 'hearts');
+}
+
 function renderDiscardPile() {
+    if (!discardPileEl) return;
+    
     discardPileEl.innerHTML = '';
     
     if (gameState.lastCard) {
@@ -240,7 +261,9 @@ async function playCard(cardIndex) {
         
         const updateData = {
             last_card: JSON.stringify(card),
-            current_player: opponentPhone, // Default to opponent's turn
+            current_player: opponentPhone,
+            current_suit: card.suit, // Update current suit to played card's suit
+            must_play_hearts: card.suit === 'hearts', // Set mustPlayHearts if heart was played
             updated_at: new Date().toISOString()
         };
         
@@ -250,40 +273,32 @@ async function playCard(cardIndex) {
             
             switch (action) {
                 case 'change_suit':
-                    // For 8 or J, player gets to choose new suit
                     if (card.value === '8' || card.value === 'J') {
                         gameState.pendingAction = 'change_suit';
                         updateData.pending_action = 'change_suit';
-                        updateData.current_player = users.phone; // Stay on current player
+                        updateData.current_player = users.phone;
                         showSuitSelector();
                     }
                     break;
                     
                 case 'skip_turn':
-                    // For 5 or 7, current player gets another turn
                     updateData.current_player = users.phone;
                     break;
                     
                 case 'draw_two':
-                    // For 2, next player must draw 2 unless they have a 2
                     gameState.pendingAction = 'draw_two';
                     updateData.pending_action = 'draw_two';
-                    updateData.pending_action_data = 2; // Number of cards to draw
+                    updateData.pending_action_data = 2;
                     break;
                     
                 case 'spade_ace':
-                    // For A of spades, next player must draw 5 unless they have 2 of spades
                     if (card.suit === 'spades' && card.value === 'A') {
                         gameState.pendingAction = 'draw_two';
                         updateData.pending_action = 'draw_two';
-                        updateData.pending_action_data = 5; // Special case for A of spades
+                        updateData.pending_action_data = 5;
                     }
                     break;
             }
-        } else {
-            // Normal card - update current suit
-            gameState.currentSuit = card.suit;
-            updateData.current_suit = card.suit;
         }
         
         // Update hands in database
@@ -299,10 +314,7 @@ async function playCard(cardIndex) {
             updateData.winner = users.phone;
             gameState.status = 'finished';
             
-            // Calculate winnings (bet * 1.8)
             const winnings = Math.floor(gameState.betAmount * 1.8);
-            
-            // Update user balance
             const { data: userData } = await supabase
                 .from('users')
                 .select('balance')
@@ -317,7 +329,6 @@ async function playCard(cardIndex) {
                     .eq('phone', users.phone);
             }
             
-            // Show win message
             showGameResult(true, winnings);
         }
         
@@ -331,8 +342,23 @@ async function playCard(cardIndex) {
         
     } catch (error) {
         console.error('Error playing card:', error);
-        gameStatusEl.textContent = 'Error playing card';
+        if (gameStatusEl) gameStatusEl.textContent = 'Error playing card';
     }
+}
+
+// ... (rest of the code remains the same as previous implementation)
+
+function setupEventListeners() {
+    if (drawCardBtn) {
+        drawCardBtn.addEventListener('click', drawCard);
+    }
+}
+
+function generateAvatarColor(username) {
+    if (!username) return '#6c757d';
+    const colors = ['#ff6b6b', '#51cf66', '#fcc419', '#228be6', '#be4bdb'];
+    const hash = username.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
+    return colors[hash % colors.length];
 }
 
 function showSuitSelector() {
@@ -571,17 +597,4 @@ function setupRealtimeUpdates() {
     return channel;
 }
 
-function setupEventListeners() {
-    // Draw card button
-    const drawCardBtn = document.getElementById('draw-card-btn');
-    if (drawCardBtn) {
-        drawCardBtn.addEventListener('click', drawCard);
-    }
-}
 
-function generateAvatarColor(username) {
-    if (!username) return '#6c757d';
-    const colors = ['#ff6b6b', '#51cf66', '#fcc419', '#228be6', '#be4bdb'];
-    const hash = username.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
-    return colors[hash % colors.length];
-}
