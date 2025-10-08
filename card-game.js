@@ -51,30 +51,71 @@ let gameState = {
 
 // --- Initialize Game ---
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!backBtn || !gameCodeDisplay || !currentSuitDisplay || !playerHandEl || 
-        !opponentHandCountEl || !discardPileEl || !gameStatusEl || !playerNameEl || 
-        !opponentNameEl || !playerAvatarEl || !opponentAvatarEl || !drawCardBtn) {
-        console.error('Missing DOM elements');
-        return;
+    // First verify all required DOM elements exist
+    const requiredElements = {
+        backBtn: document.getElementById('back-btn'),
+        gameCodeDisplay: document.getElementById('game-code-display'),
+        currentSuitDisplay: document.getElementById('current-suit'),
+        playerHandEl: document.getElementById('player-hand'),
+        opponentHandCountEl: document.getElementById('opponent-hand-count'),
+        discardPileEl: document.getElementById('discard-pile'),
+        gameStatusEl: document.getElementById('game-status'),
+        playerNameEl: document.getElementById('player-name'),
+        opponentNameEl: document.getElementById('opponent-name'),
+        playerAvatarEl: document.getElementById('player-avatar'),
+        opponentAvatarEl: document.getElementById('opponent-avatar'),
+        drawCardBtn: document.getElementById('draw-card-btn')
+    };
+
+    // Check for missing elements
+    const missingElements = Object.entries(requiredElements)
+        .filter(([name, element]) => !element)
+        .map(([name]) => name);
+
+    if (missingElements.length > 0) {
+        console.error('Missing DOM elements:', missingElements.join(', '));
+        
+        // Show error to user if gameStatusEl exists
+        if (requiredElements.gameStatusEl) {
+            requiredElements.gameStatusEl.textContent = 'Game setup error - missing elements';
+        }
+        
+        // Still try to load the game but with limited functionality
+        console.log('Proceeding with limited functionality');
     }
 
+    // Get game code from URL
     const params = new URLSearchParams(window.location.search);
     gameState.gameCode = params.get('code');
     
     if (!gameState.gameCode) {
+        console.error('No game code provided in URL');
         window.location.href = '/';
         return;
     }
     
-    gameCodeDisplay.textContent = gameState.gameCode;
+    // Set game code display if element exists
+    if (requiredElements.gameCodeDisplay) {
+        requiredElements.gameCodeDisplay.textContent = gameState.gameCode;
+    }
     
-    await loadGameData();
-    setupEventListeners();
-    setupRealtimeUpdates();
+    try {
+        await loadGameData();
+        setupEventListeners();
+        setupRealtimeUpdates();
+    } catch (error) {
+        console.error('Game initialization failed:', error);
+        if (requiredElements.gameStatusEl) {
+            requiredElements.gameStatusEl.textContent = 'Game initialization failed';
+        }
+    }
     
-    backBtn.addEventListener('click', () => {
-        window.location.href = 'home.html';
-    });
+    // Setup back button if element exists
+    if (requiredElements.backBtn) {
+        requiredElements.backBtn.addEventListener('click', () => {
+            window.location.href = 'home.html';
+        });
+    }
 });
 
 // --- Game Functions ---
