@@ -53,18 +53,18 @@ let gameState = {
 document.addEventListener('DOMContentLoaded', async () => {
     // First verify all required DOM elements exist
     const requiredElements = {
-        backBtn: document.getElementById('back-btn'),
-        gameCodeDisplay: document.getElementById('game-code-display'),
-        currentSuitDisplay: document.getElementById('current-suit'),
-        playerHandEl: document.getElementById('player-hand'),
-        opponentHandCountEl: document.getElementById('opponent-hand-count'),
-        discardPileEl: document.getElementById('discard-pile'),
-        gameStatusEl: document.getElementById('game-status'),
-        playerNameEl: document.getElementById('player-name'),
-        opponentNameEl: document.getElementById('opponent-name'),
-        playerAvatarEl: document.getElementById('player-avatar'),
-        opponentAvatarEl: document.getElementById('opponent-avatar'),
-        drawCardBtn: document.getElementById('draw-card-btn')
+        backBtn,
+        gameCodeDisplay,
+        currentSuitDisplay,
+        playerHandEl,
+        opponentHandCountEl,
+        discardPileEl,
+        gameStatusEl,
+        playerNameEl,
+        opponentNameEl,
+        playerAvatarEl,
+        opponentAvatarEl,
+        drawCardBtn
     };
 
     // Check for missing elements
@@ -76,12 +76,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Missing DOM elements:', missingElements.join(', '));
         
         // Show error to user if gameStatusEl exists
-        if (requiredElements.gameStatusEl) {
-            requiredElements.gameStatusEl.textContent = 'Game setup error - missing elements';
+        if (gameStatusEl) {
+            gameStatusEl.textContent = 'Game setup error - missing elements';
         }
-        
-        // Still try to load the game but with limited functionality
-        console.log('Proceeding with limited functionality');
     }
 
     // Get game code from URL
@@ -95,8 +92,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Set game code display if element exists
-    if (requiredElements.gameCodeDisplay) {
-        requiredElements.gameCodeDisplay.textContent = gameState.gameCode;
+    if (gameCodeDisplay) {
+        gameCodeDisplay.textContent = gameState.gameCode;
     }
     
     try {
@@ -105,14 +102,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupRealtimeUpdates();
     } catch (error) {
         console.error('Game initialization failed:', error);
-        if (requiredElements.gameStatusEl) {
-            requiredElements.gameStatusEl.textContent = 'Game initialization failed';
+        if (gameStatusEl) {
+            gameStatusEl.textContent = 'Game initialization failed';
         }
     }
     
     // Setup back button if element exists
-    if (requiredElements.backBtn) {
-        requiredElements.backBtn.addEventListener('click', () => {
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
             window.location.href = 'home.html';
         });
     }
@@ -230,7 +227,8 @@ function renderPlayerHand() {
     if (!playerHandEl) return;
     
     playerHandEl.innerHTML = '';
-    const isMyTurn = gameState.currentPlayer === JSON.parse(localStorage.getItem('user')).phone;
+    const users = JSON.parse(localStorage.getItem('user')) || {};
+    const isMyTurn = gameState.currentPlayer === users.phone;
     
     gameState.playerHand.forEach((card, index) => {
         const cardEl = document.createElement('div');
@@ -290,8 +288,11 @@ function renderDiscardPile() {
 
 async function playCard(cardIndex) {
     try {
-        const users = JSON.parse(localStorage.getItem('user'));
+        const users = JSON.parse(localStorage.getItem('user')) || {};
+        if (!users.phone) throw new Error('User not logged in');
+        
         const card = gameState.playerHand[cardIndex];
+        if (!card) throw new Error('Invalid card index');
         
         // Remove card from hand
         gameState.playerHand.splice(cardIndex, 1);
@@ -303,8 +304,7 @@ async function playCard(cardIndex) {
         const updateData = {
             last_card: JSON.stringify(card),
             current_player: opponentPhone,
-            current_suit: card.suit, // Update current suit to played card's suit
-            must_play_hearts: card.suit === 'hearts', // Set mustPlayHearts if heart was played
+            current_suit: card.suit,
             updated_at: new Date().toISOString()
         };
         
@@ -387,8 +387,6 @@ async function playCard(cardIndex) {
     }
 }
 
-// ... (rest of the code remains the same as previous implementation)
-
 function setupEventListeners() {
     if (drawCardBtn) {
         drawCardBtn.addEventListener('click', drawCard);
@@ -427,7 +425,9 @@ function showSuitSelector() {
             const selectedSuit = button.dataset.suit;
             
             try {
-                const users = JSON.parse(localStorage.getItem('user'));
+                const users = JSON.parse(localStorage.getItem('user')) || {};
+                if (!users.phone) throw new Error('User not logged in');
+                
                 const isCreator = gameState.playerRole === 'creator';
                 const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
                 
@@ -457,6 +457,8 @@ function showSuitSelector() {
 }
 
 function handlePendingAction() {
+    if (!gameStatusEl) return;
+    
     if (gameState.pendingAction === 'draw_two') {
         const drawCount = gameState.pendingActionData || 2;
         gameStatusEl.textContent = `You must play a 2 or draw ${drawCount} cards`;
@@ -467,7 +469,9 @@ function handlePendingAction() {
 
 async function drawCard() {
     try {
-        const users = JSON.parse(localStorage.getItem('user'));
+        const users = JSON.parse(localStorage.getItem('user')) || {};
+        if (!users.phone) throw new Error('User not logged in');
+        
         const isCreator = gameState.playerRole === 'creator';
         
         // Get current game state to see if there are cards left in deck
@@ -544,7 +548,7 @@ async function drawCard() {
                     .eq('code', gameState.gameCode);
                     
                 if (error) throw error;
-            } else {
+            } else if (gameStatusEl) {
                 gameStatusEl.textContent = 'No cards left to draw';
             }
         }
@@ -554,7 +558,7 @@ async function drawCard() {
         
     } catch (error) {
         console.error('Error drawing card:', error);
-        gameStatusEl.textContent = 'Error drawing card';
+        if (gameStatusEl) gameStatusEl.textContent = 'Error drawing card';
     }
 }
 
@@ -572,10 +576,13 @@ function showGameResult(isWinner, amount) {
     document.body.appendChild(resultModal);
     
     // Close button handler
-    resultModal.querySelector('#result-close-btn').addEventListener('click', () => {
-        resultModal.remove();
-        window.location.href = 'home.html';
-    });
+    const closeBtn = resultModal.querySelector('#result-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            resultModal.remove();
+            window.location.href = 'home.html';
+        });
+    }
 }
 
 function setupRealtimeUpdates() {
@@ -599,7 +606,7 @@ function setupRealtimeUpdates() {
                 gameState.pendingActionData = payload.new.pending_action_data;
                 
                 // Update hands
-                const users = JSON.parse(localStorage.getItem('user'));
+                const users = JSON.parse(localStorage.getItem('user')) || {};
                 const isCreator = gameState.playerRole === 'creator';
                 
                 if (isCreator) {
@@ -637,5 +644,3 @@ function setupRealtimeUpdates() {
         
     return channel;
 }
-
-
