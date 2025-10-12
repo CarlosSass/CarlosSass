@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 // --- Supabase Setup ---
@@ -182,6 +183,7 @@ function setupBetButtons() {
     });
 }
 
+// --- Game Creation ---
 async function createCardGame(bet) {
     if (!validateGameCreation(bet)) return;
 
@@ -194,9 +196,14 @@ async function createCardGame(bet) {
         // Create and shuffle a deck
         const deck = shuffleDeck(createDeck());
         
-        // For now, we'll just store the deck and deal cards when the game starts
+        // Deal 6 cards to creator
+        const creatorHand = [];
+        for (let i = 0; i < 6 && deck.length > 0; i++) {
+            creatorHand.push(deck.pop());
+        }
+
         const { data: createdGameData, error } = await supabase
-            .from('card_games')  // New table for card games
+            .from('card_games')
             .insert([{
                 code: gameCode,
                 creator_phone: users.phone,
@@ -204,9 +211,10 @@ async function createCardGame(bet) {
                 bet: bet,
                 status: 'waiting',
                 is_private: isPrivateGame,
-                deck: JSON.stringify(deck),  // Store the shuffled deck
+                deck: JSON.stringify(deck),  // Store the remaining deck
+                creator_hand: JSON.stringify(creatorHand), // Store creator's initial hand
                 current_player: users.phone,  // Creator goes first
-                game_type: 'war'  // Simple war game for example
+                game_type: 'war'
             }])
             .select()
             .single();
@@ -220,6 +228,60 @@ async function createCardGame(bet) {
     } catch (error) {
         console.error('Error creating card game:', error);
         displayMessage(createGameStatusEl, 'Failed to create game', 'error');
+    }
+}
+
+// --- Game Joining ---
+async function joinCardGame(gameCode, gameBet) {
+    if (!validateJoinGame(gameBet)) return;
+
+    displayMessage(createGameStatusEl, 'Joining card game...', 'info');
+
+    try {
+        const users = JSON.parse(localStorage.getItem('user'));
+
+        // Check if game exists and is available
+        const { data: gameData, error: fetchError } = await supabase
+            .from('card_games')
+            .select('creator_phone, opponent_phone, bet, is_private, status, deck, creator_hand')
+            .eq('code', gameCode)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (!gameData) throw new Error('Game not found');
+        if (gameData.opponent_phone) throw new Error('Game is already full');
+        if (gameData.bet !== gameBet) throw new Error('Bet amount mismatch');
+        if (gameData.creator_phone === users.phone) throw new Error('Cannot join your own game');
+
+        const newBalance = user.balance - gameBet;
+        await updateUserBalance(newBalance);
+
+        // Deal 6 cards to opponent from remaining deck
+        const deck = JSON.parse(gameData.deck);
+        const opponentHand = [];
+        for (let i = 0; i < 6 && deck.length > 0; i++) {
+            opponentHand.push(deck.pop());
+        }
+
+        // Update game with opponent info and dealt cards
+        const { error: joinError } = await supabase
+            .from('card_games')
+            .update({
+                opponent_phone: users.phone,
+                opponent_username: user.username,
+                status: 'ongoing',
+                deck: JSON.stringify(deck),  // Remaining deck (if any)
+                opponent_hand: JSON.stringify(opponentHand),
+                current_player: gameData.creator_phone  // Creator goes first
+            })
+            .eq('code', gameCode);
+
+        if (joinError) throw joinError;
+
+        window.location.href = `${BASE_URL}/card-game?code=${gameCode}`;
+    } catch (error) {
+        console.error('Error joining card game:', error);
+        displayMessage(createGameStatusEl, error.message || 'Failed to join game', 'error');
     }
 }
 
@@ -361,56 +423,7 @@ function updateGamesCount(count) {
 }
 
 // --- Game Joining ---
-async function joinCardGame(gameCode, gameBet) {
-    if (!validateJoinGame(gameBet)) return;
 
-    displayMessage(createGameStatusEl, 'Joining card game...', 'info');
-
-    try {
-        const users = JSON.parse(localStorage.getItem('user'));
-
-        // Check if game exists and is available
-        const { data: gameData, error: fetchError } = await supabase
-            .from('card_games')
-            .select('creator_phone, opponent_phone, bet, is_private, status, deck')
-            .eq('code', gameCode)
-            .single();
-
-        if (fetchError) throw fetchError;
-        if (!gameData) throw new Error('Game not found');
-        if (gameData.opponent_phone) throw new Error('Game is already full');
-        if (gameData.bet !== gameBet) throw new Error('Bet amount mismatch');
-        if (gameData.creator_phone === users.phone) throw new Error('Cannot join your own game');
-
-        const newBalance = user.balance - gameBet;
-        await updateUserBalance(newBalance);
-
-        // Deal cards - split the deck between players
-        const deck = JSON.parse(gameData.deck);
-        const [creatorHand, opponentHand] = dealCards(deck, 2);
-
-        // Update game with opponent info and dealt cards
-        const { error: joinError } = await supabase
-            .from('card_games')
-            .update({
-                opponent_phone: users.phone,
-                opponent_username: user.username,
-                status: 'ongoing',
-                deck: JSON.stringify(deck),  // Remaining deck (if any)
-                creator_hand: JSON.stringify(creatorHand),
-                opponent_hand: JSON.stringify(opponentHand),
-                current_player: gameData.creator_phone  // Creator goes first
-            })
-            .eq('code', gameCode);
-
-        if (joinError) throw joinError;
-
-        window.location.href = `${BASE_URL}/card-game?code=${gameCode}`;
-    } catch (error) {
-        console.error('Error joining card game:', error);
-        displayMessage(createGameStatusEl, error.message || 'Failed to join game', 'error');
-    }
-}
 
 function validateJoinGame(gameBet) {
     if (user.balance < gameBet) {
