@@ -597,50 +597,78 @@ function setupRealtimeUpdates() {
                 filter: `code=eq.${gameState.gameCode}`
             },
             (payload) => {
-                // Update game state
-                gameState.status = payload.new.status;
-                gameState.currentPlayer = payload.new.current_player;
-                gameState.currentSuit = payload.new.current_suit;
-                gameState.lastCard = payload.new.last_card ? JSON.parse(payload.new.last_card) : null;
-                gameState.pendingAction = payload.new.pending_action;
-                gameState.pendingActionData = payload.new.pending_action_data;
-                
-                // Update hands
-                const users = JSON.parse(localStorage.getItem('user')) || {};
-                const isCreator = gameState.playerRole === 'creator';
-                
-                if (isCreator) {
-                    gameState.playerHand = JSON.parse(payload.new.creator_hand || '[]');
-                    gameState.opponentHandCount = JSON.parse(payload.new.opponent_hand || '[]').length;
-                } else {
-                    gameState.playerHand = JSON.parse(payload.new.opponent_hand || '[]');
-                    gameState.opponentHandCount = JSON.parse(payload.new.creator_hand || '[]').length;
-                }
-                
-                // Update opponent info if they just joined
-                if (payload.new.opponent_phone && !gameState.opponent.phone) {
-                    gameState.opponent = {
-                        username: payload.new.opponent_username,
-                        phone: payload.new.opponent_phone
-                    };
+                try {
+                    // Update game state
+                    gameState.status = payload.new.status;
+                    gameState.currentPlayer = payload.new.current_player;
+                    gameState.currentSuit = payload.new.current_suit;
                     
-                    if (gameState.status === 'waiting') {
-                        gameState.status = 'ongoing';
+                    // Safely parse last_card
+                    if (payload.new.last_card) {
+                        try {
+                            gameState.lastCard = typeof payload.new.last_card === 'string' ? 
+                                JSON.parse(payload.new.last_card) : 
+                                payload.new.last_card;
+                        } catch (e) {
+                            console.error('Error parsing last_card:', e);
+                            gameState.lastCard = null;
+                        }
+                    } else {
+                        gameState.lastCard = null;
                     }
+                    
+                    gameState.pendingAction = payload.new.pending_action;
+                    gameState.pendingActionData = payload.new.pending_action_data;
+                    
+                    // Update hands - safely parse JSON
+                    const users = JSON.parse(localStorage.getItem('user')) || {};
+                    const isCreator = gameState.playerRole === 'creator';
+                    
+                    if (isCreator) {
+                        gameState.playerHand = safeParseJSON(payload.new.creator_hand) || [];
+                        gameState.opponentHandCount = safeParseJSON(payload.new.opponent_hand)?.length || 0;
+                    } else {
+                        gameState.playerHand = safeParseJSON(payload.new.opponent_hand) || [];
+                        gameState.opponentHandCount = safeParseJSON(payload.new.creator_hand)?.length || 0;
+                    }
+                    
+                    // Update opponent info if they just joined
+                    if (payload.new.opponent_phone && !gameState.opponent.phone) {
+                        gameState.opponent = {
+                            username: payload.new.opponent_username,
+                            phone: payload.new.opponent_phone
+                        };
+                        
+                        if (gameState.status === 'waiting') {
+                            gameState.status = 'ongoing';
+                        }
+                    }
+                    
+                    // Check for game over
+                    if (payload.new.status === 'finished') {
+                        const isWinner = payload.new.winner === users.phone;
+                        const amount = Math.floor(gameState.betAmount * 1.8);
+                        showGameResult(isWinner, amount);
+                    }
+                    
+                    // Update UI
+                    updateGameUI();
+                } catch (error) {
+                    console.error('Error processing realtime update:', error);
                 }
-                
-                // Check for game over
-                if (payload.new.status === 'finished') {
-                    const isWinner = payload.new.winner === users.phone;
-                    const amount = Math.floor(gameState.betAmount * 1.8);
-                    showGameResult(isWinner, amount);
-                }
-                
-                // Update UI
-                updateGameUI();
             }
         )
         .subscribe();
         
     return channel;
+}
+
+// Helper function to safely parse JSON
+function safeParseJSON(json) {
+    try {
+        return typeof json === 'string' ? JSON.parse(json) : json;
+    } catch (e) {
+        console.error('Error parsing JSON:', e);
+        return null;
+    }
 }
