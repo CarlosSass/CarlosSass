@@ -246,25 +246,7 @@ function renderPlayerHand() {
     });
 }
 
-function canPlayCard(card) {
-    // If no last card played, any card can be played
-    if (!gameState.lastCard) return true;
-    
-    // If there's a pending action, handle special cases
-    if (gameState.pendingAction === 'draw_two') {
-        return card.value === '2';
-    }
-    
-    // Heart cards rule - must play hearts if possible
-    if (gameState.mustPlayHearts && hasHeartsInHand()) {
-        return card.suit === 'hearts';
-    }
-    
-    // Normal play rules
-    return card.suit === gameState.currentSuit || 
-           card.value === gameState.lastCard.value ||
-           (card.value in SPECIAL_CARDS);
-}
+
 
 function hasHeartsInHand() {
     return gameState.playerHand.some(card => card.suit === 'hearts');
@@ -291,30 +273,61 @@ async function playCard(cardIndex) {
         const users = JSON.parse(localStorage.getItem('user')) || {};
         if (!users.phone) throw new Error('User not logged in');
         
+        // Check if it's the player's turn
+        if (gameState.currentPlayer !== users.phone) {
+            displayMessage(gameStatusEl, "It's not your turn!", 'error');
+            return;
+        }
+
         const card = gameState.playerHand[cardIndex];
         if (!card) throw new Error('Invalid card index');
         
-        // Remove card from hand
-        gameState.playerHand.splice(cardIndex, 1);
+        // Check if we can play multiple 7s of the same suit
+        let cardsToPlay = [card];
+        if (card.value === '7') {
+            const sameSuitCards = gameState.playerHand.filter(
+                (c, i) => c.suit === card.suit && i !== cardIndex
+            );
+            if (sameSuitCards.length > 0) {
+                // Ask player if they want to play all same-suit 7s
+                const playAll = confirm(`Play all ${card.suit} 7s?`);
+                if (playAll) {
+                    cardsToPlay = gameState.playerHand.filter(c => c.suit === card.suit && c.value === '7');
+                }
+            }
+        }
+        
+        // Remove cards from hand
+        cardsToPlay.forEach(cardToRemove => {
+            const index = gameState.playerHand.findIndex(
+                c => c.suit === cardToRemove.suit && c.value === cardToRemove.value
+            );
+            if (index !== -1) {
+                gameState.playerHand.splice(index, 1);
+            }
+        });
+        
+        // Use the last card played for game state
+        const lastPlayedCard = cardsToPlay[cardsToPlay.length - 1];
         
         // Update game state
         const isCreator = gameState.playerRole === 'creator';
         const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
         
         const updateData = {
-            last_card: JSON.stringify(card),
+            last_card: JSON.stringify(lastPlayedCard),
             current_player: opponentPhone,
-            current_suit: card.suit,
+            current_suit: lastPlayedCard.suit,
             updated_at: new Date().toISOString()
         };
         
         // Handle special cards
-        if (card.value in SPECIAL_CARDS) {
-            const action = SPECIAL_CARDS[card.value];
+        if (lastPlayedCard.value in SPECIAL_CARDS) {
+            const action = SPECIAL_CARDS[lastPlayedCard.value];
             
             switch (action) {
                 case 'change_suit':
-                    if (card.value === '8' || card.value === 'J') {
+                    if (lastPlayedCard.value === '8' || lastPlayedCard.value === 'J') {
                         gameState.pendingAction = 'change_suit';
                         updateData.pending_action = 'change_suit';
                         updateData.current_player = users.phone;
@@ -329,11 +342,11 @@ async function playCard(cardIndex) {
                 case 'draw_two':
                     gameState.pendingAction = 'draw_two';
                     updateData.pending_action = 'draw_two';
-                    updateData.pending_action_data = 2;
+                    updateData.pending_action_data = 2 * cardsToPlay.length; // Multiple 2s increase draw count
                     break;
                     
                 case 'spade_ace':
-                    if (card.suit === 'spades' && card.value === 'A') {
+                    if (lastPlayedCard.suit === 'spades' && lastPlayedCard.value === 'A') {
                         gameState.pendingAction = 'draw_two';
                         updateData.pending_action = 'draw_two';
                         updateData.pending_action_data = 5;
@@ -466,15 +479,44 @@ function handlePendingAction() {
         showSuitSelector();
     }
 }
+function canPlayCard(card) {
+    // If no last card played, any card can be played
+    if (!gameState.lastCard) return true;
+    
+    // If there's a pending draw action, only 2s can be played
+    if (gameState.pendingAction === 'draw_two') {
+        return card.value === '2';
+    }
+    
+    // Heart cards rule - must play hearts if possible
+    if (gameState.mustPlayHearts && hasHeartsInHand()) {
+        return card.suit === 'hearts';
+    }
+    
+    // Special cards can always be played
+    if (card.value in SPECIAL_CARDS) {
+        return true;
+    }
+    
+    // Normal play rules - must match suit or value
+    return card.suit === gameState.currentSuit || 
+           card.value === gameState.lastCard.value;
+}
 
 async function drawCard() {
     try {
         const users = JSON.parse(localStorage.getItem('user')) || {};
         if (!users.phone) throw new Error('User not logged in');
         
+        // Check if it's the player's turn
+        if (gameState.currentPlayer !== users.phone) {
+            displayMessage(gameStatusEl, "It's not your turn!", 'error');
+            return;
+        }
+
         const isCreator = gameState.playerRole === 'creator';
         
-        // Get current game state to see if there are cards left in deck
+        // Get current game state
         const { data: gameData, error: fetchError } = await supabase
             .from('card_games')
             .select('deck')
@@ -483,14 +525,14 @@ async function drawCard() {
             
         if (fetchError) throw fetchError;
         
-        let deck = JSON.parse(gameData.deck || '[]');
+        let deck = safeParseJSON(gameData.deck) || [];
         let drawnCards = [];
         
         // Handle pending draw actions
         if (gameState.pendingAction === 'draw_two') {
             const drawCount = gameState.pendingActionData || 2;
             
-            // Draw the required number of cards or remaining cards
+            // Draw the required number of cards
             for (let i = 0; i < drawCount && deck.length > 0; i++) {
                 drawnCards.push(deck.pop());
             }
@@ -533,6 +575,7 @@ async function drawCard() {
                 // Update database
                 const updateData = {
                     deck: JSON.stringify(deck),
+                    current_player: isCreator ? gameState.opponent.phone : gameState.creator.phone,
                     updated_at: new Date().toISOString()
                 };
                 
