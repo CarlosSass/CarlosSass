@@ -38,7 +38,31 @@ body {
   display: flex;
   flex-direction: column;
 }
+.card-suit::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
 
+.card.hearts .card-suit::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+}
+
+.card.diamonds .card-suit::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'%3E%3Cpath d='M19 12l-7-10-7 10 7 10 7-10z'/%3E%3C/svg%3E");
+}
+
+.card.clubs .card-suit::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232c3e50'%3E%3Cpath d='M12 2c1.29 0 2.49.4 3.47 1.07.38-.15.8-.24 1.24-.24 1.8 0 3.26 1.46 3.26 3.26 0 .9-.36 1.71-.94 2.3.02.16.04.32.04.49 0 2.39-2.6 4.33-5.81 4.33-.38 0-.75-.03-1.11-.08-.36.58-.92 1.01-1.58 1.23.04.24.06.49.06.75 0 1.84-1.5 3.34-3.34 3.34-.83 0-1.58-.31-2.16-.8-.31.73-.49 1.53-.49 2.38H5c0-1.05.21-2.05.59-2.96-.72-.61-1.19-1.5-1.19-2.5 0-1.8 1.46-3.26 3.26-3.26.44 0 .86.09 1.24.24C9.51 6.4 10.71 6 12 6z'/%3E%3C/svg%3E");
+}
+
+.card.spades .card-suit::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232c3e50'%3E%3Cpath d='M12 2c1.29 0 2.49.4 3.47 1.07.38-.15.8-.24 1.24-.24 1.8 0 3.26 1.46 3.26 3.26 0 .9-.36 1.71-.94 2.3.02.16.04.32.04.49 0 2.39-2.6 4.33-5.81 4.33-.38 0-.75-.03-1.11-.08-.36.58-.92 1.01-1.58 1.23.04.24.06.49.06.75 0 1.84-1.5 3.34-3.34 3.34-.83 0-1.58-.31-2.16-.8-.31.73-.49 1.53-.49 2.38H5c0-1.05.21-2.05.59-2.96-.72-.61-1.19-1.5-1.19-2.5 0-1.8 1.46-3.26 3.26-3.26.44 0 .86.09 1.24.24C9.51 6.4 10.71 6 12 6z'/%3E%3C/svg%3E");
+    transform: rotate(180deg);
+}
 /* Game Container */
 .game-container {
   max-width: 800px;
