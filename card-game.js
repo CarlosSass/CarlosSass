@@ -18,6 +18,8 @@ const opponentNameEl = document.getElementById('opponent-name');
 const playerAvatarEl = document.getElementById('player-avatar');
 const opponentAvatarEl = document.getElementById('opponent-avatar');
 const drawCardBtn = document.getElementById('draw-card-btn');
+const skipTurnBtn = document.getElementById('skip-turn-btn');
+const passTurnBtn = document.getElementById('pass-turn-btn');
 
 // --- Game Constants ---
 const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -26,7 +28,7 @@ const SPECIAL_CARDS = {
     '8': 'change_suit',
     'J': 'change_suit',
     '5': 'skip_turn',
-    '7': 'skip_turn',
+    '7': 'play_same_suit',
     '2': 'draw_two',
     'A': 'spade_ace'
 };
@@ -75,7 +77,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (missingElements.length > 0) {
         console.error('Missing DOM elements:', missingElements.join(', '));
         
-        // Show error to user if gameStatusEl exists
         if (gameStatusEl) {
             gameStatusEl.textContent = 'Game setup error - missing elements';
         }
@@ -91,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Set game code display if element exists
     if (gameCodeDisplay) {
         gameCodeDisplay.textContent = gameState.gameCode;
     }
@@ -107,7 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Setup back button if element exists
     if (backBtn) {
         backBtn.addEventListener('click', () => {
             window.location.href = 'home.html';
@@ -134,17 +133,17 @@ async function loadGameData() {
         gameState.status = gameData.status;
         gameState.currentPlayer = gameData.current_player;
         gameState.currentSuit = gameData.current_suit;
-        gameState.lastCard = gameData.last_card ? JSON.parse(gameData.last_card) : null;
+        gameState.lastCard = gameData.last_card ? safeParseJSON(gameData.last_card) : null;
         gameState.betAmount = gameData.bet;
         gameState.mustPlayHearts = gameData.current_suit === 'hearts';
         
         // Set player hands
         if (gameState.playerRole === 'creator') {
-            gameState.playerHand = JSON.parse(gameData.creator_hand || '[]');
-            gameState.opponentHandCount = JSON.parse(gameData.opponent_hand || '[]').length;
+            gameState.playerHand = safeParseJSON(gameData.creator_hand) || [];
+            gameState.opponentHandCount = safeParseJSON(gameData.opponent_hand)?.length || 0;
         } else {
-            gameState.playerHand = JSON.parse(gameData.opponent_hand || '[]');
-            gameState.opponentHandCount = JSON.parse(gameData.creator_hand || '[]').length;
+            gameState.playerHand = safeParseJSON(gameData.opponent_hand) || [];
+            gameState.opponentHandCount = safeParseJSON(gameData.creator_hand)?.length || 0;
         }
         
         // Set player info
@@ -179,6 +178,7 @@ async function loadGameData() {
 
 function updateGameUI() {
     const users = JSON.parse(localStorage.getItem('user')) || {};
+    const isMyTurn = users.phone === gameState.currentPlayer;
     
     if (playerNameEl) playerNameEl.textContent = users.username || 'You';
     if (opponentNameEl) opponentNameEl.textContent = gameState.opponent.username || 'Waiting...';
@@ -205,6 +205,30 @@ function updateGameUI() {
         opponentHandCountEl.textContent = `${gameState.opponentHandCount} cards`;
     }
     
+    // Show/hide action buttons based on turn and game state
+    if (drawCardBtn) {
+        drawCardBtn.style.display = isMyTurn ? 'block' : 'none';
+    }
+    
+    if (skipTurnBtn) {
+        skipTurnBtn.style.display = 'none'; // Hide by default, shown in specific cases
+    }
+    
+    if (passTurnBtn) {
+        passTurnBtn.style.display = 'none'; // Hide by default, shown in specific cases
+    }
+    
+    // Show pass button if must play hearts but don't have any
+    if (isMyTurn && gameState.mustPlayHearts && !hasCardsOfSuit('hearts') && 
+        !hasSpecialCards(['8', 'J']) && passTurnBtn) {
+        passTurnBtn.style.display = 'block';
+    }
+    
+    // Show skip button if there's a pending action but can't play
+    if (isMyTurn && gameState.pendingAction && !canPlayAnyCard() && skipTurnBtn) {
+        skipTurnBtn.style.display = 'block';
+    }
+    
     renderDiscardPile();
     renderPlayerHand();
     
@@ -212,7 +236,6 @@ function updateGameUI() {
         if (gameState.status === 'waiting') {
             gameStatusEl.textContent = 'Waiting for opponent...';
         } else {
-            const isMyTurn = users.phone === gameState.currentPlayer;
             gameStatusEl.textContent = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
             gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
             
@@ -246,10 +269,40 @@ function renderPlayerHand() {
     });
 }
 
+function canPlayCard(card) {
+    // If no last card played, any card can be played
+    if (!gameState.lastCard) return true;
+    
+    // If there's a pending action, handle special cases
+    if (gameState.pendingAction === 'draw_two') {
+        return card.value === '2';
+    }
+    
+    // Heart cards rule - must play hearts if possible
+    if (gameState.mustPlayHearts && hasCardsOfSuit('hearts')) {
+        return card.suit === 'hearts';
+    }
+    
+    // Special cards can always be played
+    if (card.value in SPECIAL_CARDS) {
+        return true;
+    }
+    
+    // Normal play rules - must match suit or value
+    return card.suit === gameState.currentSuit || 
+           card.value === gameState.lastCard.value;
+}
 
+function hasCardsOfSuit(suit) {
+    return gameState.playerHand.some(card => card.suit === suit);
+}
 
-function hasHeartsInHand() {
-    return gameState.playerHand.some(card => card.suit === 'hearts');
+function hasSpecialCards(values) {
+    return gameState.playerHand.some(card => values.includes(card.value));
+}
+
+function canPlayAnyCard() {
+    return gameState.playerHand.some(card => canPlayCard(card));
 }
 
 function renderDiscardPile() {
@@ -273,7 +326,6 @@ async function playCard(cardIndex) {
         const users = JSON.parse(localStorage.getItem('user')) || {};
         if (!users.phone) throw new Error('User not logged in');
         
-        // Check if it's the player's turn
         if (gameState.currentPlayer !== users.phone) {
             displayMessage(gameStatusEl, "It's not your turn!", 'error');
             return;
@@ -282,117 +334,14 @@ async function playCard(cardIndex) {
         const card = gameState.playerHand[cardIndex];
         if (!card) throw new Error('Invalid card index');
         
-        // Check if we can play multiple 7s of the same suit
-        let cardsToPlay = [card];
+        // Handle 7 card - show selection dialog
         if (card.value === '7') {
-            const sameSuitCards = gameState.playerHand.filter(
-                (c, i) => c.suit === card.suit && i !== cardIndex
-            );
-            if (sameSuitCards.length > 0) {
-                // Ask player if they want to play all same-suit 7s
-                const playAll = confirm(`Play all ${card.suit} 7s?`);
-                if (playAll) {
-                    cardsToPlay = gameState.playerHand.filter(c => c.suit === card.suit && c.value === '7');
-                }
-            }
+            await handleSevenCard(cardIndex);
+            return;
         }
         
-        // Remove cards from hand
-        cardsToPlay.forEach(cardToRemove => {
-            const index = gameState.playerHand.findIndex(
-                c => c.suit === cardToRemove.suit && c.value === cardToRemove.value
-            );
-            if (index !== -1) {
-                gameState.playerHand.splice(index, 1);
-            }
-        });
-        
-        // Use the last card played for game state
-        const lastPlayedCard = cardsToPlay[cardsToPlay.length - 1];
-        
-        // Update game state
-        const isCreator = gameState.playerRole === 'creator';
-        const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
-        
-        const updateData = {
-            last_card: JSON.stringify(lastPlayedCard),
-            current_player: opponentPhone,
-            current_suit: lastPlayedCard.suit,
-            updated_at: new Date().toISOString()
-        };
-        
-        // Handle special cards
-        if (lastPlayedCard.value in SPECIAL_CARDS) {
-            const action = SPECIAL_CARDS[lastPlayedCard.value];
-            
-            switch (action) {
-                case 'change_suit':
-                    if (lastPlayedCard.value === '8' || lastPlayedCard.value === 'J') {
-                        gameState.pendingAction = 'change_suit';
-                        updateData.pending_action = 'change_suit';
-                        updateData.current_player = users.phone;
-                        showSuitSelector();
-                    }
-                    break;
-                    
-                case 'skip_turn':
-                    updateData.current_player = users.phone;
-                    break;
-                    
-                case 'draw_two':
-                    gameState.pendingAction = 'draw_two';
-                    updateData.pending_action = 'draw_two';
-                    updateData.pending_action_data = 2 * cardsToPlay.length; // Multiple 2s increase draw count
-                    break;
-                    
-                case 'spade_ace':
-                    if (lastPlayedCard.suit === 'spades' && lastPlayedCard.value === 'A') {
-                        gameState.pendingAction = 'draw_two';
-                        updateData.pending_action = 'draw_two';
-                        updateData.pending_action_data = 5;
-                    }
-                    break;
-            }
-        }
-        
-        // Update hands in database
-        if (isCreator) {
-            updateData.creator_hand = JSON.stringify(gameState.playerHand);
-        } else {
-            updateData.opponent_hand = JSON.stringify(gameState.playerHand);
-        }
-        
-        // Check for win condition
-        if (gameState.playerHand.length === 0) {
-            updateData.status = 'finished';
-            updateData.winner = users.phone;
-            gameState.status = 'finished';
-            
-            const winnings = Math.floor(gameState.betAmount * 1.8);
-            const { data: userData } = await supabase
-                .from('users')
-                .select('balance')
-                .eq('phone', users.phone)
-                .single();
-                
-            if (userData) {
-                const newBalance = userData.balance + winnings;
-                await supabase
-                    .from('users')
-                    .update({ balance: newBalance })
-                    .eq('phone', users.phone);
-            }
-            
-            showGameResult(true, winnings);
-        }
-        
-        // Update game in database
-        const { error } = await supabase
-            .from('card_games')
-            .update(updateData)
-            .eq('code', gameState.gameCode);
-            
-        if (error) throw error;
+        // For other cards, proceed normally
+        await processCardPlay([card]);
         
     } catch (error) {
         console.error('Error playing card:', error);
@@ -400,107 +349,252 @@ async function playCard(cardIndex) {
     }
 }
 
-function setupEventListeners() {
-    if (drawCardBtn) {
-        drawCardBtn.addEventListener('click', drawCard);
+async function handleSevenCard(initialCardIndex) {
+    const initialCard = gameState.playerHand[initialCardIndex];
+    const sameSuitCards = gameState.playerHand.filter(
+        (card, index) => card.suit === initialCard.suit && index !== initialCardIndex
+    );
+    
+    // If no other cards of same suit, treat as normal card
+    if (sameSuitCards.length === 0) {
+        await processCardPlay([initialCard]);
+        return;
     }
-}
-
-function generateAvatarColor(username) {
-    if (!username) return '#6c757d';
-    const colors = ['#ff6b6b', '#51cf66', '#fcc419', '#228be6', '#be4bdb'];
-    const hash = username.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
-    return colors[hash % colors.length];
-}
-
-function showSuitSelector() {
-    // Create suit selection modal
+    
+    // Create selection modal
     const modal = document.createElement('div');
-    modal.className = 'suit-selector-modal';
+    modal.className = 'selection-modal';
     modal.innerHTML = `
-        <div class="suit-selector">
-            <h3>Choose a suit:</h3>
-            <div class="suit-options">
-                ${SUITS.map(suit => `
-                    <button class="suit-option ${suit}" data-suit="${suit}">
-                        ${suit.toUpperCase()}
-                    </button>
+        <div class="selection-content">
+            <h3>Select cards to play with ${initialCard.value} of ${initialCard.suit}</h3>
+            <div class="card-options">
+                ${sameSuitCards.map((card, i) => `
+                    <div class="card-option ${card.suit}" data-index="${gameState.playerHand.findIndex(c => 
+                        c.suit === card.suit && c.value === card.value)}">
+                        <div class="card-value">${card.value}</div>
+                        <div class="card-suit"></div>
+                    </div>
                 `).join('')}
+            </div>
+            <div class="selection-actions">
+                <button id="confirm-selection">Play Selected</button>
+                <button id="skip-seven">Play Just This One</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
     
-    // Add event listeners
-    modal.querySelectorAll('.suit-option').forEach(button => {
-        button.addEventListener('click', async () => {
-            const selectedSuit = button.dataset.suit;
-            
-            try {
-                const users = JSON.parse(localStorage.getItem('user')) || {};
-                if (!users.phone) throw new Error('User not logged in');
-                
-                const isCreator = gameState.playerRole === 'creator';
-                const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
-                
-                // Update game state
-                const { error } = await supabase
-                    .from('card_games')
-                    .update({
-                        current_suit: selectedSuit,
-                        current_player: opponentPhone,
-                        pending_action: null,
-                        pending_action_data: null,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('code', gameState.gameCode);
-                    
-                if (error) throw error;
-                
-                // Remove modal
-                modal.remove();
-                
-            } catch (error) {
-                console.error('Error selecting suit:', error);
-                modal.remove();
+    // Track selected cards
+    const selectedIndices = [initialCardIndex];
+    
+    // Add selection handlers
+    modal.querySelectorAll('.card-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const index = parseInt(option.dataset.index);
+            if (selectedIndices.includes(index)) {
+                option.classList.remove('selected');
+                selectedIndices.splice(selectedIndices.indexOf(index), 1);
+            } else {
+                option.classList.add('selected');
+                selectedIndices.push(index);
             }
+        });
+    });
+    
+    // Add action handlers
+    return new Promise((resolve) => {
+        modal.querySelector('#confirm-selection').addEventListener('click', async () => {
+            const cardsToPlay = selectedIndices.map(i => gameState.playerHand[i]);
+            modal.remove();
+            await processCardPlay(cardsToPlay);
+            resolve();
+        });
+        
+        modal.querySelector('#skip-seven').addEventListener('click', async () => {
+            modal.remove();
+            await processCardPlay([initialCard]);
+            resolve();
         });
     });
 }
 
-function handlePendingAction() {
-    if (!gameStatusEl) return;
+async function processCardPlay(cardsToPlay) {
+    const users = JSON.parse(localStorage.getItem('user')) || {};
+    const isCreator = gameState.playerRole === 'creator';
+    const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
     
-    if (gameState.pendingAction === 'draw_two') {
-        const drawCount = gameState.pendingActionData || 2;
-        gameStatusEl.textContent = `You must play a 2 or draw ${drawCount} cards`;
-    } else if (gameState.pendingAction === 'change_suit') {
-        showSuitSelector();
+    // Remove cards from hand
+    cardsToPlay.forEach(cardToRemove => {
+        const index = gameState.playerHand.findIndex(
+            c => c.suit === cardToRemove.suit && c.value === cardToRemove.value
+        );
+        if (index !== -1) {
+            gameState.playerHand.splice(index, 1);
+        }
+    });
+    
+    // Use the last card played for game state
+    const lastPlayedCard = cardsToPlay[cardsToPlay.length - 1];
+    
+    const updateData = {
+        last_card: JSON.stringify(lastPlayedCard),
+        current_player: opponentPhone,
+        current_suit: lastPlayedCard.suit,
+        updated_at: new Date().toISOString(),
+        must_play_hearts: lastPlayedCard.suit === 'hearts'
+    };
+    
+    // Handle special cards
+    if (lastPlayedCard.value in SPECIAL_CARDS) {
+        const action = SPECIAL_CARDS[lastPlayedCard.value];
+        
+        switch (action) {
+            case 'change_suit':
+                if (lastPlayedCard.value === '8' || lastPlayedCard.value === 'J') {
+                    gameState.pendingAction = 'change_suit';
+                    updateData.pending_action = 'change_suit';
+                    updateData.current_player = users.phone;
+                    showSuitSelector();
+                }
+                break;
+                
+            case 'skip_turn':
+                updateData.current_player = users.phone;
+                break;
+                
+            case 'draw_two':
+                gameState.pendingAction = 'draw_two';
+                updateData.pending_action = 'draw_two';
+                updateData.pending_action_data = 2 * cardsToPlay.length;
+                break;
+                
+            case 'spade_ace':
+                if (lastPlayedCard.suit === 'spades' && lastPlayedCard.value === 'A') {
+                    gameState.pendingAction = 'draw_two';
+                    updateData.pending_action = 'draw_two';
+                    updateData.pending_action_data = 5;
+                }
+                break;
+                
+            case 'play_same_suit':
+                // 7s are already handled, no special action needed
+                break;
+        }
+    }
+    
+    // Update hands in database
+    if (isCreator) {
+        updateData.creator_hand = JSON.stringify(gameState.playerHand);
+    } else {
+        updateData.opponent_hand = JSON.stringify(gameState.playerHand);
+    }
+    
+    // Check for win condition
+    if (gameState.playerHand.length === 0) {
+        updateData.status = 'finished';
+        updateData.winner = users.phone;
+        gameState.status = 'finished';
+        
+        const winnings = Math.floor(gameState.betAmount * 1.8);
+        const { data: userData } = await supabase
+            .from('users')
+            .select('balance')
+            .eq('phone', users.phone)
+            .single();
+            
+        if (userData) {
+            const newBalance = userData.balance + winnings;
+            await supabase
+                .from('users')
+                .update({ balance: newBalance })
+                .eq('phone', users.phone);
+        }
+        
+        showGameResult(true, winnings);
+    }
+    
+    // Update game in database
+    const { error } = await supabase
+        .from('card_games')
+        .update(updateData)
+        .eq('code', gameState.gameCode);
+        
+    if (error) throw error;
+    
+    updateGameUI();
+}
+
+async function skipTurn() {
+    try {
+        const users = JSON.parse(localStorage.getItem('user')) || {};
+        if (!users.phone) throw new Error('User not logged in');
+        
+        if (gameState.currentPlayer !== users.phone) {
+            displayMessage(gameStatusEl, "It's not your turn!", 'error');
+            return;
+        }
+
+        const isCreator = gameState.playerRole === 'creator';
+        const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
+        
+        const updateData = {
+            current_player: opponentPhone,
+            updated_at: new Date().toISOString(),
+            pending_action: null,
+            pending_action_data: null
+        };
+        
+        const { error } = await supabase
+            .from('card_games')
+            .update(updateData)
+            .eq('code', gameState.gameCode);
+            
+        if (error) throw error;
+        
+        gameState.pendingAction = null;
+        gameState.pendingActionData = null;
+        updateGameUI();
+        
+    } catch (error) {
+        console.error('Error skipping turn:', error);
+        if (gameStatusEl) gameStatusEl.textContent = 'Error skipping turn';
     }
 }
-function canPlayCard(card) {
-    // If no last card played, any card can be played
-    if (!gameState.lastCard) return true;
-    
-    // If there's a pending draw action, only 2s can be played
-    if (gameState.pendingAction === 'draw_two') {
-        return card.value === '2';
+
+async function passTurn() {
+    try {
+        const users = JSON.parse(localStorage.getItem('user')) || {};
+        if (!users.phone) throw new Error('User not logged in');
+        
+        if (gameState.currentPlayer !== users.phone) {
+            displayMessage(gameStatusEl, "It's not your turn!", 'error');
+            return;
+        }
+
+        const isCreator = gameState.playerRole === 'creator';
+        const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
+        
+        const updateData = {
+            current_player: opponentPhone,
+            updated_at: new Date().toISOString(),
+            must_play_hearts: false
+        };
+        
+        const { error } = await supabase
+            .from('card_games')
+            .update(updateData)
+            .eq('code', gameState.gameCode);
+            
+        if (error) throw error;
+        
+        gameState.mustPlayHearts = false;
+        updateGameUI();
+        
+    } catch (error) {
+        console.error('Error passing turn:', error);
+        if (gameStatusEl) gameStatusEl.textContent = 'Error passing turn';
     }
-    
-    // Heart cards rule - must play hearts if possible
-    if (gameState.mustPlayHearts && hasHeartsInHand()) {
-        return card.suit === 'hearts';
-    }
-    
-    // Special cards can always be played
-    if (card.value in SPECIAL_CARDS) {
-        return true;
-    }
-    
-    // Normal play rules - must match suit or value
-    return card.suit === gameState.currentSuit || 
-           card.value === gameState.lastCard.value;
 }
 
 async function drawCard() {
@@ -508,7 +602,6 @@ async function drawCard() {
         const users = JSON.parse(localStorage.getItem('user')) || {};
         if (!users.phone) throw new Error('User not logged in');
         
-        // Check if it's the player's turn
         if (gameState.currentPlayer !== users.phone) {
             displayMessage(gameStatusEl, "It's not your turn!", 'error');
             return;
@@ -532,19 +625,16 @@ async function drawCard() {
         if (gameState.pendingAction === 'draw_two') {
             const drawCount = gameState.pendingActionData || 2;
             
-            // Draw the required number of cards
             for (let i = 0; i < drawCount && deck.length > 0; i++) {
                 drawnCards.push(deck.pop());
             }
             
-            // Add to player's hand
             gameState.playerHand = [...gameState.playerHand, ...drawnCards];
             
             // Clear pending action
             gameState.pendingAction = null;
             gameState.pendingActionData = null;
             
-            // Update database
             const updateData = {
                 deck: JSON.stringify(deck),
                 pending_action: null,
@@ -572,7 +662,6 @@ async function drawCard() {
                 drawnCards.push(deck.pop());
                 gameState.playerHand = [...gameState.playerHand, ...drawnCards];
                 
-                // Update database
                 const updateData = {
                     deck: JSON.stringify(deck),
                     current_player: isCreator ? gameState.opponent.phone : gameState.creator.phone,
@@ -596,12 +685,95 @@ async function drawCard() {
             }
         }
         
-        // Update UI
         updateGameUI();
         
     } catch (error) {
         console.error('Error drawing card:', error);
         if (gameStatusEl) gameStatusEl.textContent = 'Error drawing card';
+    }
+}
+
+function setupEventListeners() {
+    if (drawCardBtn) {
+        drawCardBtn.addEventListener('click', drawCard);
+    }
+    
+    if (skipTurnBtn) {
+        skipTurnBtn.addEventListener('click', skipTurn);
+    }
+    
+    if (passTurnBtn) {
+        passTurnBtn.addEventListener('click', passTurn);
+    }
+}
+
+function generateAvatarColor(username) {
+    if (!username) return '#6c757d';
+    const colors = ['#ff6b6b', '#51cf66', '#fcc419', '#228be6', '#be4bdb'];
+    const hash = username.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
+    return colors[hash % colors.length];
+}
+
+function showSuitSelector() {
+    const modal = document.createElement('div');
+    modal.className = 'suit-selector-modal';
+    modal.innerHTML = `
+        <div class="suit-selector">
+            <h3>Choose a suit:</h3>
+            <div class="suit-options">
+                ${SUITS.map(suit => `
+                    <button class="suit-option ${suit}" data-suit="${suit}">
+                        ${suit.toUpperCase()}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelectorAll('.suit-option').forEach(button => {
+        button.addEventListener('click', async () => {
+            const selectedSuit = button.dataset.suit;
+            
+            try {
+                const users = JSON.parse(localStorage.getItem('user')) || {};
+                if (!users.phone) throw new Error('User not logged in');
+                
+                const isCreator = gameState.playerRole === 'creator';
+                const opponentPhone = isCreator ? gameState.opponent.phone : gameState.creator.phone;
+                
+                const { error } = await supabase
+                    .from('card_games')
+                    .update({
+                        current_suit: selectedSuit,
+                        current_player: opponentPhone,
+                        pending_action: null,
+                        pending_action_data: null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('code', gameState.gameCode);
+                    
+                if (error) throw error;
+                
+                modal.remove();
+                
+            } catch (error) {
+                console.error('Error selecting suit:', error);
+                modal.remove();
+            }
+        });
+    });
+}
+
+function handlePendingAction() {
+    if (!gameStatusEl) return;
+    
+    if (gameState.pendingAction === 'draw_two') {
+        const drawCount = gameState.pendingActionData || 2;
+        gameStatusEl.textContent = `You must play a 2 or draw ${drawCount} cards`;
+    } else if (gameState.pendingAction === 'change_suit') {
+        showSuitSelector();
     }
 }
 
@@ -618,7 +790,6 @@ function showGameResult(isWinner, amount) {
     
     document.body.appendChild(resultModal);
     
-    // Close button handler
     const closeBtn = resultModal.querySelector('#result-close-btn');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
@@ -641,12 +812,10 @@ function setupRealtimeUpdates() {
             },
             (payload) => {
                 try {
-                    // Update game state
                     gameState.status = payload.new.status;
                     gameState.currentPlayer = payload.new.current_player;
                     gameState.currentSuit = payload.new.current_suit;
                     
-                    // Safely parse last_card
                     if (payload.new.last_card) {
                         try {
                             gameState.lastCard = typeof payload.new.last_card === 'string' ? 
@@ -662,8 +831,8 @@ function setupRealtimeUpdates() {
                     
                     gameState.pendingAction = payload.new.pending_action;
                     gameState.pendingActionData = payload.new.pending_action_data;
+                    gameState.mustPlayHearts = payload.new.must_play_hearts || false;
                     
-                    // Update hands - safely parse JSON
                     const users = JSON.parse(localStorage.getItem('user')) || {};
                     const isCreator = gameState.playerRole === 'creator';
                     
@@ -675,7 +844,6 @@ function setupRealtimeUpdates() {
                         gameState.opponentHandCount = safeParseJSON(payload.new.creator_hand)?.length || 0;
                     }
                     
-                    // Update opponent info if they just joined
                     if (payload.new.opponent_phone && !gameState.opponent.phone) {
                         gameState.opponent = {
                             username: payload.new.opponent_username,
@@ -687,14 +855,12 @@ function setupRealtimeUpdates() {
                         }
                     }
                     
-                    // Check for game over
                     if (payload.new.status === 'finished') {
                         const isWinner = payload.new.winner === users.phone;
                         const amount = Math.floor(gameState.betAmount * 1.8);
                         showGameResult(isWinner, amount);
                     }
                     
-                    // Update UI
                     updateGameUI();
                 } catch (error) {
                     console.error('Error processing realtime update:', error);
@@ -706,12 +872,25 @@ function setupRealtimeUpdates() {
     return channel;
 }
 
-// Helper function to safely parse JSON
 function safeParseJSON(json) {
     try {
         return typeof json === 'string' ? JSON.parse(json) : json;
     } catch (e) {
         console.error('Error parsing JSON:', e);
         return null;
+    }
+}
+
+function displayMessage(element, message, type = 'info') {
+    if (!element) return;
+    
+    element.textContent = message;
+    element.className = `status-message ${type}`;
+    
+    if (type === 'success') {
+        setTimeout(() => {
+            element.textContent = '';
+            element.className = 'status-message';
+        }, 3000);
     }
 }
