@@ -48,12 +48,13 @@ let gameState = {
     pendingAction: null,
     pendingActionData: null,
     betAmount: 0,
-    mustPlayHearts: false
+    mustPlayHearts: false,
+    hasDrawnCard: false
 };
 
 // --- Initialize Game ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // First verify all required DOM elements exist
+    // Verify all required DOM elements exist
     const requiredElements = {
         backBtn,
         gameCodeDisplay,
@@ -136,6 +137,7 @@ async function loadGameData() {
         gameState.lastCard = gameData.last_card ? safeParseJSON(gameData.last_card) : null;
         gameState.betAmount = gameData.bet;
         gameState.mustPlayHearts = gameData.current_suit === 'hearts';
+        gameState.hasDrawnCard = false;
         
         // Set player hands
         if (gameState.playerRole === 'creator') {
@@ -215,13 +217,7 @@ function updateGameUI() {
     }
     
     if (passTurnBtn) {
-        passTurnBtn.style.display = 'none'; // Hide by default, shown in specific cases
-    }
-    
-    // Show pass button if must play hearts but don't have any
-    if (isMyTurn && gameState.mustPlayHearts && !hasCardsOfSuit('hearts') && 
-        !hasSpecialCards(['8', 'J']) && passTurnBtn) {
-        passTurnBtn.style.display = 'block';
+        passTurnBtn.style.display = gameState.hasDrawnCard && isMyTurn ? 'block' : 'none';
     }
     
     // Show skip button if there's a pending action but can't play
@@ -278,14 +274,10 @@ function canPlayCard(card) {
         return card.value === '2';
     }
     
-    // Heart cards rule - must play hearts if possible
-    if (gameState.mustPlayHearts && hasCardsOfSuit('hearts')) {
-        return card.suit === 'hearts';
-    }
-    
-    // Special cards can always be played
-    if (card.value in SPECIAL_CARDS) {
-        return true;
+    // Special cards can be played if they match suit or value
+    if (card.value === '5' || card.value === '7') {
+        return card.suit === gameState.currentSuit || 
+               card.value === gameState.lastCard.value;
     }
     
     // Normal play rules - must match suit or value
@@ -522,6 +514,7 @@ async function processCardPlay(cardsToPlay) {
         
     if (error) throw error;
     
+    gameState.hasDrawnCard = false;
     updateGameUI();
 }
 
@@ -554,6 +547,7 @@ async function skipTurn() {
         
         gameState.pendingAction = null;
         gameState.pendingActionData = null;
+        gameState.hasDrawnCard = false;
         updateGameUI();
         
     } catch (error) {
@@ -577,8 +571,7 @@ async function passTurn() {
         
         const updateData = {
             current_player: opponentPhone,
-            updated_at: new Date().toISOString(),
-            must_play_hearts: false
+            updated_at: new Date().toISOString()
         };
         
         const { error } = await supabase
@@ -588,7 +581,7 @@ async function passTurn() {
             
         if (error) throw error;
         
-        gameState.mustPlayHearts = false;
+        gameState.hasDrawnCard = false;
         updateGameUI();
         
     } catch (error) {
@@ -639,7 +632,6 @@ async function drawCard() {
                 deck: JSON.stringify(deck),
                 pending_action: null,
                 pending_action_data: null,
-                current_player: isCreator ? gameState.opponent.phone : gameState.creator.phone,
                 updated_at: new Date().toISOString()
             };
             
@@ -661,10 +653,10 @@ async function drawCard() {
             if (deck.length > 0) {
                 drawnCards.push(deck.pop());
                 gameState.playerHand = [...gameState.playerHand, ...drawnCards];
+                gameState.hasDrawnCard = true;
                 
                 const updateData = {
                     deck: JSON.stringify(deck),
-                    current_player: isCreator ? gameState.opponent.phone : gameState.creator.phone,
                     updated_at: new Date().toISOString()
                 };
                 
@@ -732,9 +724,11 @@ function showSuitSelector() {
     
     document.body.appendChild(modal);
     
+    // Auto-close after selection
     modal.querySelectorAll('.suit-option').forEach(button => {
         button.addEventListener('click', async () => {
             const selectedSuit = button.dataset.suit;
+            modal.remove();
             
             try {
                 const users = JSON.parse(localStorage.getItem('user')) || {};
@@ -756,11 +750,8 @@ function showSuitSelector() {
                     
                 if (error) throw error;
                 
-                modal.remove();
-                
             } catch (error) {
                 console.error('Error selecting suit:', error);
-                modal.remove();
             }
         });
     });
@@ -832,6 +823,7 @@ function setupRealtimeUpdates() {
                     gameState.pendingAction = payload.new.pending_action;
                     gameState.pendingActionData = payload.new.pending_action_data;
                     gameState.mustPlayHearts = payload.new.must_play_hearts || false;
+                    gameState.hasDrawnCard = false;
                     
                     const users = JSON.parse(localStorage.getItem('user')) || {};
                     const isCreator = gameState.playerRole === 'creator';
