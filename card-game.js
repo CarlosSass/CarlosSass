@@ -203,7 +203,7 @@ function updateGameUI() {
     
     if (passTurnBtn) {
         passTurnBtn.style.display = 'none';
-        if (isMyTurn && gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch) {
+        if (isMyTurn && gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch)) {
             passTurnBtn.style.display = 'block';
         }
     }
