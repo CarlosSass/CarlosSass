@@ -459,69 +459,7 @@ async function passTurn() {
     }
 }
 
-async function drawCard() {
-    try {
-        const users = JSON.parse(localStorage.getItem('user')) || {};
-        if (!users.phone) throw new Error('User not logged in');
-        
-        if (gameState.currentPlayer !== users.phone) {
-            displayMessage(gameStatusEl, "It's not your turn!", 'error');
-            return;
-        }
 
-        const isCreator = gameState.playerRole === 'creator';
-        
-        // Get current game state
-        const { data: gameData, error: fetchError } = await supabase
-            .from('card_games')
-            .select('deck')
-            .eq('code', gameState.gameCode)
-            .single();
-            
-        if (fetchError) throw fetchError;
-        
-        let deck = safeParseJSON(gameData.deck) || [];
-        
-        if (deck.length === 0) {
-            displayMessage(gameStatusEl, 'No cards left to draw', 'error');
-            return;
-        }
-        
-        // Draw card
-        const drawnCard = deck.pop();
-        gameState.playerHand = [...gameState.playerHand, drawnCard];
-        
-        // Update database
-        const updateData = {
-            deck: JSON.stringify(deck),
-            updated_at: new Date().toISOString()
-        };
-        
-        if (isCreator) {
-            updateData.creator_hand = JSON.stringify(gameState.playerHand);
-        } else {
-            updateData.opponent_hand = JSON.stringify(gameState.playerHand);
-        }
-        
-        // If must play suit but can't, show pass button
-        if (gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch)) {
-            if (passTurnBtn) passTurnBtn.style.display = 'block';
-        }
-        
-        const { error } = await supabase
-            .from('card_games')
-            .update(updateData)
-            .eq('code', gameState.gameCode);
-            
-        if (error) throw error;
-        
-        updateGameUI();
-        
-    } catch (error) {
-        console.error('Error drawing card:', error);
-        if (gameStatusEl) gameStatusEl.textContent = 'Error drawing card';
-    }
-}
 
 function showSuitSelector() {
     const modal = document.createElement('div');
