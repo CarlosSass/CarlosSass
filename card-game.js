@@ -31,6 +31,33 @@ const SPECIAL_CARDS = {
     '2': 'draw_two',
     'A': 'spade_ace'
 };
+function canPlayCard(card) {
+    // If no last card played, any card can be played
+    if (!gameState.lastCard) return true;
+    
+    // If there's a pending draw action, only 2s can be played
+    if (gameState.pendingAction === 'draw_two') {
+        // FIX #1: Only allow playing 2 if it's the only matching card
+        return card.value === '2' && 
+               (card.suit === gameState.currentSuit || 
+                card.value === gameState.lastCard.value);
+    }
+    
+    // If must play specific suit, only that suit can be played
+    if (gameState.mustPlaySuit && gameState.currentSuitToMatch) {
+        return card.suit === gameState.currentSuitToMatch;
+    }
+    
+    // Special cards (5 and 7) can only be played if suit or value matches
+    if (card.value === '5' || card.value === '7') {
+        return card.suit === gameState.currentSuit || card.value === gameState.lastCard.value;
+    }
+    
+    // Normal play rules - must match suit or value
+    return card.suit === gameState.currentSuit || 
+           card.value === gameState.lastCard.value ||
+           (card.value in SPECIAL_CARDS && card.value !== '5' && card.value !== '7');
+}
 
 // --- Game State ---
 let gameState = {
@@ -169,68 +196,7 @@ async function loadGameData() {
     }
 }
 
-function updateGameUI() {
-    const users = JSON.parse(localStorage.getItem('user')) || {};
-    const isMyTurn = users.phone === gameState.currentPlayer;
-    
-    // Update player info
-    if (playerNameEl) playerNameEl.textContent = users.username || 'You';
-    if (opponentNameEl) opponentNameEl.textContent = gameState.opponent.username || 'Waiting...';
-    
-    if (playerAvatarEl) {
-        playerAvatarEl.style.backgroundColor = generateAvatarColor(users.username);
-        playerAvatarEl.textContent = users.username ? users.username.charAt(0).toUpperCase() : 'Y';
-    }
-    
-    if (opponentAvatarEl) {
-        opponentAvatarEl.style.backgroundColor = generateAvatarColor(gameState.opponent.username);
-        opponentAvatarEl.textContent = gameState.opponent.username ? 
-            gameState.opponent.username.charAt(0).toUpperCase() : 'O';
-    }
-    
-    // Update game state display
-    if (currentSuitDisplay) {
-        currentSuitDisplay.textContent = gameState.currentSuit 
-            ? `${gameState.currentSuit.toUpperCase()}` 
-            : 'Not set';
-        currentSuitDisplay.className = `suit-${gameState.currentSuit}`;
-    }
-    
-    if (opponentHandCountEl) {
-        opponentHandCountEl.textContent = `${gameState.opponentHandCount} cards`;
-    }
-    
-    // Show/hide action buttons
-    if (drawCardBtn) {
-        drawCardBtn.style.display = isMyTurn && !gameState.hasDrawnThisTurn ? 'block' : 'none';
-    }
-    
-    if (passTurnBtn) {
-        passTurnBtn.style.display = 'none';
-        if (isMyTurn && (gameState.hasDrawnThisTurn || 
-                        (gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch)))) {
-            passTurnBtn.style.display = 'block';
-        }
-    }
-    
-    // Render game elements
-    renderDiscardPile();
-    renderPlayerHand();
-    
-    // Update game status
-    if (gameStatusEl) {
-        if (gameState.status === 'waiting') {
-            gameStatusEl.textContent = 'Waiting for opponent...';
-        } else {
-            gameStatusEl.textContent = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
-            gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
-            
-            if (isMyTurn && gameState.pendingAction) {
-                handlePendingAction();
-            }
-        }
-    }
-}
+
 
 function renderPlayerHand() {
     if (!playerHandEl) return;
@@ -255,30 +221,6 @@ function renderPlayerHand() {
     });
 }
 
-function canPlayCard(card) {
-    // If no last card played, any card can be played
-    if (!gameState.lastCard) return true;
-    
-    // If there's a pending draw action, only 2s can be played
-    if (gameState.pendingAction === 'draw_two') {
-        return card.value === '2';
-    }
-    
-    // If must play specific suit, only that suit can be played
-    if (gameState.mustPlaySuit && gameState.currentSuitToMatch) {
-        return card.suit === gameState.currentSuitToMatch;
-    }
-    
-    // Special cards (5 and 7) can only be played if suit or value matches
-    if (card.value === '5' || card.value === '7') {
-        return card.suit === gameState.currentSuit || card.value === gameState.lastCard.value;
-    }
-    
-    // Normal play rules - must match suit or value
-    return card.suit === gameState.currentSuit || 
-           card.value === gameState.lastCard.value ||
-           (card.value in SPECIAL_CARDS && card.value !== '5' && card.value !== '7');
-}
 
 function hasCardsOfSuit(suit) {
     return gameState.playerHand.some(card => card.suit === suit);
@@ -456,7 +398,11 @@ async function processCardPlay(cardsToPlay) {
                 // Handle draw two stacking
                 let drawCount = 2;
                 if (gameState.pendingAction === 'draw_two') {
+                    // If already in a draw two sequence, add to the count
                     drawCount = (gameState.pendingActionData || 2) + 2;
+                } else {
+                    // Start new draw two sequence
+                    drawCount = 2;
                 }
                 
                 gameState.pendingAction = 'draw_two';
@@ -522,6 +468,74 @@ async function processCardPlay(cardsToPlay) {
     if (error) throw error;
     
     updateGameUI();
+}
+
+function updateGameUI() {
+    const users = JSON.parse(localStorage.getItem('user')) || {};
+    const isMyTurn = users.phone === gameState.currentPlayer;
+    
+    // Update player info
+    if (playerNameEl) playerNameEl.textContent = users.username || 'You';
+    if (opponentNameEl) opponentNameEl.textContent = gameState.opponent.username || 'Waiting...';
+    
+    if (playerAvatarEl) {
+        playerAvatarEl.style.backgroundColor = generateAvatarColor(users.username);
+        playerAvatarEl.textContent = users.username ? users.username.charAt(0).toUpperCase() : 'Y';
+    }
+    
+    if (opponentAvatarEl) {
+        opponentAvatarEl.style.backgroundColor = generateAvatarColor(gameState.opponent.username);
+        opponentAvatarEl.textContent = gameState.opponent.username ? 
+            gameState.opponent.username.charAt(0).toUpperCase() : 'O';
+    }
+    
+    // Update game state display
+    if (currentSuitDisplay) {
+        currentSuitDisplay.textContent = gameState.currentSuit 
+            ? `${gameState.currentSuit.toUpperCase()}` 
+            : 'Not set';
+        currentSuitDisplay.className = `suit-${gameState.currentSuit}`;
+    }
+    
+    if (opponentHandCountEl) {
+        opponentHandCountEl.textContent = `${gameState.opponentHandCount} cards`;
+    }
+    
+    // Show/hide action buttons
+    if (drawCardBtn) {
+        drawCardBtn.style.display = isMyTurn && !gameState.hasDrawnThisTurn ? 'block' : 'none';
+    }
+    
+    if (passTurnBtn) {
+        // Only show pass button if:
+        // 1. Player has drawn this turn, OR
+        // 2. Player must play a suit but can't
+        passTurnBtn.style.display = 'none';
+        if (isMyTurn) {
+            if (gameState.hasDrawnThisTurn || 
+                (gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch))) {
+                passTurnBtn.style.display = 'block';
+            }
+        }
+    }
+    
+    // Render game elements
+    renderDiscardPile();
+    renderPlayerHand();
+    
+    // Update game status
+    if (gameStatusEl) {
+        if (gameState.status === 'waiting') {
+            gameStatusEl.textContent = 'Waiting for opponent...';
+        } else {
+            gameStatusEl.textContent = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
+            gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
+            
+            if (isMyTurn && gameState.pendingAction) {
+                handlePendingAction();
+            }
+        }
+    }
 }
 
 async function passTurn() {
