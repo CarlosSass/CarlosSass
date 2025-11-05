@@ -339,7 +339,109 @@ async function showSevenCardDialog(initialCardIndex) {
         });
     });
 }
+async function drawCard() {
+    try {
+        const users = JSON.parse(localStorage.getItem('user')) || {};
+        if (!users.phone) throw new Error('User not logged in');
+        
+        if (gameState.currentPlayer !== users.phone) {
+            displayMessage(gameStatusEl, "It's not your turn!", 'error');
+            return;
+        }
 
+        // Determine how many cards to draw
+        let drawCount = 1;
+        if (gameState.pendingAction === 'draw_two') {
+            drawCount = gameState.pendingActionData || 2;
+            // Clear the pending action after drawing
+            gameState.pendingAction = null;
+            gameState.pendingActionData = null;
+        }
+
+        const isCreator = gameState.playerRole === 'creator';
+        
+        // Get current game state
+        const { data: gameData, error: fetchError } = await supabase
+            .from('card_games')
+            .select('deck, discard_pile, last_card')
+            .eq('code', gameState.gameCode)
+            .single();
+            
+        if (fetchError) throw fetchError;
+        
+        let deck = safeParseJSON(gameData.deck) || [];
+        const cardsToAdd = [];
+        
+        // Draw the required number of cards
+        for (let i = 0; i < drawCount; i++) {
+            // If deck is empty, reshuffle discard pile (except last card)
+            if (deck.length === 0) {
+                let discardPile = safeParseJSON(gameData.discard_pile) || [];
+                const lastCard = safeParseJSON(gameData.last_card);
+                
+                // Remove last card from discard pile (so it stays in play)
+                if (lastCard) {
+                    discardPile = discardPile.filter(card => 
+                        !(card.suit === lastCard.suit && card.value === lastCard.value));
+                }
+                
+                // Reshuffle the remaining cards
+                deck = shuffleArray(discardPile);
+                
+                // Update deck and clear discard pile (except last card)
+                const { error: updateDeckError } = await supabase
+                    .from('card_games')
+                    .update({
+                        deck: JSON.stringify(deck),
+                        discard_pile: lastCard ? JSON.stringify([lastCard]) : JSON.stringify([]),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('code', gameState.gameCode);
+                    
+                if (updateDeckError) throw updateDeckError;
+            }
+            
+            // Draw card if available
+            if (deck.length > 0) {
+                cardsToAdd.push(deck.pop());
+            }
+        }
+        
+        // Add drawn cards to hand
+        gameState.playerHand = [...gameState.playerHand, ...cardsToAdd];
+        
+        // Update database
+        const updateData = {
+            deck: JSON.stringify(deck),
+            updated_at: new Date().toISOString(),
+            has_drawn_this_turn: true,
+            pending_action: null,
+            pending_action_data: null
+        };
+        
+        if (isCreator) {
+            updateData.creator_hand = JSON.stringify(gameState.playerHand);
+        } else {
+            updateData.opponent_hand = JSON.stringify(gameState.playerHand);
+        }
+        
+        const { error } = await supabase
+            .from('card_games')
+            .update(updateData)
+            .eq('code', gameState.gameCode);
+            
+        if (error) throw error;
+        
+        gameState.hasDrawnThisTurn = true;
+        gameState.pendingAction = null;
+        gameState.pendingActionData = null;
+        updateGameUI();
+        
+    } catch (error) {
+        console.error('Error drawing card:', error);
+        if (gameStatusEl) gameStatusEl.textContent = 'Error drawing card';
+    }
+}
 async function processCardPlay(cardsToPlay) {
     const users = JSON.parse(localStorage.getItem('user')) || {};
     const isCreator = gameState.playerRole === 'creator';
@@ -470,6 +572,7 @@ async function processCardPlay(cardsToPlay) {
     updateGameUI();
 }
 
+
 function updateGameUI() {
     const users = JSON.parse(localStorage.getItem('user')) || {};
     const isMyTurn = users.phone === gameState.currentPlayer;
@@ -507,15 +610,12 @@ function updateGameUI() {
     }
     
     if (passTurnBtn) {
-        // Only show pass button if:
-        // 1. Player has drawn this turn, OR
-        // 2. Player must play a suit but can't
-        passTurnBtn.style.display = 'none';
-        if (isMyTurn) {
-            if (gameState.hasDrawnThisTurn || 
-                (gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch))) {
-                passTurnBtn.style.display = 'block';
-            }
+        // Only show pass button if player has drawn this turn
+        passTurnBtn.style.display = isMyTurn && gameState.hasDrawnThisTurn ? 'block' : 'none';
+        
+        // Exception: Also show if forced to pass due to suit mismatch
+        if (isMyTurn && gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch)) {
+            passTurnBtn.style.display = 'block';
         }
     }
     
@@ -528,12 +628,15 @@ function updateGameUI() {
         if (gameState.status === 'waiting') {
             gameStatusEl.textContent = 'Waiting for opponent...';
         } else {
-            gameStatusEl.textContent = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
-            gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
+            let statusText = isMyTurn ? 'Your turn!' : 'Opponent\'s turn';
             
-            if (isMyTurn && gameState.pendingAction) {
-                handlePendingAction();
+            if (isMyTurn && gameState.pendingAction === 'draw_two') {
+                const drawCount = gameState.pendingActionData || 2;
+                statusText = `You must draw ${drawCount} cards or play a 2`;
             }
+            
+            gameStatusEl.textContent = statusText;
+            gameStatusEl.className = isMyTurn ? 'status-your-turn' : 'status-opponent-turn';
         }
     }
 }
@@ -577,93 +680,6 @@ async function passTurn() {
     }
 }
 
-async function drawCard() {
-    try {
-        const users = JSON.parse(localStorage.getItem('user')) || {};
-        if (!users.phone) throw new Error('User not logged in');
-        
-        if (gameState.currentPlayer !== users.phone) {
-            displayMessage(gameStatusEl, "It's not your turn!", 'error');
-            return;
-        }
-
-        if (gameState.hasDrawnThisTurn) {
-            displayMessage(gameStatusEl, "You can only draw once per turn", 'error');
-            return;
-        }
-
-        const isCreator = gameState.playerRole === 'creator';
-        
-        // Get current game state
-        const { data: gameData, error: fetchError } = await supabase
-            .from('card_games')
-            .select('deck, discard_pile, last_card')
-            .eq('code', gameState.gameCode)
-            .single();
-            
-        if (fetchError) throw fetchError;
-        
-        let deck = safeParseJSON(gameData.deck) || [];
-        
-        // If deck is empty, reshuffle discard pile (except last card)
-        if (deck.length === 0) {
-            let discardPile = safeParseJSON(gameData.discard_pile) || [];
-            const lastCard = safeParseJSON(gameData.last_card);
-            
-            // Remove last card from discard pile (so it stays in play)
-            if (lastCard) {
-                discardPile = discardPile.filter(card => 
-                    !(card.suit === lastCard.suit && card.value === lastCard.value));
-            }
-            
-            // Reshuffle the remaining cards
-            deck = shuffleArray(discardPile);
-            
-            // Update deck and clear discard pile (except last card)
-            const { error: updateDeckError } = await supabase
-                .from('card_games')
-                .update({
-                    deck: JSON.stringify(deck),
-                    discard_pile: lastCard ? JSON.stringify([lastCard]) : JSON.stringify([]),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('code', gameState.gameCode);
-                
-            if (updateDeckError) throw updateDeckError;
-        }
-        
-        // Draw card
-        const drawnCard = deck.pop();
-        gameState.playerHand = [...gameState.playerHand, drawnCard];
-        
-        // Update database
-        const updateData = {
-            deck: JSON.stringify(deck),
-            updated_at: new Date().toISOString(),
-            has_drawn_this_turn: true
-        };
-        
-        if (isCreator) {
-            updateData.creator_hand = JSON.stringify(gameState.playerHand);
-        } else {
-            updateData.opponent_hand = JSON.stringify(gameState.playerHand);
-        }
-        
-        const { error } = await supabase
-            .from('card_games')
-            .update(updateData)
-            .eq('code', gameState.gameCode);
-            
-        if (error) throw error;
-        
-        gameState.hasDrawnThisTurn = true;
-        updateGameUI();
-        
-    } catch (error) {
-        console.error('Error drawing card:', error);
-        if (gameStatusEl) gameStatusEl.textContent = 'Error drawing card';
-    }
-}
 
 function showSuitSelector() {
     const modal = document.createElement('div');
