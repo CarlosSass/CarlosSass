@@ -31,13 +31,201 @@ const SPECIAL_CARDS = {
     '2': 'draw_two',
     'A': 'spade_ace'
 };
+
+// --- CSS for Dialogs ---
+const style = document.createElement('style');
+style.textContent = `
+/* Card Selection Modal */
+.card-selection-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.selection-content {
+    background-color: #2c3e50;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    color: white;
+}
+
+.card-selection-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 20px 0;
+    justify-content: center;
+}
+
+.card-option {
+    width: 60px;
+    height: 90px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-option.selected {
+    transform: translateY(-10px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.card-option.hearts, .card-option.diamonds {
+    background-color: white;
+    color: red;
+}
+
+.card-option.clubs, .card-option.spades {
+    background-color: white;
+    color: black;
+}
+
+.selection-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.selection-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.selection-actions button:first-child {
+    background-color: #27ae60;
+    color: white;
+}
+
+.selection-actions button:last-child {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Suit Selector Modal */
+.suit-selector-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.suit-selector {
+    background-color: #2c3e50;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    color: white;
+    text-align: center;
+}
+
+.suit-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.suit-option {
+    padding: 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    min-width: 80px;
+    color: white;
+}
+
+.suit-option.hearts {
+    background-color: #e74c3c;
+}
+
+.suit-option.diamonds {
+    background-color: #3498db;
+}
+
+.suit-option.clubs {
+    background-color: #2ecc71;
+}
+
+.suit-option.spades {
+    background-color: #9b59b6;
+}
+
+/* Game Result Modal */
+.game-result-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.result-content {
+    background-color: #2c3e50;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    color: white;
+    text-align: center;
+}
+
+.result-content h2 {
+    color: #f1c40f;
+    margin-bottom: 20px;
+}
+
+#result-close-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+    font-weight: bold;
+}
+`;
+document.head.appendChild(style);
+
 function canPlayCard(card) {
     // If no last card played, any card can be played
     if (!gameState.lastCard) return true;
     
     // If there's a pending draw action, only 2s can be played
     if (gameState.pendingAction === 'draw_two') {
-        // FIX #1: Only allow playing 2 if it's the only matching card
+        // Only allow playing 2 if it's the only matching card
         return card.value === '2' && 
                (card.suit === gameState.currentSuit || 
                 card.value === gameState.lastCard.value);
@@ -196,8 +384,6 @@ async function loadGameData() {
     }
 }
 
-
-
 function renderPlayerHand() {
     if (!playerHandEl) return;
     
@@ -220,7 +406,6 @@ function renderPlayerHand() {
         playerHandEl.appendChild(cardEl);
     });
 }
-
 
 function hasCardsOfSuit(suit) {
     return gameState.playerHand.some(card => card.suit === suit);
@@ -339,6 +524,7 @@ async function showSevenCardDialog(initialCardIndex) {
         });
     });
 }
+
 async function drawCard() {
     try {
         const users = JSON.parse(localStorage.getItem('user')) || {};
@@ -442,6 +628,7 @@ async function drawCard() {
         if (gameStatusEl) gameStatusEl.textContent = 'Error drawing card';
     }
 }
+
 async function processCardPlay(cardsToPlay) {
     const users = JSON.parse(localStorage.getItem('user')) || {};
     const isCreator = gameState.playerRole === 'creator';
@@ -572,7 +759,6 @@ async function processCardPlay(cardsToPlay) {
     updateGameUI();
 }
 
-
 function updateGameUI() {
     const users = JSON.parse(localStorage.getItem('user')) || {};
     const isMyTurn = users.phone === gameState.currentPlayer;
@@ -604,7 +790,7 @@ function updateGameUI() {
         opponentHandCountEl.textContent = `${gameState.opponentHandCount} cards`;
     }
     
-    // Show/hide action buttons
+    // Show/hide action buttons based on game state
     if (drawCardBtn) {
         drawCardBtn.style.display = isMyTurn && !gameState.hasDrawnThisTurn ? 'block' : 'none';
     }
@@ -679,7 +865,6 @@ async function passTurn() {
         if (gameStatusEl) gameStatusEl.textContent = 'Error passing turn';
     }
 }
-
 
 function showSuitSelector() {
     const modal = document.createElement('div');
