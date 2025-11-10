@@ -800,8 +800,9 @@ function updateGameUI() {
         passTurnBtn.style.display = isMyTurn && gameState.hasDrawnThisTurn ? 'block' : 'none';
         
         // Exception: Also show if forced to pass due to suit mismatch
+
         if (isMyTurn && gameState.mustPlaySuit && !hasCardsOfSuit(gameState.currentSuitToMatch)) {
-            passTurnBtn.style.display = 'block';
+           // passTurnBtn.style.display = 'block';
         }
     }
     
