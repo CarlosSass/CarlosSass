@@ -436,7 +436,138 @@ function renderPlayerHand() {
         playerHandEl.appendChild(cardEl);
     });
 }
+function renderDiscardPile() {
+    if (!discardPileEl) return;
+    
+    discardPileEl.innerHTML = '';
+    
+    if (gameState.lastCard) {
+        // Create container for stacked cards
+        const stackContainer = document.createElement('div');
+        stackContainer.className = 'card-stack';
+        
+        // Add the last played card
+        const cardEl = document.createElement('div');
+        cardEl.className = `card ${gameState.lastCard.suit} top-card`;
+        cardEl.innerHTML = `
+            <div class="card-value">${gameState.lastCard.value}</div>
+            <div class="card-suit"></div>
+        `;
+        stackContainer.appendChild(cardEl);
+        
+        // If there are stacked cards (from a 7 play), show them beneath
+        if (gameState.discardPile.length > 0) {
+            const stackedCards = gameState.discardPile.slice(-3); // Show up to 3 stacked cards
+            
+            stackedCards.forEach((card, index) => {
+                const stackedCardEl = document.createElement('div');
+                stackedCardEl.className = `card ${card.suit} stacked-card`;
+                stackedCardEl.style.transform = `translate(${5 * (index + 1)}px, ${5 * (index + 1)}px)`;
+                stackedCardEl.style.zIndex = `-${index + 1}`;
+                stackedCardEl.innerHTML = `
+                    <div class="card-value">${card.value}</div>
+                    <div class="card-suit"></div>
+                `;
+                stackContainer.appendChild(stackedCardEl);
+            });
+        }
+        
+        discardPileEl.appendChild(stackContainer);
+    }
+}
 
+
+
+async function showSevenCardDialog(initialCardIndex) {
+    const initialCard = gameState.playerHand[initialCardIndex];
+    
+    // Find all number cards (2-10) and special cards (8,J) that can be played with this 7
+    const playableCards = gameState.playerHand.filter(
+        (card, index) => {
+            // Can play number cards (2-10) of the same suit
+            const isNumberCard = !isNaN(parseInt(card.value)) && card.value !== '8';
+            const sameSuitNumber = isNumberCard && card.suit === initialCard.suit;
+            
+            // Or special cards (8,J) of any suit
+            const isSpecialCard = card.value === '8' || card.value === 'J';
+            
+            return (sameSuitNumber || isSpecialCard) && index !== initialCardIndex;
+        }
+    );
+    
+    // If no playable cards, treat as normal card
+    if (playableCards.length === 0) {
+        await processCardPlay([initialCard]);
+        return;
+    }
+    
+    // Create selection modal
+    const modal = document.createElement('div');
+    modal.className = 'card-selection-modal';
+    modal.innerHTML = `
+        <div class="selection-content">
+            <h3>Select cards to stack with ${initialCard.value} of ${initialCard.suit}</h3>
+            <p>You can stack number cards (2-10) of the same suit or special cards (8,J)</p>
+            <div class="card-selection-options">
+                ${playableCards.map((card, i) => `
+                    <div class="card-option ${card.suit}" data-index="${gameState.playerHand.findIndex(c => 
+                        c.suit === card.suit && c.value === card.value)}">
+                        <div class="card-value">${card.value}</div>
+                        <div class="card-suit"></div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="selection-actions">
+                <button id="play-selected-cards">Play Stack</button>
+                <button id="play-single-seven">Play Just This 7</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Track selected cards
+    const selectedIndices = new Set([initialCardIndex]);
+    
+    // Add selection handlers
+    modal.querySelectorAll('.card-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const index = parseInt(option.dataset.index);
+            if (selectedIndices.has(index)) {
+                option.classList.remove('selected');
+                selectedIndices.delete(index);
+            } else {
+                option.classList.add('selected');
+                selectedIndices.add(index);
+            }
+        });
+    });
+    
+    // Add action handlers
+    return new Promise((resolve) => {
+        modal.querySelector('#play-selected-cards').addEventListener('click', async () => {
+            const cardsToPlay = Array.from(selectedIndices).map(i => gameState.playerHand[i]);
+            modal.remove();
+            
+            // Sort cards so the 7 is played last (for proper stacking)
+            const sortedCards = [...cardsToPlay];
+            sortedCards.sort((a, b) => {
+                if (a.value === '7') return 1;
+                if (b.value === '7') return -1;
+                return 0;
+            });
+            
+            await processCardPlay(sortedCards);
+            resolve();
+        });
+        
+        modal.querySelector('#play-single-seven').addEventListener('click', async () => {
+            modal.remove();
+            await processCardPlay([initialCard]);
+            resolve();
+        });
+    });
+}
 // Update the processCardPlay function to handle the new Ace behavior
 async function processCardPlay(cardsToPlay) {
     const users = JSON.parse(localStorage.getItem('user')) || {};
@@ -468,6 +599,7 @@ async function processCardPlay(cardsToPlay) {
     // Add played cards to discard pile (except last card)
     const cardsToDiscard = cardsToPlay.slice(0, -1);
     if (cardsToDiscard.length > 0) {
+        // If playing multiple cards with a 7, keep them together in the discard pile
         updateData.discard_pile = JSON.stringify([
             ...gameState.discardPile,
             ...cardsToDiscard
@@ -493,13 +625,10 @@ async function processCardPlay(cardsToPlay) {
                 break;
                 
             case 'draw_two':
-                // Handle draw two stacking
                 let drawCount = 2;
                 if (gameState.pendingAction === 'draw_two') {
-                    // If already in a draw two sequence, add to the count
                     drawCount = (gameState.pendingActionData || 2) + 2;
                 } else {
-                    // Start new draw two sequence
                     drawCount = 2;
                 }
                 
@@ -510,32 +639,27 @@ async function processCardPlay(cardsToPlay) {
                 break;
                 
             case 'spade_ace_only':
-                // Only trigger if it's Ace of Spades
                 if (lastPlayedCard.suit === 'spades' && lastPlayedCard.value === 'A') {
                     gameState.pendingAction = 'draw_two';
                     updateData.pending_action = 'draw_two';
-                    updateData.pending_action_data = 5; // Make opponent draw 5
+                    updateData.pending_action_data = 5;
                     updateData.current_player = opponentPhone;
                 } else {
-                    // Normal Ace behavior - just pass turn
                     updateData.current_player = opponentPhone;
                 }
                 break;
                 
             case 'play_multiple':
-                // For 7 cards - check if playing with 8 or J
                 const playingWithSpecial = cardsToPlay.some(card => 
                     card.value === '8' || card.value === 'J'
                 );
                 
                 if (playingWithSpecial) {
-                    // If playing 7 with 8 or J, treat it like a change suit
                     gameState.pendingAction = 'change_suit';
                     updateData.pending_action = 'change_suit';
                     updateData.current_player = users.phone;
                     showSuitSelector();
                 } else {
-                    // Normal 7 behavior - pass turn
                     updateData.current_player = opponentPhone;
                 }
                 break;
@@ -544,7 +668,6 @@ async function processCardPlay(cardsToPlay) {
         updateData.current_player = opponentPhone;
     }
     
-    // Rest of the function remains the same...
     // Update hands in database
     if (isCreator) {
         updateData.creator_hand = JSON.stringify(gameState.playerHand);
@@ -591,21 +714,7 @@ function hasCardsOfSuit(suit) {
     return gameState.playerHand.some(card => card.suit === suit);
 }
 
-function renderDiscardPile() {
-    if (!discardPileEl) return;
-    
-    discardPileEl.innerHTML = '';
-    
-    if (gameState.lastCard) {
-        const cardEl = document.createElement('div');
-        cardEl.className = `card ${gameState.lastCard.suit}`;
-        cardEl.innerHTML = `
-            <div class="card-value">${gameState.lastCard.value}</div>
-            <div class="card-suit"></div>
-        `;
-        discardPileEl.appendChild(cardEl);
-    }
-}
+
 
 async function playCard(cardIndex) {
     try {
@@ -743,78 +852,7 @@ async function drawCard() {
 
 
 
-// Update the showSevenCardDialog function to handle the new 7 card behavior
-async function showSevenCardDialog(initialCardIndex) {
-    const initialCard = gameState.playerHand[initialCardIndex];
-    
-    // Find all 8s and Js in hand (regardless of suit) that can be played with this 7
-    const specialCards = gameState.playerHand.filter(
-        (card, index) => (card.value === '8' || card.value === 'J') && index !== initialCardIndex
-    );
-    
-    // If no special cards to play with, treat as normal card
-    if (specialCards.length === 0) {
-        await processCardPlay([initialCard]);
-        return;
-    }
-    
-    // Create selection modal
-    const modal = document.createElement('div');
-    modal.className = 'card-selection-modal';
-    modal.innerHTML = `
-        <div class="selection-content">
-            <h3>Select cards to play with ${initialCard.value} of ${initialCard.suit}</h3>
-            <div class="card-selection-options">
-                ${specialCards.map((card, i) => `
-                    <div class="card-option ${card.suit}" data-index="${gameState.playerHand.findIndex(c => 
-                        c.suit === card.suit && c.value === card.value)}">
-                        <div class="card-value">${card.value}</div>
-                        <div class="card-suit"></div>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="selection-actions">
-                <button id="play-selected-cards">Play Selected</button>
-                <button id="play-single-seven">Play Just This 7</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Track selected cards
-    const selectedIndices = new Set([initialCardIndex]);
-    
-    // Add selection handlers
-    modal.querySelectorAll('.card-option').forEach(option => {
-        option.addEventListener('click', () => {
-            const index = parseInt(option.dataset.index);
-            if (selectedIndices.has(index)) {
-                option.classList.remove('selected');
-                selectedIndices.delete(index);
-            } else {
-                option.classList.add('selected');
-                selectedIndices.add(index);
-            }
-        });
-    });
-    
-    // Add action handlers
-    return new Promise((resolve) => {
-        modal.querySelector('#play-selected-cards').addEventListener('click', async () => {
-            const cardsToPlay = Array.from(selectedIndices).map(i => gameState.playerHand[i]);
-            modal.remove();
-            await processCardPlay(cardsToPlay);
-            resolve();
-        });
-        
-        modal.querySelector('#play-single-seven').addEventListener('click', async () => {
-            modal.remove();
-            await processCardPlay([initialCard]);
-            resolve();
-        });
-    });
-}
+
 function updateGameUI() {
     const users = JSON.parse(localStorage.getItem('user')) || {};
     const isMyTurn = users.phone === gameState.currentPlayer;
