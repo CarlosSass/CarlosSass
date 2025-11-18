@@ -23,9 +23,11 @@
           --club-color: #263238; /* Dark gray */
           --spade-color: #263238; /* Dark gray */
           --card-white: #fff8f0; /* Off-white for cards */
-          --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
-          --card-radius: 8px;
-          --card-border: 1px solid rgba(0,0,0,0.1);
+          --card-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          --card-radius: 6px;
+          --card-border: 1px solid rgba(0,0,0,0.05);
+          --header-height: 50px;
+          --footer-height: 70px;
         }
 
         * {
@@ -38,98 +40,93 @@
         body {
           background-color: var(--background-color);
           color: var(--text-color);
-          min-height: 100vh;
+          height: 100vh;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
         }
 
-        /* Game Container */
+        /* Game Container - Optimized for Telegram viewport */
         .game-container {
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 1.5rem;
+          width: 100%;
+          height: 100%;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          padding: 0;
+          overflow: hidden;
         }
 
-        /* Header */
+        /* Header - Fixed height */
         .game-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.5rem 0;
+          padding: 0 12px;
+          height: var(--header-height);
+          background: white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          z-index: 10;
         }
 
         #back-btn {
           background: var(--primary-color);
           color: white;
           border: none;
-          padding: 0.6rem 1.2rem;
-          border-radius: 20px;
+          padding: 6px 12px;
+          border-radius: 16px;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 4px;
           font-weight: 500;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        #back-btn:hover {
-          background: var(--secondary-color);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+          font-size: 14px;
         }
 
         #game-code-display {
           background: rgba(0, 0, 0, 0.08);
-          padding: 0.6rem 1.2rem;
-          border-radius: 20px;
+          padding: 6px 12px;
+          border-radius: 16px;
           font-weight: bold;
           color: var(--secondary-color);
           font-family: 'Courier New', monospace;
-          letter-spacing: 1px;
+          font-size: 14px;
+        }
+
+        /* Main Game Area - Flexible space between header and footer */
+        .game-main {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         /* Game Status */
         .game-status {
           text-align: center;
-          margin: 1rem 0;
           background: white;
-          padding: 1rem;
-          border-radius: 12px;
+          padding: 8px;
+          border-radius: 8px;
           box-shadow: var(--card-shadow);
         }
 
         #current-suit {
-          font-size: 1.5rem;
+          font-size: 16px;
           font-weight: bold;
-          margin-bottom: 0.5rem;
+          margin-bottom: 4px;
         }
 
-        .suit-hearts {
-          color: var(--heart-color);
-        }
-
-        .suit-diamonds {
-          color: var(--diamond-color);
-        }
-
-        .suit-clubs {
-          color: var(--club-color);
-        }
-
-        .suit-spades {
-          color: var(--spade-color);
-        }
+        .suit-hearts { color: var(--heart-color); }
+        .suit-diamonds { color: var(--diamond-color); }
+        .suit-clubs { color: var(--club-color); }
+        .suit-spades { color: var(--spade-color); }
 
         #game-status {
-          padding: 0.8rem;
-          border-radius: 20px;
+          padding: 6px;
+          border-radius: 16px;
           font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 1px;
+          font-size: 14px;
         }
 
         .status-your-turn {
@@ -146,379 +143,11 @@
         .opponent-info, .player-info {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 1rem;
+          gap: 8px;
+          padding: 8px;
           background: white;
-          border-radius: 12px;
-          box-shadow: var(--card-shadow);
-        }
-
-        #opponent-avatar, #player-avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          background: var(--primary-color);
-          font-size: 1.2rem;
-        }
-
-        #opponent-name, #player-name {
-          font-weight: 600;
-          flex-grow: 1;
-          font-size: 1.1rem;
-        }
-
-        #opponent-hand-count {
-          background: var(--accent-color);
-          color: white;
-          padding: 0.4rem 1rem;
-          border-radius: 20px;
-          font-weight: bold;
-          min-width: 40px;
-          text-align: center;
-        }
-
-        /* Discard Pile */
-        .discard-pile {
-          min-height: 180px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background: white;
-          border-radius: 12px;
-          box-shadow: var(--card-shadow);
-          margin: 1rem 0;
-          position: relative;
-        }
-
-        /* Cards */
-        .card {
-          width: 90px;
-          height: 135px;
-          background: var(--card-white);
-          border-radius: var(--card-radius);
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 0.8rem;
-          margin: 0.5rem;
-          box-shadow: var(--card-shadow);
-          position: relative;
-          cursor: default;
-          transition: transform 0.3s, box-shadow 0.3s;
-          border: var(--card-border);
-          font-weight: 600;
-        }
-
-        .card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border-radius: var(--card-radius);
-          border: 1px solid rgba(0,0,0,0.05);
-          pointer-events: none;
-        }
-
-        .card.playable {
-          cursor: pointer;
-        }
-
-        .card.playable:hover {
-          transform: translateY(-15px);
-          box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-        }
-
-        .card.hearts, .card.diamonds {
-          color: var(--heart-color);
-        }
-
-        .card.clubs, .card.spades {
-          color: var(--club-color);
-        }
-
-        .card-value {
-          font-size: 1.3rem;
-          font-weight: bold;
-          position: relative;
-          z-index: 1;
-        }
-
-        .card-value.top {
-          align-self: flex-start;
-        }
-
-        .card-value.bottom {
-          align-self: flex-end;
-          transform: rotate(180deg);
-        }
-
-        .card-suit {
-          font-size: 2.5rem;
-          align-self: center;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Realistic card suit icons */
-        .card-suit::after {
-            content: '';
-            display: inline-block;
-            width: 36px;
-            height: 36px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-
-        .card.hearts .card-suit::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d32f2f'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
-        }
-
-        .card.diamonds .card-suit::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d32f2f'%3E%3Cpath d='M19 12l-7-10-7 10 7 10 7-10z'/%3E%3C/svg%3E");
-        }
-
-        .card.clubs .card-suit::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23263238'%3E%3Cpath d='M256 32c-74.1 0-141.8 26.1-194.2 69.5-2.1 1.8-4.1 3.6-6.1 5.5-50.5 46.6-55.7 118-55.7 118s9.2 16.9 28.7 16.9c19.6 0 28.7-16.9 28.7-16.9s-1.1-25.7 12.4-40.7c13.5-15 38.3-20.5 38.3-20.5s4.9 8.8 4.9 19.6c0 10.8-4.9 19.6-4.9 19.6s-24.8 5.5-38.3 20.5c-13.5 15-12.4 40.7-12.4 40.7s4.2 24.5 16.2 40.3c12 15.8 29.2 27.5 48.7 33.9-5.3 12.4-8.2 25.9-8.2 40 0 61.9 50.1 112 112 112s112-50.1 112-112c0-14.1-2.9-27.6-8.2-40 19.5-6.4 36.7-18.1 48.7-33.9 12-15.8 16.2-40.3 16.2-40.3s1.1-25.7-12.4-40.7c-13.5-15-38.3-20.5-38.3-20.5s-4.9-8.8-4.9-19.6c0-10.8 4.9-19.6 4.9-19.6s24.8-5.5 38.3-20.5c13.5-15 12.4-40.7 12.4-40.7s-5.2-71.4-55.7-118c-2-1.9-4-3.7-6.1-5.5C397.8 58.1 330.1 32 256 32z'/%3E%3C/svg%3E");
-        }
-
-        .card.spades .card-suit::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23263238'%3E%3Cpath d='M256 32c-74.1 0-141.8 26.1-194.2 69.5-2.1 1.8-4.1 3.6-6.1 5.5-50.5 46.6-55.7 118-55.7 118s9.2 16.9 28.7 16.9c19.6 0 28.7-16.9 28.7-16.9s-1.1-25.7 12.4-40.7c13.5-15 38.3-20.5 38.3-20.5s4.9 8.8 4.9 19.6c0 10.8-4.9 19.6-4.9 19.6s-24.8 5.5-38.3 20.5c-13.5 15-12.4 40.7-12.4 40.7s4.2 24.5 16.2 40.3c12 15.8 29.2 27.5 48.7 33.9-5.3 12.4-8.2 25.9-8.2 40 0 61.9 50.1 112 112 112s112-50.1 112-112c0-14.1-2.9-27.6-8.2-40 19.5-6.4 36.7-18.1 48.7-33.9 12-15.8 16.2-40.3 16.2-40.3s1.1-25.7-12.4-40.7c-13.5-15-38.3-20.5-38.3-20.5s-4.9-8.8-4.9-19.6c0-10.8 4.9-19.6 4.9-19.6s24.8-5.5 38.3-20.5c13.5-15 12.4-40.7 12.4-40.7s-5.2-71.4-55.7-118c-2-1.9-4-3.7-6.1-5.5C397.8 58.1 330.1 32 256 32z'/%3E%3C/svg%3E");
-            transform: rotate(180deg);
-        }
-
-        /* Card corners */
-        .card-corner {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            z-index: 1;
-        }
-
-        .card-corner.top-left {
-            top: 5px;
-            left: 5px;
-        }
-
-        .card-corner.bottom-right {
-            bottom: 5px;
-            right: 5px;
-            transform: rotate(180deg);
-        }
-
-        /* Player Hand */
-        .player-hand {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 0.8rem;
-          padding: 1.5rem;
-          background: white;
-          border-radius: 12px;
-          box-shadow: var(--card-shadow);
-          min-height: 180px;
-        }
-
-        /* Game Controls */
-        .game-controls {
-          display: flex;
-          justify-content: center;
-          margin-top: 1rem;
-          gap: 1rem;
-        }
-
-        #draw-card-btn, #skip-turn-btn, #pass-turn-btn {
-          background: var(--primary-color);
-          color: white;
-          border: none;
-          padding: 0.8rem 1.8rem;
-          border-radius: 30px;
-          font-size: 1rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        #draw-card-btn:hover, #skip-turn-btn:hover, #pass-turn-btn:hover {
-          background: var(--secondary-color);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        /* Modals */
-        .suit-selector-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .suit-selector {
-          background: white;
-          padding: 2rem;
-          border-radius: 12px;
-          max-width: 500px;
-          width: 90%;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-
-        .suit-selector h3 {
-          margin-bottom: 1.5rem;
-          text-align: center;
-          color: var(--primary-color);
-          font-size: 1.5rem;
-        }
-
-        .suit-options {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1.5rem;
-        }
-
-        .suit-option {
-          padding: 1.5rem;
-          border: none;
           border-radius: 8px;
-          cursor: pointer;
-          font-weight: bold;
-          text-align: center;
-          transition: all 0.3s ease;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.8rem;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .suit-option:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 8px 15px rgba(0,0,0,0.15);
-        }
-
-        .suit-option.hearts {
-          background: var(--heart-color);
-          color: white;
-        }
-
-        .suit-option.diamonds {
-          background: var(--diamond-color);
-          color: white;
-        }
-
-        .suit-option.clubs {
-          background: var(--club-color);
-          color: white;
-        }
-
-        .suit-option.spades {
-          background: var(--spade-color);
-          color: white;
-        }
-
-        .suit-icon {
-          width: 40px;
-          height: 40px;
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: center;
-        }
-
-        .game-result-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .result-content {
-          background: white;
-          padding: 2.5rem;
-          border-radius: 12px;
-          max-width: 450px;
-          width: 90%;
-          text-align: center;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-
-        .result-content h2 {
-          margin-bottom: 1.5rem;
-          color: var(--primary-color);
-          font-size: 2rem;
-        }
-
-        .result-content p {
-          margin-bottom: 2rem;
-          font-size: 1.2rem;
-          line-height: 1.6;
-        }
-
-        .result-content button {
-          background: var(--primary-color);
-          color: white;
-          border: none;
-          padding: 0.8rem 1.8rem;
-          border-radius: 30px;
-          font-size: 1rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .result-content button:hover {
-          background: var(--secondary-color);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-          .card {
-            width: 70px;
-            height: 105px;
-            padding: 0.6rem;
-          }
-          
-          .card-value {
-            font-size: 1.1rem;
-          }
-          
-          .card-suit::after {
-            width: 30px;
-            height: 30px;
-          }
-          
-          .suit-options {
-            grid-template-columns: 1fr;
-          }
-          
-          .game-container {
-            padding: 1rem;
-          }
+          box-shadow: var(--card-shadow);
         }
 .card-stack {
     position: relative;
@@ -544,92 +173,315 @@
 .card:hover {
     transform: translateY(-10px);
 }
-        @media (max-width: 480px) {
-          .card {
-            width: 60px;
-            height: 90px;
-            padding: 0.5rem;
-          }
-          
-          .card-suit::after {
+        #opponent-avatar, #player-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          background: var(--primary-color);
+          font-size: 16px;
+        }
+
+        #opponent-name, #player-name {
+          font-weight: 500;
+          flex-grow: 1;
+          font-size: 14px;
+        }
+
+        #opponent-hand-count {
+          background: var(--accent-color);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 16px;
+          font-weight: bold;
+          min-width: 30px;
+          text-align: center;
+          font-size: 14px;
+        }
+
+        /* Discard Pile */
+        .discard-pile {
+          min-height: 100px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: white;
+          border-radius: 8px;
+          box-shadow: var(--card-shadow);
+          margin: 4px 0;
+        }
+
+        /* Cards - Optimized for small screens */
+        .card {
+          width: 60px;
+          height: 90px;
+          background: var(--card-white);
+          border-radius: var(--card-radius);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 6px;
+          margin: 4px;
+          box-shadow: var(--card-shadow);
+          position: relative;
+          cursor: default;
+          transition: transform 0.2s, box-shadow 0.2s;
+          border: var(--card-border);
+          font-weight: 600;
+        }
+
+        .card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border-radius: var(--card-radius);
+          border: 1px solid rgba(0,0,0,0.05);
+          pointer-events: none;
+        }
+
+        .card.playable {
+          cursor: pointer;
+        }
+
+        .card.playable:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+
+        .card.hearts, .card.diamonds { color: var(--heart-color); }
+        .card.clubs, .card.spades { color: var(--club-color); }
+
+        .card-value {
+          font-size: 14px;
+          font-weight: bold;
+          position: relative;
+          z-index: 1;
+        }
+
+        .card-value.top { align-self: flex-start; }
+        .card-value.bottom { align-self: flex-end; transform: rotate(180deg); }
+
+        .card-suit {
+          align-self: center;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* Realistic card suit icons */
+        .card-suit::after {
+            content: '';
+            display: inline-block;
             width: 24px;
             height: 24px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .card.hearts .card-suit::after {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d32f2f'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+        }
+
+        .card.diamonds .card-suit::after {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d32f2f'%3E%3Cpath d='M19 12l-7-10-7 10 7 10 7-10z'/%3E%3C/svg%3E");
+        }
+
+        .card.clubs .card-suit::after {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23263238'%3E%3Cpath d='M256 32c-74.1 0-141.8 26.1-194.2 69.5-2.1 1.8-4.1 3.6-6.1 5.5-50.5 46.6-55.7 118-55.7 118s9.2 16.9 28.7 16.9c19.6 0 28.7-16.9 28.7-16.9s-1.1-25.7 12.4-40.7c13.5-15 38.3-20.5 38.3-20.5s4.9 8.8 4.9 19.6c0 10.8-4.9 19.6-4.9 19.6s-24.8 5.5-38.3 20.5c-13.5 15-12.4 40.7-12.4 40.7s4.2 24.5 16.2 40.3c12 15.8 29.2 27.5 48.7 33.9-5.3 12.4-8.2 25.9-8.2 40 0 61.9 50.1 112 112 112s112-50.1 112-112c0-14.1-2.9-27.6-8.2-40 19.5-6.4 36.7-18.1 48.7-33.9 12-15.8 16.2-40.3 16.2-40.3s1.1-25.7-12.4-40.7c-13.5-15-38.3-20.5-38.3-20.5s-4.9-8.8-4.9-19.6c0-10.8 4.9-19.6 4.9-19.6s24.8-5.5 38.3-20.5c13.5-15 12.4-40.7 12.4-40.7s-5.2-71.4-55.7-118c-2-1.9-4-3.7-6.1-5.5C397.8 58.1 330.1 32 256 32z'/%3E%3C/svg%3E");
+        }
+
+        .card.spades .card-suit::after {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512' fill='%23263238'%3E%3Cpath d='M272 144c38.7 0 70.1 28.7 70.1 64 0 5.5-.6 10.8-1.7 15.8 15.3-5 32.6-7.8 50.5-7.8C397 216 432 250.2 432 292c0 38.7-31.3 70.1-70.1 70.1-13.1 0-25.4-3.6-35.9-9.8-17.1 38.6-56.6 65.8-102.6 65.8-56.5 0-102.8-41.8-110.9-95.8-5.3 3.3-11.4 5.1-17.8 5.1-22.5 0-40.7-18.3-40.7-40.7 0-15.8 9-29.5 22.1-36.3-1.4-4.9-2.1-10.1-2.1-15.4 0-35.3 31.4-64 70.1-64 28.7 0 53.3 17.9 63.5 43.3 6.7-1.8 13.7-2.8 20.9-2.8 7.9 0 15.5 1.1 22.6 3.1C216.6 163.3 242.3 144 272 144z'/%3E%3C/svg%3E");
+            transform: rotate(180deg);
+        }
+
+        /* Player Hand - Fixed height with scrolling */
+        .player-hand {
+          display: flex;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          padding: 8px;
+          background: white;
+          border-radius: 8px;
+          box-shadow: var(--card-shadow);
+          min-height: 110px;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE/Edge */
+        }
+
+        .player-hand::-webkit-scrollbar {
+          display: none; /* Chrome/Safari */
+        }
+
+        /* Game Controls - Fixed footer */
+        .game-controls {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          padding: 8px 12px;
+          background: white;
+          box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
+          height: var(--footer-height);
+          z-index: 10;
+        }
+
+        #draw-card-btn, #pass-turn-btn {
+          background: var(--primary-color);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          flex: 1;
+          max-width: 150px;
+        }
+
+        /* Modals - For suit selection */
+        .suit-selector-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .suit-selector {
+          background: white;
+          padding: 16px;
+          border-radius: 12px;
+          width: 90%;
+          max-width: 300px;
+          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .suit-selector h3 {
+          margin-bottom: 16px;
+          text-align: center;
+          color: var(--primary-color);
+          font-size: 18px;
+        }
+
+        .suit-options {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+
+        .suit-option {
+          padding: 12px;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+          text-align: center;
+          font-size: 14px;
+        }
+
+        .suit-option.hearts { background: var(--heart-color); color: white; }
+        .suit-option.diamonds { background: var(--diamond-color); color: white; }
+        .suit-option.clubs { background: var(--club-color); color: white; }
+        .suit-option.spades { background: var(--spade-color); color: white; }
+
+        /* Responsive adjustments */
+        @media (min-width: 400px) {
+          .card {
+            width: 70px;
+            height: 105px;
           }
           
-          .card-value {
-            font-size: 1rem;
+          .player-hand {
+            min-height: 125px;
           }
         }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <!-- Game Info -->
+        <!-- Fixed Header -->
         <div class="game-header">
             <button id="back-btn">
-                <i class="material-icons">arrow_back</i> Back
+                <i class="material-icons" style="font-size: 18px;">arrow_back</i> Back
             </button>
-            <div id="game-code-display">GAME-CODE-1234</div>
+            <div id="game-code-display">GAME-CODE</div>
         </div>
         
-        <!-- Current Game State -->
-        <div class="game-status">
-            <div id="current-suit" class="suit-hearts">Hearts</div>
-            <div id="game-status" class="status-your-turn">Your Turn</div>
-        </div>
-        
-        <!-- Opponent Info -->
-        <div class="opponent-info">
-            <div id="opponent-avatar">O</div>
-            <div id="opponent-name">Opponent</div>
-            <div id="opponent-hand-count">5</div>
-        </div>
-        
-        <!-- Discard Pile -->
-        <div id="discard-pile" class="discard-pile">
-            <!-- Sample card in discard pile -->
-            <div class="card hearts">
-                <div class="card-value top">Q</div>
-                <div class="card-suit"></div>
-                <div class="card-value bottom">Q</div>
+        <!-- Scrollable Main Content -->
+        <div class="game-main">
+            <!-- Current Game State -->
+            <div class="game-status">
+                <div id="current-suit" class="suit-hearts">Hearts</div>
+                <div id="game-status" class="status-your-turn">Your Turn</div>
+            </div>
+            
+            <!-- Opponent Info -->
+            <div class="opponent-info">
+                <div id="opponent-avatar">O</div>
+                <div id="opponent-name">Opponent</div>
+                <div id="opponent-hand-count">5</div>
+            </div>
+            
+            <!-- Discard Pile -->
+            <div id="discard-pile" class="discard-pile">
+                <div class="card hearts">
+                    <div class="card-value top">Q</div>
+                    <div class="card-suit"></div>
+                    <div class="card-value bottom">Q</div>
+                </div>
+            </div>
+            
+            <!-- Player Info -->
+            <div class="player-info">
+                <div id="player-avatar">Y</div>
+                <div id="player-name">You</div>
+            </div>
+            
+            <!-- Player Hand - Horizontal Scrolling -->
+            <div id="player-hand" class="player-hand">
+                <div class="card clubs playable">
+                    <div class="card-value top">A</div>
+                    <div class="card-suit"></div>
+                    <div class="card-value bottom">A</div>
+                </div>
+                <div class="card hearts playable">
+                    <div class="card-value top">7</div>
+                    <div class="card-suit"></div>
+                    <div class="card-value bottom">7</div>
+                </div>
+                <div class="card diamonds playable">
+                    <div class="card-value top">K</div>
+                    <div class="card-suit"></div>
+                    <div class="card-value bottom">K</div>
+                </div>
+                <div class="card spades">
+                    <div class="card-value top">2</div>
+                    <div class="card-suit"></div>
+                    <div class="card-value bottom">2</div>
+                </div>
+                <div class="card clubs playable">
+                    <div class="card-value top">10</div>
+                    <div class="card-suit"></div>
+                    <div class="card-value bottom">10</div>
+                </div>
             </div>
         </div>
         
-        <!-- Player Info -->
-        <div class="player-info">
-            <div id="player-avatar">Y</div>
-            <div id="player-name">You</div>
-        </div>
-        
-        <!-- Player Hand -->
-        <div id="player-hand" class="player-hand">
-            <!-- Sample cards in hand -->
-            <div class="card clubs playable">
-                <div class="card-value top">A</div>
-                <div class="card-suit"></div>
-                <div class="card-value bottom">A</div>
-            </div>
-            <div class="card hearts playable">
-                <div class="card-value top">7</div>
-                <div class="card-suit"></div>
-                <div class="card-value bottom">7</div>
-            </div>
-            <div class="card diamonds playable">
-                <div class="card-value top">K</div>
-                <div class="card-suit"></div>
-                <div class="card-value bottom">K</div>
-            </div>
-            <div class="card spades">
-                <div class="card-value top">2</div>
-                <div class="card-suit"></div>
-                <div class="card-value bottom">2</div>
-            </div>
-        </div>
-        
-        <!-- Game Controls -->
+        <!-- Fixed Footer with Controls -->
         <div class="game-controls">
             <button id="draw-card-btn">Draw Card</button>
-            <button id="skip-turn-btn">Skip Turn</button>
             <button id="pass-turn-btn">Pass Turn</button>
         </div>
     </div>
